@@ -55,6 +55,11 @@
   --color-pill-bg: rgba(207, 230, 220, 0.16);
   --color-pill-border: rgba(207, 230, 220, 0.38);
 
+  /* Layar 2 — Hasil pencarian (sumber: .dc.html turn 1a, Layar 2) */
+  --color-surface-2: #f3f4f6; /* media kartu hasil + CTA nonaktif */
+  --color-line-soft: #efefef; /* border kartu unit yang sudah tersewa */
+  --color-chip-border: #bfdcd0; /* border chip tanggal nonaktif */
+
   /* ---------- Tipografi ----------
      Setiap token membawa size + weight + line-height + tracking
      sekaligus, supaya satu class = satu baris spec di README. */
@@ -189,8 +194,56 @@
   --text-testimonial-meta: 10.5px;
   --text-testimonial-meta--font-weight: 500;
 
+  /* Layar 2 — Hasil pencarian */
+  --text-result-head: 15px;
+  --text-result-head--font-weight: 700;
+
+  --text-result-sub: 15px;
+  --text-result-sub--font-weight: 500;
+
+  --text-filter: 12px;
+  --text-filter--font-weight: 600;
+
+  --text-chip-label: 11px;
+  --text-chip-label--font-weight: 700;
+
+  --text-chip: 11.5px;
+  --text-chip--font-weight: 700;
+
+  --text-cta-sm: 12.5px;
+  --text-cta-sm--font-weight: 700;
+
+  --text-tag: 10.5px;
+  --text-tag--font-weight: 600;
+
+  --text-kind: 10.5px;
+  --text-kind--letter-spacing: 0.06em;
+  --text-kind--font-weight: 600;
+
+  --text-badge-sm: 10px;
+  --text-badge-sm--font-weight: 700;
+
+  /* Layar 4 — Pemesanan */
+  --text-step: 12px;
+  --text-step--font-weight: 700;
+
+  --text-row: 12.5px;
+  --text-row--font-weight: 500;
+
+  --text-row-value: 12.5px;
+  --text-row-value--font-weight: 600;
+
+  --text-total-label: 13px;
+  --text-total-label--font-weight: 700;
+
+  --text-total: 19px;
+  --text-total--font-weight: 800;
+
   /* ---------- Radius ---------- */
   --radius-bar: 6px;
+  --radius-tag: 5px; /* tag kecil di kartu hasil pencarian */
+  --radius-chip: 6px; /* chip tanggal di filter bar */
+  --radius-result: 10px; /* kartu hasil pencarian */
   --radius-input: 8px; /* input, tombol */
   --radius-cta: 9px; /* tombol di dalam blok gradient */
   --radius-faq: 10px;
@@ -209,6 +262,16 @@
 }
 
 @layer base {
+  /* Preflight Tailwind v4 menyetel `cursor: default` pada <button>, beda
+     dengan v3. Tanpa aturan ini semua tombol (Cari unit, tab Motor/Mobil,
+     chip tanggal, accordion FAQ, hamburger) tidak menunjukkan kursor
+     tangan saat di-hover. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+
   /* Focus ring tunggal untuk seluruh elemen interaktif.
      README/Accessibility: 0 0 0 3px rgba(15,107,79,.28) */
   a:focus-visible,

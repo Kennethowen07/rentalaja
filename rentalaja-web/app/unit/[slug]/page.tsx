@@ -24,12 +24,17 @@ export default async function UnitPage({ params }: PageProps<"/unit/[slug]">) {
           <strong className="text-body-strong text-ink">{slug}</strong>.
         </p>
 
-        <Link
-          href="/"
-          className="mt-18 inline-block text-link-sm text-green-700"
-        >
-          ← Kembali ke halaman utama
-        </Link>
+        <div className="mt-18 flex flex-wrap items-center gap-12">
+          <Link
+            href="/pemesanan"
+            className="rounded-input bg-green-700 px-22 py-13 text-btn-sm text-white transition-colors duration-160 ease-base hover:bg-green-800"
+          >
+            Pesan unit ini
+          </Link>
+          <Link href="/cari" className="text-link-sm text-green-700">
+            ← Kembali ke hasil pencarian
+          </Link>
+        </div>
       </main>
       <Footer />
     </>

@@ -10,6 +10,8 @@ export type Unit = {
   spesifikasi: string;
   hargaPerHari: number;
   fotoLabel: string;
+  /** Foto asli di public/units/. Kalau null, dipakai ImagePlaceholder. */
+  foto: string | null;
 };
 
 export const unitPopuler: Unit[] = [
@@ -21,6 +23,7 @@ export const unitPopuler: Unit[] = [
     spesifikasi: "skutik 110cc",
     hargaPerHari: 75000,
     fotoLabel: "foto unit",
+    foto: "/units/honda-scoopy-2023.jpeg",
   },
   {
     id: "yamaha-nmax-2022",
@@ -30,6 +33,7 @@ export const unitPopuler: Unit[] = [
     spesifikasi: "skutik 155cc",
     hargaPerHari: 110000,
     fotoLabel: "foto unit",
+    foto: "/units/yamaha-nmax-2022.webp",
   },
   {
     id: "toyota-avanza-2021",
@@ -39,6 +43,7 @@ export const unitPopuler: Unit[] = [
     spesifikasi: "MPV 7 kursi",
     hargaPerHari: 320000,
     fotoLabel: "foto unit",
+    foto: "/units/toyota-avanza-2021.webp",
   },
 ];
 
