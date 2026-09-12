@@ -18,7 +18,8 @@
 // dibaca di memori, cukup untuk prototype.
 
 import Image from "next/image";
-import { useId, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useRef, useState } from "react";
 import ImagePlaceholder from "@/components/ui/ImagePlaceholder";
 import {
   contohIsian,
@@ -28,6 +29,7 @@ import {
   opsiPengambilan,
   pesanan,
   petunjukBerkas,
+  simulasi,
 } from "@/lib/mock/pemesanan";
 
 const INPUT =
@@ -147,6 +149,108 @@ function Unggah({
   );
 }
 
+type Tahap = "form" | "qr" | "proses";
+
+/** Pop-up pembayaran. Muncul setelah "Bayar DP", menutupi halaman dengan
+ *  lapisan hitam transparan (bukan pekat) supaya form di belakangnya masih
+ *  terlihat samar. Pembayarannya tidak nyata — hanya simulasi alur. */
+function ModalPembayaran({
+  tahap,
+  onBayar,
+  onTutup,
+}: {
+  tahap: Exclude<Tahap, "form">;
+  onBayar: () => void;
+  onTutup: () => void;
+}) {
+  const tombolRef = useRef<HTMLButtonElement>(null);
+  const judulId = useId();
+  const memproses = tahap === "proses";
+
+  // Fokus langsung ke aksi utama saat modal terbuka.
+  useEffect(() => {
+    tombolRef.current?.focus();
+  }, []);
+
+  // Escape membatalkan, tapi tidak saat pembayaran sedang diproses.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !memproses) onTutup();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [memproses, onTutup]);
+
+  return (
+    <div
+      onClick={() => !memproses && onTutup()}
+      className="fixed inset-0 z-50 grid place-items-center bg-ink/55 p-20 backdrop-blur-[2px]"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={judulId}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[340px] rounded-card border border-line bg-white p-24 text-center shadow-search"
+      >
+        <h2 id={judulId} className="text-result-head text-ink">
+          Simulasi MidTrans
+        </h2>
+        <p className="mt-5 text-body-sm text-muted">
+          Pindai QR untuk membayar DP.
+        </p>
+
+        <div className="relative mx-auto mt-16 size-200">
+          <Image
+            src="/qr-midtrans.png"
+            alt={`Kode QR pembayaran simulasi MidTrans sebesar ${pesanan.dp}`}
+            fill
+            sizes="200px"
+            className="object-contain"
+          />
+        </div>
+
+        {/* Nominal ditaruh tepat di bawah QR: pengguna harus bisa mencocokkan
+            angka di aplikasi pembayaran tanpa menggulir ke mana pun. */}
+        <div className="mt-14 rounded-input bg-green-100 px-12 py-10">
+          <p className="text-meta text-green-800">Total DP</p>
+          <p className="mt-2 text-price-lg text-green-700">{pesanan.dp}</p>
+        </div>
+
+        <button
+          ref={tombolRef}
+          type="button"
+          onClick={onBayar}
+          disabled={memproses}
+          className={`mt-14 w-full rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
+            memproses
+              ? "bg-surface-2 text-placeholder"
+              : "bg-green-700 text-white hover:bg-green-800"
+          }`}
+        >
+          {memproses ? "Memproses…" : "Simulasikan Payment"}
+        </button>
+
+        {!memproses && (
+          <button
+            type="button"
+            onClick={onTutup}
+            className="mt-8 text-link-sm text-muted transition-colors duration-160 ease-base hover:text-ink"
+          >
+            Batal
+          </button>
+        )}
+
+        <p aria-live="polite" className="mt-10 text-micro text-muted">
+          {memproses
+            ? "Pembayaran diterima. Membuka pesanan aktif…"
+            : "Tidak ada pembayaran sungguhan yang diproses."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function BookingForm() {
   const [ambil, setAmbil] = useState("");
   const [kembali, setKembali] = useState("");
@@ -160,7 +264,10 @@ export default function BookingForm() {
   const [email, setEmail] = useState("");
 
   const [pembayaran, setPembayaran] = useState<number | null>(null);
-  const [terkirim, setTerkirim] = useState(false);
+  // form -> qr (modal MidTrans terbuka) -> proses (jeda 3 detik) -> /pesanan
+  const [tahap, setTahap] = useState<Tahap>("form");
+  const bayarRef = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
 
   // Satu langkah hijau hanya kalau SELURUH field miliknya terisi.
   const selesai = [
@@ -170,10 +277,39 @@ export default function BookingForm() {
   ];
   const semuaSelesai = selesai.every(Boolean);
 
+  // Jeda 3 detik sebelum pindah ke pesanan aktif — memberi kesan DP sedang
+  // diproses, bukan langsung lompat. Timer dibersihkan saat unmount supaya
+  // navigasi tidak terpicu setelah pengguna meninggalkan halaman.
+  useEffect(() => {
+    if (tahap !== "proses") return;
+    const timer = setTimeout(() => router.push("/pesanan"), 3000);
+    return () => clearTimeout(timer);
+  }, [tahap, router]);
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!semuaSelesai) return;
-    setTerkirim(true);
+    if (!semuaSelesai || tahap !== "form") return;
+    setTahap("qr");
+  }
+
+  function tutupModal() {
+    setTahap("form");
+    bayarRef.current?.focus();
+  }
+
+  /** Isi seluruh form sekaligus dengan data contoh, supaya alur bisa dicoba
+   *  berulang tanpa mengetik ulang. */
+  function isiOtomatis() {
+    setAmbil(simulasi.ambil);
+    setKembali(simulasi.kembali);
+    setTitikAntar(simulasi.titikAntar);
+    setPengambilan(simulasi.pengambilan);
+    setKtp(simulasi.ktp);
+    setSim(simulasi.sim);
+    setNama(simulasi.nama);
+    setWhatsapp(simulasi.whatsapp);
+    setEmail(simulasi.email);
+    setPembayaran(simulasi.pembayaran);
   }
 
   return (
@@ -336,6 +472,21 @@ export default function BookingForm() {
               ))}
             </div>
           </Kartu>
+
+          {/* Pintasan demo — bukan bagian dari desain. Ada supaya alur bisa
+              dicoba berulang tanpa mengisi ulang sepuluh field. */}
+          <button
+            type="button"
+            onClick={isiOtomatis}
+            disabled={tahap !== "form"}
+            className="mt-14 w-full rounded-input bg-green-700 py-13 text-btn text-white transition-colors duration-160 ease-base hover:bg-green-800"
+          >
+            Simulasikan Langsung
+          </button>
+          <p className="mt-8 text-micro text-muted">
+            Mengisi seluruh kolom dengan data contoh, termasuk kedua dokumen.
+            Pintasan untuk mencoba alur, bukan bagian dari produk.
+          </p>
         </div>
 
         {/* Panel ringkasan sticky */}
@@ -383,10 +534,11 @@ export default function BookingForm() {
           </div>
 
           <button
+            ref={bayarRef}
             type="submit"
-            disabled={!semuaSelesai}
+            disabled={!semuaSelesai || tahap !== "form"}
             className={`mt-14 w-full rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
-              semuaSelesai
+              semuaSelesai && tahap === "form"
                 ? "bg-green-700 text-white hover:bg-green-800"
                 : "bg-surface-2 text-placeholder"
             }`}
@@ -395,8 +547,8 @@ export default function BookingForm() {
           </button>
 
           <p aria-live="polite" className="mt-10 text-micro text-muted">
-            {terkirim
-              ? "Pesanan terkirim. Menunggu konfirmasi penyedia."
+            {tahap !== "form"
+              ? "Menunggu pembayaran di jendela MidTrans."
               : semuaSelesai
                 ? "Pesanan menunggu konfirmasi penyedia maksimal 1 jam. DP kembali penuh kalau ditolak."
                 : `Lengkapi ketiga langkah di atas untuk melanjutkan. Sisa ${
@@ -405,6 +557,14 @@ export default function BookingForm() {
           </p>
         </aside>
       </div>
+
+      {tahap !== "form" && (
+        <ModalPembayaran
+          tahap={tahap}
+          onBayar={() => setTahap("proses")}
+          onTutup={tutupModal}
+        />
+      )}
     </form>
   );
 }

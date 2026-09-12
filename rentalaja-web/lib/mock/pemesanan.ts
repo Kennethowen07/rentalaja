@@ -58,3 +58,22 @@ export const labelDokumen = {
 } as const;
 
 export const petunjukBerkas = "Tarik file ke sini atau pilih";
+
+/** Nilai untuk tombol "Simulasikan Langsung" — mengisi seluruh form sekaligus
+ *  supaya alur bisa dicoba berulang tanpa mengetik ulang.
+ *
+ *  Tanggalnya sengaja 12–14 Sep 2026, sama persis dengan periode sewa yang
+ *  ditampilkan Layar 5, jadi hasil simulasi nyambung dengan halaman pesanan
+ *  aktif yang muncul setelahnya. */
+export const simulasi = {
+  ambil: "2026-09-12T09:00",
+  kembali: "2026-09-14T09:00",
+  titikAntar: contohIsian.titikAntar,
+  pengambilan: 0,
+  ktp: "ktp-adi.jpg",
+  sim: "sim-adi.jpg",
+  nama: contohIsian.nama,
+  whatsapp: contohIsian.whatsapp,
+  email: contohIsian.email,
+  pembayaran: 0,
+} as const;
