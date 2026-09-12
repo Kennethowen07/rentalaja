@@ -1,10 +1,14 @@
-// Mock data Layar 4 "Pemesanan" — verbatim dari .dc.html turn 1a.
+// Data Layar 4 "Pemesanan" — dari .dc.html turn 1a.
 //
-// Angka di desain konsisten dan saya pertahankan apa adanya:
+// Angka di desain konsisten dan dipertahankan apa adanya:
 //   3 hari x Rp 70.000            = Rp 210.000
 //   DP 30% dari sewa (Rp 63.000) + biaya layanan Rp 5.000 = Rp 68.000
 //   sisa tunai saat serah terima  = Rp 147.000
 //   deposit tunai (dikembalikan)  = Rp 300.000
+//
+// Nilai yang di desain tampil sebagai isi form (nama penyewa, nomor, email,
+// titik antar) di sini turun jadi PLACEHOLDER. Formnya mulai kosong supaya
+// bisa diisi sungguhan, dan stepper baru menghijau setelah terisi.
 
 export const pesanan = {
   unit: {
@@ -12,18 +16,6 @@ export const pesanan = {
     penyedia: "Bali Motor Rent",
     rating: "4,9",
     foto: "/units/honda-scoopy-2023.jpeg",
-  },
-  ambil: "Sab, 12 Sep 2026 · 09.00",
-  kembali: "Sen, 14 Sep 2026 · 09.00",
-  titikAntar: "Jl. Pantai Batu Bolong No. 12, Canggu",
-  penyewa: {
-    nama: "Adi Prasetyo",
-    whatsapp: "+62 812 3456 7890",
-    email: "adi@email.com",
-  },
-  dokumen: {
-    identitas: { label: "KTP / Paspor", berkas: "ktp-adi.jpg · terunggah" },
-    sim: { label: "SIM C", berkas: "Tarik file ke sini atau pilih" },
   },
   rincian: [
     { label: "3 hari sewa", nilai: "Rp 210.000" },
@@ -51,3 +43,18 @@ export const metodePembayaran = [
   "QRIS",
   "E-wallet",
 ] as const;
+
+/** Nilai desain, dipakai sebagai contoh di placeholder input. */
+export const contohIsian = {
+  titikAntar: "Jl. Pantai Batu Bolong No. 12, Canggu",
+  nama: "Adi Prasetyo",
+  whatsapp: "+62 812 3456 7890",
+  email: "adi@email.com",
+} as const;
+
+export const labelDokumen = {
+  identitas: "KTP / Paspor",
+  sim: "SIM C",
+} as const;
+
+export const petunjukBerkas = "Tarik file ke sini atau pilih";

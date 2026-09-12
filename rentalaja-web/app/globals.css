@@ -57,8 +57,13 @@
 
   /* Layar 2 — Hasil pencarian (sumber: .dc.html turn 1a, Layar 2) */
   --color-surface-2: #f3f4f6; /* media kartu hasil + CTA nonaktif */
+  --color-surface-3: #f9fafb; /* kotak deposit di Layar 3 */
   --color-line-soft: #efefef; /* border kartu unit yang sudah tersewa */
   --color-chip-border: #bfdcd0; /* border chip tanggal nonaktif */
+
+  /* Layar 5 — Pesanan aktif */
+  --color-warning: #d97706; /* deposit yang masih ditahan penyedia */
+  --color-danger: #dc2626;  /* aksi merusak: laporkan masalah unit */
 
   /* ---------- Tipografi ----------
      Setiap token membawa size + weight + line-height + tracking
@@ -222,6 +227,53 @@
 
   --text-badge-sm: 10px;
   --text-badge-sm--font-weight: 700;
+
+  /* Layar 3 — Detail unit */
+  --text-h-unit: 24px;
+  --text-h-unit--letter-spacing: -0.01em;
+  --text-h-unit--font-weight: 800;
+
+  --text-section-sm: 14px;
+  --text-section-sm--font-weight: 700;
+
+  --text-price-lg: 26px;
+  --text-price-lg--font-weight: 800;
+
+  --text-price-unit: 13px;
+  --text-price-unit--font-weight: 600;
+
+  /* Dinaikkan dari 12.5px (nilai desain) atas permintaan: spesifikasi
+     terlalu kecil untuk dibaca. */
+  --text-item: 14px;
+  --text-item--font-weight: 500;
+
+  --text-prose: 14px;
+  --text-prose--line-height: 1.7;
+  --text-prose--font-weight: 500;
+
+  --text-verified: 11.5px;
+  --text-verified--font-weight: 700;
+
+  /* Strip kalender dinaikkan dari 9.5/14/8.5px desain — 8.5px gagal
+     terbaca di layar biasa. */
+  --text-cal-dow: 11px;
+  --text-cal-dow--font-weight: 600;
+
+  --text-cal-date: 16px;
+  --text-cal-date--font-weight: 700;
+
+  --text-cal-state: 10.5px;
+  --text-cal-state--font-weight: 600;
+
+  /* Layar 5 — Pesanan aktif */
+  --text-panel: 13px;
+  --text-panel--font-weight: 700;
+
+  --text-unit-name: 16px;
+  --text-unit-name--font-weight: 700;
+
+  --text-step-label: 11px;
+  --text-step-label--font-weight: 700;
 
   /* Layar 4 — Pemesanan */
   --text-step: 12px;

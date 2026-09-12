@@ -2,55 +2,206 @@
 
 // Layar 4 · Pemesanan.
 //
-// Dua hal yang benar-benar interaktif sesuai desain: pilihan titik antar
-// dan metode pembayaran. Stepper di atas bersifat penanda — desain
-// menampilkan ketiga langkah dalam satu halaman, bukan wizard bertahap.
+// Form mulai KOSONG dan benar-benar bisa diisi. Stepper di atas bukan
+// navigasi: tiap langkah abu sampai seluruh field miliknya terisi, lalu
+// menghijau. Tombol bayar baru aktif setelah ketiganya hijau.
+//
+// Status "lengkap" SENGAJA tidak disampaikan lewat warna saja. Tiap kartu
+// membawa tiga sinyal sekaligus:
+//   1. nomor langkah berubah jadi tanda centang  (bentuk)
+//   2. label teks "Lengkap" muncul               (teks)
+//   3. latar dan border berubah                  (warna + terang-gelap)
+// Sinyal 1 dan 2 tetap terbaca oleh pengguna buta warna, dan nomor itu juga
+// yang mengikat tiap kartu ke langkah di stepper — bukan hue-nya.
+//
+// Berkas yang dipilih tidak diunggah ke mana pun — hanya namanya yang
+// dibaca di memori, cukup untuk prototype.
 
 import Image from "next/image";
-import { useState } from "react";
+import { useId, useState } from "react";
 import ImagePlaceholder from "@/components/ui/ImagePlaceholder";
 import {
+  contohIsian,
+  labelDokumen,
   langkah,
   metodePembayaran,
   opsiPengambilan,
   pesanan,
+  petunjukBerkas,
 } from "@/lib/mock/pemesanan";
 
-const KOTAK =
-  "rounded-input border border-line px-12 py-11 text-nav-strong text-ink";
-const KARTU = "rounded-card border border-line p-18";
+const INPUT =
+  "w-full rounded-input border border-line bg-white px-12 py-11 text-nav-strong text-ink placeholder:font-medium placeholder:text-placeholder";
 
-function Field({ label, children }: { label: string; children: string }) {
+function Kartu({
+  nomor,
+  judul,
+  selesai,
+  className = "",
+  children,
+}: {
+  nomor: number;
+  judul: string;
+  selesai: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={`rounded-card border p-18 transition-colors duration-160 ease-base ${
+        selesai ? "border-green-700 bg-green-50" : "border-line bg-surface-3"
+      } ${className}`}
+    >
+      <div className="flex items-center gap-10">
+        <span
+          aria-hidden
+          className={`grid size-28 shrink-0 place-items-center rounded-input text-badge transition-colors duration-160 ease-base ${
+            selesai ? "bg-green-700 text-white" : "bg-surface-2 text-muted"
+          }`}
+        >
+          {selesai ? "✓" : nomor}
+        </span>
+        <h2 className="text-result-head text-ink">{judul}</h2>
+        {selesai && (
+          <span className="text-micro text-green-700">Lengkap</span>
+        )}
+        <span className="sr-only">
+          Langkah {nomor}: {selesai ? "lengkap" : "belum lengkap"}
+        </span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Isian({
+  label,
+  tipe = "text",
+  nilai,
+  onUbah,
+  placeholder,
+}: {
+  label: string;
+  tipe?: string;
+  nilai: string;
+  onUbah: (v: string) => void;
+  placeholder?: string;
+}) {
+  const id = useId();
   return (
     <div>
-      <p className="mb-6 text-label text-muted">{label}</p>
-      <p className={KOTAK}>{children}</p>
+      <label htmlFor={id} className="mb-6 block text-label text-muted">
+        {label}
+      </label>
+      <input
+        id={id}
+        type={tipe}
+        value={nilai}
+        placeholder={placeholder}
+        onChange={(e) => onUbah(e.target.value)}
+        className={INPUT}
+      />
     </div>
   );
 }
 
+function Unggah({
+  label,
+  berkas,
+  onPilih,
+}: {
+  label: string;
+  berkas: string | null;
+  onPilih: (nama: string | null) => void;
+}) {
+  const id = useId();
+  return (
+    <label
+      htmlFor={id}
+      className={`block cursor-pointer rounded-result border border-dashed p-18 text-center transition-colors duration-160 ease-base ${
+        berkas
+          ? "border-green-700 bg-green-100"
+          : "border-line bg-white hover:border-green-700"
+      }`}
+    >
+      <span
+        className={`block text-cta-sm ${berkas ? "text-green-700" : "text-ink"}`}
+      >
+        {berkas ? `✓ ${label}` : label}
+      </span>
+      <span
+        className={`mt-3 block text-micro ${
+          berkas ? "text-green-800" : "text-muted"
+        }`}
+      >
+        {berkas ? `${berkas} · terunggah` : petunjukBerkas}
+      </span>
+      <input
+        id={id}
+        type="file"
+        accept="image/*,.pdf"
+        className="sr-only"
+        onChange={(e) => onPilih(e.target.files?.[0]?.name ?? null)}
+      />
+    </label>
+  );
+}
+
 export default function BookingForm() {
-  const [pengambilan, setPengambilan] = useState(0);
-  const [pembayaran, setPembayaran] = useState(0);
+  const [ambil, setAmbil] = useState("");
+  const [kembali, setKembali] = useState("");
+  const [titikAntar, setTitikAntar] = useState("");
+  const [pengambilan, setPengambilan] = useState<number | null>(null);
+
+  const [ktp, setKtp] = useState<string | null>(null);
+  const [sim, setSim] = useState<string | null>(null);
+  const [nama, setNama] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [email, setEmail] = useState("");
+
+  const [pembayaran, setPembayaran] = useState<number | null>(null);
+  const [terkirim, setTerkirim] = useState(false);
+
+  // Satu langkah hijau hanya kalau SELURUH field miliknya terisi.
+  const selesai = [
+    Boolean(ambil && kembali && titikAntar.trim() && pengambilan !== null),
+    Boolean(ktp && sim && nama.trim() && whatsapp.trim() && email.trim()),
+    pembayaran !== null,
+  ];
+  const semuaSelesai = selesai.every(Boolean);
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!semuaSelesai) return;
+    setTerkirim(true);
+  }
 
   return (
-    <div className="container-page pt-20 pb-28">
-      {/* Stepper */}
+    <form onSubmit={onSubmit} className="container-page pt-20 pb-28">
+      {/* Stepper — abu sampai langkahnya lengkap, lalu hijau.
+          Centang ✓ menggantikan nomor supaya statusnya terbaca tanpa warna. */}
       <ol className="mb-20 flex items-center gap-10">
         {langkah.map((l, i) => (
           <li key={l} className="flex flex-1 items-center gap-10 last:flex-none">
             <span
-              aria-current={i === 0 ? "step" : undefined}
-              className={
-                i === 0
-                  ? "rounded-pill bg-green-100 px-13 py-6 text-step text-green-700"
-                  : "rounded-pill border border-line px-13 py-6 text-filter text-muted"
-              }
+              className={`rounded-pill px-13 py-6 transition-colors duration-160 ease-base ${
+                selesai[i]
+                  ? "bg-green-100 text-step text-green-700"
+                  : "border border-line text-filter text-muted"
+              }`}
             >
-              {l}
+              {selesai[i] ? `✓ ${l.replace(/^\d+ · /, "")}` : l}
+              <span className="sr-only">
+                {selesai[i] ? " — lengkap" : " — belum lengkap"}
+              </span>
             </span>
             {i < langkah.length - 1 && (
-              <span aria-hidden className="h-2 flex-1 bg-line" />
+              <span
+                aria-hidden
+                className={`h-2 flex-1 transition-colors duration-160 ease-base ${
+                  selesai[i] ? "bg-green-700" : "bg-line"
+                }`}
+              />
             )}
           </li>
         ))}
@@ -58,19 +209,29 @@ export default function BookingForm() {
 
       <div className="grid items-start gap-24 lg:grid-cols-[1fr_320px]">
         <div>
-          {/* Tanggal dan titik antar */}
-          <section className={KARTU}>
-            <h2 className="text-result-head text-ink">
-              Tanggal dan titik antar
-            </h2>
-
+          <Kartu nomor={1} judul="Tanggal dan titik antar" selesai={selesai[0]}>
             <div className="mt-14 grid gap-12 sm:grid-cols-2">
-              <Field label="Ambil">{pesanan.ambil}</Field>
-              <Field label="Kembali">{pesanan.kembali}</Field>
+              <Isian
+                label="Ambil"
+                tipe="datetime-local"
+                nilai={ambil}
+                onUbah={setAmbil}
+              />
+              <Isian
+                label="Kembali"
+                tipe="datetime-local"
+                nilai={kembali}
+                onUbah={setKembali}
+              />
             </div>
 
             <div className="mt-12">
-              <Field label="Titik antar">{pesanan.titikAntar}</Field>
+              <Isian
+                label="Titik antar"
+                nilai={titikAntar}
+                onUbah={setTitikAntar}
+                placeholder={contohIsian.titikAntar}
+              />
               <ImagePlaceholder
                 label="potongan peta"
                 className="mt-8 h-96 rounded-input"
@@ -90,55 +251,68 @@ export default function BookingForm() {
                   onClick={() => setPengambilan(i)}
                   className={`rounded-input border px-13 py-8 text-filter transition-colors duration-160 ease-base ${
                     i === pengambilan
-                      ? "border-transparent bg-green-100 text-green-700"
-                      : "border-line text-muted"
+                      ? "border-green-700 bg-green-100 text-green-700"
+                      : "border-line bg-white text-muted hover:border-green-700"
                   }`}
                 >
-                  {o}
+                  {i === pengambilan ? `✓ ${o}` : o}
                 </button>
               ))}
             </div>
-          </section>
+          </Kartu>
 
-          {/* Dokumen */}
-          <section className={`${KARTU} mt-14`}>
-            <h2 className="text-result-head text-ink">Dokumen</h2>
+          <Kartu
+            nomor={2}
+            judul="Dokumen"
+            selesai={selesai[1]}
+            className="mt-14"
+          >
             <p className="mt-4 text-body-sm text-muted">
               Untuk motor, KTP atau paspor dan SIM C. Diverifikasi penyedia
               sebelum unit diantar.
             </p>
 
             <div className="mt-14 grid gap-12 sm:grid-cols-2">
-              <div className="rounded-result border border-dashed border-green-700 bg-green-100 p-18 text-center">
-                <p className="text-cta-sm text-green-700">
-                  {pesanan.dokumen.identitas.label}
-                </p>
-                <p className="mt-3 text-micro text-green-800">
-                  {pesanan.dokumen.identitas.berkas}
-                </p>
-              </div>
-              <div className="rounded-result border border-dashed border-line p-18 text-center">
-                <p className="text-cta-sm text-ink">
-                  {pesanan.dokumen.sim.label}
-                </p>
-                <p className="mt-3 text-micro text-muted">
-                  {pesanan.dokumen.sim.berkas}
-                </p>
-              </div>
+              <Unggah
+                label={labelDokumen.identitas}
+                berkas={ktp}
+                onPilih={setKtp}
+              />
+              <Unggah label={labelDokumen.sim} berkas={sim} onPilih={setSim} />
             </div>
 
             <div className="mt-14 grid gap-8 border-t border-line pt-12">
-              <Field label="Nama sesuai dokumen">{pesanan.penyewa.nama}</Field>
+              <Isian
+                label="Nama sesuai dokumen"
+                nilai={nama}
+                onUbah={setNama}
+                placeholder={contohIsian.nama}
+              />
               <div className="grid gap-12 sm:grid-cols-2">
-                <Field label="Nomor WhatsApp">{pesanan.penyewa.whatsapp}</Field>
-                <Field label="Email">{pesanan.penyewa.email}</Field>
+                <Isian
+                  label="Nomor WhatsApp"
+                  tipe="tel"
+                  nilai={whatsapp}
+                  onUbah={setWhatsapp}
+                  placeholder={contohIsian.whatsapp}
+                />
+                <Isian
+                  label="Email"
+                  tipe="email"
+                  nilai={email}
+                  onUbah={setEmail}
+                  placeholder={contohIsian.email}
+                />
               </div>
             </div>
-          </section>
+          </Kartu>
 
-          {/* Bayar DP */}
-          <section className={`${KARTU} mt-14`}>
-            <h2 className="text-result-head text-ink">Bayar DP</h2>
+          <Kartu
+            nomor={3}
+            judul="Bayar DP"
+            selesai={selesai[2]}
+            className="mt-14"
+          >
             <div
               role="radiogroup"
               aria-label="Metode pembayaran"
@@ -154,18 +328,18 @@ export default function BookingForm() {
                   className={`rounded-input border p-12 text-left transition-colors duration-160 ease-base ${
                     i === pembayaran
                       ? "border-green-700 bg-green-100 text-tab text-green-700"
-                      : "border-line text-nav-strong text-ink"
+                      : "border-line bg-white text-nav-strong text-ink hover:border-green-700"
                   }`}
                 >
-                  {m}
+                  {i === pembayaran ? `✓ ${m}` : m}
                 </button>
               ))}
             </div>
-          </section>
+          </Kartu>
         </div>
 
         {/* Panel ringkasan sticky */}
-        <aside className="rounded-card border border-line p-18 lg:sticky lg:top-76">
+        <aside className="rounded-card border border-line bg-surface-3 p-18 lg:sticky lg:top-76">
           <div className="flex gap-11">
             <div className="relative h-50 w-66 shrink-0 overflow-hidden rounded-input">
               <Image
@@ -209,18 +383,28 @@ export default function BookingForm() {
           </div>
 
           <button
-            type="button"
-            className="mt-14 w-full rounded-input bg-green-700 py-13 text-btn text-white transition-colors duration-160 ease-base hover:bg-green-800"
+            type="submit"
+            disabled={!semuaSelesai}
+            className={`mt-14 w-full rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
+              semuaSelesai
+                ? "bg-green-700 text-white hover:bg-green-800"
+                : "bg-surface-2 text-placeholder"
+            }`}
           >
             Bayar DP {pesanan.dp}
           </button>
 
-          <p className="mt-10 text-micro text-muted">
-            Pesanan menunggu konfirmasi penyedia maksimal 1 jam. DP kembali
-            penuh kalau ditolak.
+          <p aria-live="polite" className="mt-10 text-micro text-muted">
+            {terkirim
+              ? "Pesanan terkirim. Menunggu konfirmasi penyedia."
+              : semuaSelesai
+                ? "Pesanan menunggu konfirmasi penyedia maksimal 1 jam. DP kembali penuh kalau ditolak."
+                : `Lengkapi ketiga langkah di atas untuk melanjutkan. Sisa ${
+                    selesai.filter((s) => !s).length
+                  } langkah.`}
           </p>
         </aside>
       </div>
-    </div>
+    </form>
   );
 }

@@ -1,40 +1,44 @@
-// STUB. Layar 3 "Detail unit" ada di Langkah 3 handoff dan belum dikerjakan.
-// Ada supaya kartu unit di landing page tidak berujung 404 saat didemokan.
+// Layar 3 · Detail unit.
+//
+// Halaman ini sengaja TIDAK mengimpor data detail langsung. Ia memanggil
+// GET /api/units/:slug lewat HTTP supaya endpoint itu benar-benar terpakai,
+// bukan sekadar ada. Konsekuensinya ada satu hop ekstra di server — wajar
+// untuk prototype, tapi kalau nanti endpointnya diganti backend sungguhan,
+// yang berubah cuma base URL-nya.
 
-import Link from "next/link";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { unitPopuler } from "@/lib/mock/units";
+import UnitDetail from "@/components/unit/UnitDetail";
+import type { DetailUnit } from "@/lib/mock/unit-detail";
+
+async function ambilDetail(slug: string): Promise<DetailUnit | null> {
+  const h = await headers();
+  const host = h.get("host");
+  if (!host) return null;
+  const proto = h.get("x-forwarded-proto") ?? "http";
+
+  const res = await fetch(
+    `${proto}://${host}/api/units/${encodeURIComponent(slug)}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) return null;
+
+  return (await res.json()) as DetailUnit;
+}
 
 export default async function UnitPage({ params }: PageProps<"/unit/[slug]">) {
   const { slug } = await params;
-  const unit = unitPopuler.find((u) => u.id === slug);
+  const data = await ambilDetail(slug);
+
+  if (!data) notFound();
 
   return (
     <>
       <Navbar />
-      <main className="container-page py-38">
-        <p className="text-eyebrow text-green-700 uppercase">Belum dibangun</p>
-        <h1 className="mt-10 text-h2 text-ink">
-          {unit ? unit.nama : "Detail unit"}
-        </h1>
-        <p className="mt-9 max-w-[580px] text-body text-muted">
-          Layar detail unit bagian dari Langkah 3 handoff dan belum
-          diimplementasikan. Slug yang diterima route ini:{" "}
-          <strong className="text-body-strong text-ink">{slug}</strong>.
-        </p>
-
-        <div className="mt-18 flex flex-wrap items-center gap-12">
-          <Link
-            href="/pemesanan"
-            className="rounded-input bg-green-700 px-22 py-13 text-btn-sm text-white transition-colors duration-160 ease-base hover:bg-green-800"
-          >
-            Pesan unit ini
-          </Link>
-          <Link href="/cari" className="text-link-sm text-green-700">
-            ← Kembali ke hasil pencarian
-          </Link>
-        </div>
+      <main>
+        <UnitDetail data={data} />
       </main>
       <Footer />
     </>
