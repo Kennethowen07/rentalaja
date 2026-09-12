@@ -9,7 +9,7 @@ export default function PopularUnits() {
   return (
     <section className="border-y border-green-200 bg-green-50 py-34">
       <div className="container-page">
-        <div className="flex flex-wrap items-end justify-between gap-12">
+        <div className="flex flex-wrap items-baseline justify-between gap-12">
           <div>
             <h2 className="text-section text-ink">Unit populer minggu ini</h2>
             <p className="mt-5 text-body text-muted">Canggu, Seminyak, Ubud</p>
@@ -33,7 +33,7 @@ export default function PopularUnits() {
                 <div className="p-14">
                   <h3 className="text-card-title text-ink">{u.nama}</h3>
                   <p className="mt-3 text-meta text-muted">{metaUnit(u)}</p>
-                  <p className="mt-11">
+                  <p className="mt-11 flex items-baseline gap-5">
                     <span className="text-price text-green-700">
                       {formatRupiah(u.hargaPerHari)}
                     </span>

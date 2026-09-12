@@ -13,7 +13,7 @@
 //    "14 Sep" (= +2 hari). Karena helper harus dihitung live, rumus yang
 //    dipakai adalah tanggalAmbil + durasiHari.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { areaAntarOptions, jamAmbilOptions } from "@/lib/mock/areas";
 
@@ -27,7 +27,11 @@ type SearchForm = {
   durasiHari: number;
 };
 
-type Errors = Partial<Record<"area" | "tanggalAmbil" | "durasiHari", string>>;
+type FieldTervalidasi = "area" | "tanggalAmbil" | "durasiHari";
+type Errors = Partial<Record<FieldTervalidasi, string>>;
+
+/** Urutan fokus saat submit gagal — mengikuti urutan visual field. */
+const URUTAN_FIELD: FieldTervalidasi[] = ["area", "tanggalAmbil", "durasiHari"];
 
 const formatTanggalPanjang = new Intl.DateTimeFormat("id-ID", {
   weekday: "long",
@@ -66,6 +70,24 @@ function tanggalKembali(
   return formatTanggalPanjang.format(kembali);
 }
 
+/** Fungsi murni — dipanggil saat render supaya pesan error selalu
+ *  mencerminkan isi form saat ini. Versi sebelumnya menyimpan errors di
+ *  state dan hanya menghitungnya saat submit, sehingga pesan tetap tampil
+ *  setelah user memperbaiki field-nya. */
+function hitungErrors(form: SearchForm, minTanggal: string): Errors {
+  const next: Errors = {};
+  if (!form.area) next.area = "Pilih area antar.";
+  if (!form.tanggalAmbil) {
+    next.tanggalAmbil = "Pilih tanggal ambil.";
+  } else if (minTanggal && form.tanggalAmbil < minTanggal) {
+    next.tanggalAmbil = "Tanggal tidak boleh di masa lalu.";
+  }
+  if (!Number.isFinite(form.durasiHari) || form.durasiHari < 1) {
+    next.durasiHari = "Durasi minimal 1 hari.";
+  }
+  return next;
+}
+
 const KELAS_FIELD =
   "w-full rounded-input border bg-white px-12 py-11 text-nav-strong text-ink";
 
@@ -82,8 +104,12 @@ export default function SearchCard() {
     jamAmbil: "09.00",
     durasiHari: 3,
   });
-  const [errors, setErrors] = useState<Errors>({});
   const [minTanggal, setMinTanggal] = useState("");
+  const [sudahSubmit, setSudahSubmit] = useState(false);
+
+  const areaRef = useRef<HTMLSelectElement>(null);
+  const tanggalRef = useRef<HTMLInputElement>(null);
+  const durasiRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const hariIni = isoTanggalLokal(new Date());
@@ -93,25 +119,27 @@ export default function SearchCard() {
 
   const kembali = tanggalKembali(form.tanggalAmbil, form.durasiHari);
 
-  function validasi(): Errors {
-    const next: Errors = {};
-    if (!form.area) next.area = "Pilih area antar.";
-    if (!form.tanggalAmbil) {
-      next.tanggalAmbil = "Pilih tanggal ambil.";
-    } else if (minTanggal && form.tanggalAmbil < minTanggal) {
-      next.tanggalAmbil = "Tanggal tidak boleh di masa lalu.";
-    }
-    if (!Number.isFinite(form.durasiHari) || form.durasiHari < 1) {
-      next.durasiHari = "Durasi minimal 1 hari.";
-    }
-    return next;
-  }
+  const errors = hitungErrors(form, minTanggal);
+  // Jangan tampilkan error sebelum user pernah menekan "Cari unit".
+  const errorTampil: Errors = sudahSubmit ? errors : {};
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const hasil = validasi();
-    setErrors(hasil);
-    if (Object.keys(hasil).length > 0) return;
+    setSudahSubmit(true);
+
+    const fieldGagal = URUTAN_FIELD.find((f) => errors[f]);
+    if (fieldGagal) {
+      // WCAG 3.3.1 — pindahkan fokus ke field invalid pertama supaya
+      // pengguna screen reader tahu submit gagal dan di mana letaknya.
+      const ref =
+        fieldGagal === "area"
+          ? areaRef
+          : fieldGagal === "tanggalAmbil"
+            ? tanggalRef
+            : durasiRef;
+      ref.current?.focus();
+      return;
+    }
 
     const query = new URLSearchParams({
       jenis: form.jenis,
@@ -163,12 +191,14 @@ export default function SearchCard() {
             </label>
             <select
               id="area"
+              ref={areaRef}
+              required
               value={form.area}
-              aria-invalid={Boolean(errors.area)}
-              aria-describedby={errors.area ? "area-error" : undefined}
+              aria-invalid={Boolean(errorTampil.area)}
+              aria-describedby={errorTampil.area ? "area-error" : undefined}
               onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))}
               className={`${KELAS_FIELD} ${
-                errors.area ? "border-error" : "border-line"
+                errorTampil.area ? "border-error" : "border-line"
               }`}
             >
               {areaAntarOptions.map((a) => (
@@ -177,9 +207,13 @@ export default function SearchCard() {
                 </option>
               ))}
             </select>
-            {errors.area && (
-              <p id="area-error" className="mt-6 text-body-sm text-error">
-                {errors.area}
+            {errorTampil.area && (
+              <p
+                id="area-error"
+                role="alert"
+                className="mt-6 text-body-sm text-error"
+              >
+                {errorTampil.area}
               </p>
             )}
           </div>
@@ -194,26 +228,29 @@ export default function SearchCard() {
             </label>
             <input
               id="tanggal-ambil"
+              ref={tanggalRef}
               type="date"
+              required
               value={form.tanggalAmbil}
               min={minTanggal || undefined}
-              aria-invalid={Boolean(errors.tanggalAmbil)}
+              aria-invalid={Boolean(errorTampil.tanggalAmbil)}
               aria-describedby={
-                errors.tanggalAmbil ? "tanggal-ambil-error" : undefined
+                errorTampil.tanggalAmbil ? "tanggal-ambil-error" : undefined
               }
               onChange={(e) =>
                 setForm((f) => ({ ...f, tanggalAmbil: e.target.value }))
               }
               className={`${KELAS_FIELD} ${
-                errors.tanggalAmbil ? "border-error" : "border-line"
+                errorTampil.tanggalAmbil ? "border-error" : "border-line"
               }`}
             />
-            {errors.tanggalAmbil && (
+            {errorTampil.tanggalAmbil && (
               <p
                 id="tanggal-ambil-error"
+                role="alert"
                 className="mt-6 text-body-sm text-error"
               >
-                {errors.tanggalAmbil}
+                {errorTampil.tanggalAmbil}
               </p>
             )}
           </div>
@@ -244,21 +281,25 @@ export default function SearchCard() {
 
           {/* Durasi */}
           <div>
-            <label
-              htmlFor="durasi"
-              className="mb-6 block text-label text-muted"
-            >
+            <label htmlFor="durasi" className="mb-6 block text-label text-muted">
               Durasi
+              {/* Satuan "hari" di dalam kotak bersifat dekoratif (aria-hidden),
+                  jadi satuannya disediakan di sini untuk pembaca layar. */}
+              <span className="sr-only"> dalam hari</span>
             </label>
             <div className="relative">
               <input
                 id="durasi"
+                ref={durasiRef}
                 type="number"
                 min={1}
+                required
                 inputMode="numeric"
                 value={Number.isFinite(form.durasiHari) ? form.durasiHari : ""}
-                aria-invalid={Boolean(errors.durasiHari)}
-                aria-describedby={errors.durasiHari ? "durasi-error" : undefined}
+                aria-invalid={Boolean(errorTampil.durasiHari)}
+                aria-describedby={
+                  errorTampil.durasiHari ? "durasi-error" : undefined
+                }
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,
@@ -266,7 +307,7 @@ export default function SearchCard() {
                   }))
                 }
                 className={`${KELAS_FIELD} pr-44 ${
-                  errors.durasiHari ? "border-error" : "border-line"
+                  errorTampil.durasiHari ? "border-error" : "border-line"
                 }`}
               />
               <span
@@ -276,9 +317,13 @@ export default function SearchCard() {
                 hari
               </span>
             </div>
-            {errors.durasiHari && (
-              <p id="durasi-error" className="mt-6 text-body-sm text-error">
-                {errors.durasiHari}
+            {errorTampil.durasiHari && (
+              <p
+                id="durasi-error"
+                role="alert"
+                className="mt-6 text-body-sm text-error"
+              >
+                {errorTampil.durasiHari}
               </p>
             )}
           </div>

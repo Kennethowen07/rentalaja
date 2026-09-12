@@ -6,7 +6,7 @@ export default function Testimonials() {
   return (
     <section className="bg-green-900 py-38">
       <div className="container-page">
-        <p className="text-eyebrow text-green-400 uppercase">Kata penyewa</p>
+        <h2 className="text-eyebrow text-green-400 uppercase">Kata penyewa</h2>
 
         <ul className="mt-16 grid gap-16 sm:grid-cols-2 lg:grid-cols-3">
           {testimoni.map((t) => (

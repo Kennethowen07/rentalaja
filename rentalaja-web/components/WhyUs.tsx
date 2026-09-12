@@ -32,7 +32,7 @@ export default function WhyUs() {
 
           <ul className="mt-18 flex flex-col gap-13">
             {checklist.map((c) => (
-              <li key={c.judul} className="flex gap-10">
+              <li key={c.judul} className="flex gap-11">
                 <span
                   aria-hidden
                   className="mt-2 grid size-20 shrink-0 place-items-center rounded-pill bg-green-700 text-check text-white"
@@ -41,14 +41,14 @@ export default function WhyUs() {
                 </span>
                 <div>
                   <h3 className="text-btn-sm text-ink">{c.judul}</h3>
-                  <p className="text-body-xs text-muted">{c.body}</p>
+                  <p className="mt-2 text-body-xs text-muted">{c.body}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="grid grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2">
           <ImagePlaceholder
             label="foto serah terima"
             className="h-148 rounded-card"
@@ -58,7 +58,7 @@ export default function WhyUs() {
             <p className="text-metric text-white">
               {whyUsStats.konfirmasi.angka}
             </p>
-            <p className="text-stat-label text-green-400">
+            <p className="mt-4 text-stat-label text-green-400">
               {whyUsStats.konfirmasi.label}
             </p>
           </div>
@@ -67,7 +67,7 @@ export default function WhyUs() {
             <p className="text-metric text-green-700">
               {whyUsStats.biayaTersembunyi.angka}
             </p>
-            <p className="text-stat-label text-green-600">
+            <p className="mt-4 text-stat-label text-green-600">
               {whyUsStats.biayaTersembunyi.label}
             </p>
           </div>

@@ -5,8 +5,8 @@ export default function ProviderCta() {
   return (
     <section id="jadi-penyedia" className="bg-white">
       <div className="container-page">
-        <div className="bg-cta-gradient flex flex-col items-start gap-24 rounded-block p-30 sm:flex-row sm:items-center sm:justify-between">
-          <div className="max-w-[520px]">
+        <div className="bg-cta-gradient mb-34 flex flex-col items-start gap-24 rounded-block p-30 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-520">
             <h2 className="text-h2-cta text-white">
               Punya unit yang sering menganggur?
             </h2>

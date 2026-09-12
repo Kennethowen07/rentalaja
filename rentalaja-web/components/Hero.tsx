@@ -18,7 +18,7 @@ export default function Hero() {
       <div className="bg-hero-overlay absolute inset-0 -z-1" />
 
       <div className="container-page pt-40 pb-64 sm:pt-58 sm:pb-86">
-        <div className="max-w-[580px]">
+        <div className="max-w-580">
           <p className="inline-flex items-center gap-7 rounded-pill border border-pill-border bg-pill-bg px-13 py-6 text-pill text-green-300">
             {heroEyebrow}
           </p>

@@ -32,7 +32,7 @@ export default function Footer() {
           {kolomLink.map((kolom) => (
             <div key={kolom.judul}>
               <h2 className="text-footer-title text-white">{kolom.judul}</h2>
-              <ul>
+              <ul className="mt-7">
                 {kolom.items.map((item) => (
                   <li key={item}>
                     <a
