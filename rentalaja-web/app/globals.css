@@ -1,0 +1,253 @@
+@import "tailwindcss";
+
+/* ==================================================================
+   RentalAja — design token layer
+   Sumber tunggal: design_handoff_rentalaja_landing/README.md
+
+   Jangan menulis hex atau ukuran mentah di komponen. Kalau butuh nilai
+   baru, daftarkan token di sini dulu supaya audit konformitas cukup
+   membaca satu file.
+
+   ------------------------------------------------------------------
+   PENTING — skala spacing dibuat 1px.
+   `--spacing: 1px` membuat setiap utility spacing bernilai piksel
+   harfiah:  px-28 = 28px,  gap-16 = 16px,  h-120 = 120px.
+   Ini disengaja supaya kode terbaca persis seperti angka di README.
+   Konsekuensinya: p-4 = 4px, BUKAN 16px seperti Tailwind default.
+
+   ------------------------------------------------------------------
+   Breakpoint README (1024 / 640) kebetulan identik dengan lg / sm
+   bawaan Tailwind, jadi konvensi di seluruh proyek ini:
+     base  = <640px     (mobile)
+     sm:   = 640-1023px (tablet)
+     lg:   = >=1024px   (desktop, "seperti desain")
+   ================================================================== */
+
+@theme {
+  --spacing: 1px;
+
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+
+  /* ---------- Warna ----------
+     Palet hijau bawaan Tailwind dibuang lebih dulu supaya shade yang
+     tidak terdaftar di README tidak diam-diam jatuh ke warna default. */
+  --color-green-*: initial;
+  --color-green-25: #fbfdfb; /* background kartu "tiga langkah" */
+  --color-green-50: #f4f8f5; /* background section (unit populer, FAQ) */
+  --color-green-100: #e8f3ee; /* chip/pill aktif, badge nomor */
+  --color-green-200: #e1e9e4; /* border kartu & pemisah section */
+  --color-green-300: #cfe6dc; /* body text di atas hijau tua */
+  --color-green-400: #9fc4b4; /* label/meta di atas hijau tua */
+  --color-green-600: #3f6b5b; /* body di atas #E8F3EE */
+  --color-green-700: #0f6b4f; /* primary */
+  --color-green-800: #0b5540; /* hover tombol utama */
+  --color-green-900: #093628; /* band testimoni, kartu statistik gelap */
+  --color-green-950: #062a1f; /* footer, ujung gelap gradient hero */
+
+  --color-ink: #1a1a1a;
+  --color-muted: #6b7280;
+  --color-placeholder: #9ca3af;
+  --color-line: #e5e7eb; /* border input & chip netral */
+  --color-surface: #edf1ef; /* kotak foto placeholder + skeleton */
+  --color-footer-bottom: #6e8f82;
+  --color-error: #b42318;
+  --color-quote: #eaf3ef; /* kutipan testimoni di atas green-900 */
+  --color-pill-bg: rgba(207, 230, 220, 0.16);
+  --color-pill-border: rgba(207, 230, 220, 0.38);
+
+  /* ---------- Tipografi ----------
+     Setiap token membawa size + weight + line-height + tracking
+     sekaligus, supaya satu class = satu baris spec di README. */
+
+  --text-h1: 38px;
+  --text-h1--line-height: 1.13;
+  --text-h1--letter-spacing: -0.025em;
+  --text-h1--font-weight: 800;
+
+  --text-h1-md: 30px; /* 640-1023px */
+  --text-h1-md--line-height: 1.13;
+  --text-h1-md--letter-spacing: -0.025em;
+  --text-h1-md--font-weight: 800;
+
+  --text-h1-sm: 26px; /* <640px */
+  --text-h1-sm--line-height: 1.13;
+  --text-h1-sm--letter-spacing: -0.025em;
+  --text-h1-sm--font-weight: 800;
+
+  --text-h2: 26px;
+  --text-h2--line-height: 1.22;
+  --text-h2--letter-spacing: -0.02em;
+  --text-h2--font-weight: 800;
+
+  --text-h2-cta: 23px;
+  --text-h2-cta--line-height: 1.25;
+  --text-h2-cta--letter-spacing: -0.02em;
+  --text-h2-cta--font-weight: 800;
+
+  --text-section: 18px;
+  --text-section--letter-spacing: -0.01em;
+  --text-section--font-weight: 700;
+
+  --text-wordmark: 19px;
+  --text-wordmark--letter-spacing: -0.02em;
+  --text-wordmark--font-weight: 800;
+
+  --text-lead: 15px;
+  --text-lead--line-height: 1.55;
+  --text-lead--font-weight: 500;
+
+  --text-metric: 24px;
+  --text-metric--font-weight: 800;
+
+  --text-metric-hero: 20px;
+  --text-metric-hero--font-weight: 800;
+
+  --text-price: 16px;
+  --text-price--font-weight: 800;
+
+  --text-card-title: 14.5px;
+  --text-card-title--font-weight: 700;
+
+  --text-btn: 14px;
+  --text-btn--font-weight: 700;
+
+  --text-btn-sm: 13.5px;
+  --text-btn-sm--font-weight: 700;
+
+  --text-tab: 13px;
+  --text-tab--font-weight: 700;
+
+  --text-body: 13px;
+  --text-body--line-height: 1.55;
+  --text-body--font-weight: 500;
+
+  /* Dinamai "testimoni", bukan "quote", supaya tidak bertabrakan dengan
+     --color-quote — `text-quote` harus tetap berarti warna. */
+  --text-testimoni: 13px;
+  --text-testimoni--line-height: 1.6;
+  --text-testimoni--font-weight: 500;
+
+  --text-nav: 13px;
+  --text-nav--font-weight: 500;
+
+  --text-nav-strong: 13px;
+  --text-nav-strong--font-weight: 600;
+
+  --text-link-sm: 12.5px;
+  --text-link-sm--font-weight: 600;
+
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 1.55;
+  --text-body-sm--font-weight: 500;
+
+  --text-body-xs: 12px;
+  --text-body-xs--line-height: 1.5;
+  --text-body-xs--font-weight: 500;
+
+  /* Bagian tanggal pada helper text search card: 700/12px #1A1A1A */
+  --text-body-strong: 12px;
+  --text-body-strong--line-height: 1.55;
+  --text-body-strong--font-weight: 700;
+
+  --text-footer-desc: 12px;
+  --text-footer-desc--line-height: 1.6;
+  --text-footer-desc--font-weight: 500;
+
+  --text-footer-link: 12px;
+  --text-footer-link--line-height: 2;
+  --text-footer-link--font-weight: 500;
+
+  --text-footer-title: 12px;
+  --text-footer-title--font-weight: 700;
+
+  --text-badge: 12px;
+  --text-badge--font-weight: 800;
+
+  --text-meta: 11.5px;
+  --text-meta--font-weight: 500;
+
+  --text-stat-label: 11.5px;
+  --text-stat-label--line-height: 1.45;
+  --text-stat-label--font-weight: 500;
+
+  --text-pill: 11.5px;
+  --text-pill--font-weight: 600;
+
+  --text-label: 11px;
+  --text-label--font-weight: 600;
+
+  --text-eyebrow: 11px;
+  --text-eyebrow--letter-spacing: 0.1em;
+  --text-eyebrow--font-weight: 600;
+
+  --text-micro: 11px;
+  --text-micro--font-weight: 500;
+
+  --text-check: 11px;
+  --text-check--font-weight: 700;
+
+  --text-testimonial-meta: 10.5px;
+  --text-testimonial-meta--font-weight: 500;
+
+  /* ---------- Radius ---------- */
+  --radius-bar: 6px;
+  --radius-input: 8px; /* input, tombol */
+  --radius-cta: 9px; /* tombol di dalam blok gradient */
+  --radius-faq: 10px;
+  --radius-card: 12px;
+  --radius-search: 14px;
+  --radius-block: 16px;
+  --radius-pill: 999px;
+
+  /* ---------- Shadow ---------- */
+  --shadow-search: 0 10px 30px rgba(9, 54, 40, 0.13);
+  --shadow-card-hover: 0 8px 20px rgba(9, 54, 40, 0.1);
+
+  /* ---------- Easing ----------
+     README: "Transisi umum 160-200ms ease." */
+  --ease-base: ease;
+}
+
+@layer base {
+  /* Focus ring tunggal untuk seluruh elemen interaktif.
+     README/Accessibility: 0 0 0 3px rgba(15,107,79,.28) */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  [tabindex]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(15, 107, 79, 0.28);
+  }
+}
+
+@layer components {
+  /* Container produksi. README bagian Root:
+     max-width 1200px, padding-inline 24px (28px pada kanvas desain 1060px). */
+  .container-page {
+    margin-inline: auto;
+    max-width: 1200px;
+    padding-inline: 24px;
+  }
+
+  @media (max-width: 639px) {
+    .container-page {
+      padding-inline: 20px;
+    }
+  }
+
+  /* Gradient hero — overlay di atas hero-parkir.png */
+  .bg-hero-overlay {
+    background-image: linear-gradient(
+      90deg,
+      rgba(6, 42, 31, 0.94) 0%,
+      rgba(9, 54, 40, 0.78) 52%,
+      rgba(9, 54, 40, 0.42) 100%
+    );
+  }
+
+  /* Gradient blok CTA penyedia */
+  .bg-cta-gradient {
+    background-image: linear-gradient(105deg, #0f6b4f 0%, #093628 100%);
+  }
+}
