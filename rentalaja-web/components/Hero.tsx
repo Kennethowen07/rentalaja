@@ -1,5 +1,11 @@
-// README section 2. Gradient overlay di atas hero-parkir.png,
-// posisi foto center 38% / cover.
+// README section 2. Foto hero-parkir.png, posisi center 38% / cover.
+//
+// Penyimpangan dari spec: overlay hijau spec (.bg-hero-overlay, 94% ke 42%)
+// terasa terlalu tebal, jadi diganti hijau merek yang jauh lebih tipis
+// (.bg-hero-overlay-muda) supaya foto lebih terlihat. Ketebalannya hasil
+// simulasi kontras di 4 ukuran layar. Warna teks lewat token hero-sub,
+// hero-meta, dan hero-pill-*. Versi spec: kelas overlay "bg-hero-overlay"
+// dengan token teks green-300, green-400, pill-bg, pill-border.
 
 import Image from "next/image";
 import { heroEyebrow, heroStats } from "@/lib/mock/stats";
@@ -15,11 +21,11 @@ export default function Hero() {
         sizes="100vw"
         className="-z-2 object-cover object-[center_38%]"
       />
-      <div className="bg-hero-overlay absolute inset-0 -z-1" />
+      <div className="bg-hero-overlay-muda absolute inset-0 -z-1" />
 
       <div className="container-page pt-40 pb-64 sm:pt-58 sm:pb-86">
-        <div className="max-w-580">
-          <p className="inline-flex items-center gap-7 rounded-pill border border-pill-border bg-pill-bg px-13 py-6 text-pill text-green-300">
+        <div className="teks-hero max-w-580">
+          <p className="inline-flex items-center gap-7 rounded-pill border border-hero-pill-border bg-hero-pill-bg px-13 py-6 text-pill text-hero-sub">
             {heroEyebrow}
           </p>
 
@@ -27,7 +33,7 @@ export default function Hero() {
             Lihat unit yang benar-benar kosong di tanggalmu.
           </h1>
 
-          <p className="mt-13 text-lead text-green-300">
+          <p className="mt-13 text-lead text-hero-sub">
             Harga tetap, tanpa chat dulu. Pilih tanggal, bayar DP 30%, unit
             diantar ke titik yang kamu tentukan.
           </p>
@@ -42,7 +48,7 @@ export default function Hero() {
                   i > 0 ? "border-l border-white/22 pl-22" : ""
                 }`}
               >
-                <dt className="text-micro text-green-400">{s.label}</dt>
+                <dt className="text-micro text-hero-meta">{s.label}</dt>
                 <dd className="text-metric-hero text-white">{s.angka}</dd>
               </div>
             ))}

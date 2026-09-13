@@ -1,4 +1,9 @@
 // README section 4 — "Tiga langkah, tanpa chat"
+//
+// Hover (bukan bagian spec): kartu membesar 3% dan memudar ke hijau
+// primary dengan kilau putih. Zoom dimatikan untuk pengguna yang memilih
+// reduce motion; perubahan warnanya tetap jalan. Hover Tailwind v4 hanya
+// aktif di perangkat ber-pointer, jadi tidak "nyangkut" setelah di-tap.
 
 const langkah = [
   {
@@ -31,13 +36,23 @@ export default function HowItWorks() {
           {langkah.map((l) => (
             <li
               key={l.no}
-              className="rounded-card border border-green-200 bg-green-25 p-18"
+              className="group relative overflow-hidden rounded-card border border-green-200 bg-green-25 p-18 transition duration-200 ease-base hover:border-green-700 hover:shadow-langkah motion-safe:hover:scale-[1.03]"
             >
-              <span className="grid size-28 place-items-center rounded-input bg-green-100 text-badge text-green-700">
+              {/* Lapisan hijau + kilau putih, dipudarkan lewat opacity karena
+                  background-image gradient tidak bisa ditransisikan langsung. */}
+              <span
+                aria-hidden
+                className="bg-langkah-aktif absolute inset-0 opacity-0 transition-opacity duration-200 ease-base group-hover:opacity-100"
+              />
+              <span className="relative grid size-28 place-items-center rounded-input bg-green-100 text-badge text-green-700 transition-colors duration-200 ease-base group-hover:bg-white">
                 {l.no}
               </span>
-              <h3 className="mt-11 text-card-title text-ink">{l.judul}</h3>
-              <p className="mt-5 text-body-sm text-muted">{l.body}</p>
+              <h3 className="relative mt-11 text-card-title text-ink transition-colors duration-200 ease-base group-hover:text-white">
+                {l.judul}
+              </h3>
+              <p className="relative mt-5 text-body-sm text-muted transition-colors duration-200 ease-base group-hover:text-green-50">
+                {l.body}
+              </p>
             </li>
           ))}
         </ul>
