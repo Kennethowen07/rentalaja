@@ -1,11 +1,13 @@
 // Layar 5 · Pesanan aktif.
 //
-// Seluruh layar ini bersifat tampilan — tidak ada state. Tombol aksi di
-// panel kanan sengaja dirender sebagai <button> tanpa handler: layar
-// tujuannya (perpanjang, reschedule, lapor masalah) belum ada di scope.
+// Layar ini server component. Satu-satunya bagian yang butuh state — tombol
+// "Lihat titik pengembalian" dan pop-up petanya — dipisah ke
+// ReturnPointButton. Tombol aksi lain di panel kanan masih <button> tanpa
+// handler: layar tujuannya (hubungi penyedia, perpanjang, reschedule, lapor
+// masalah) belum ada di scope.
 
 import Image from "next/image";
-import ImagePlaceholder from "@/components/ui/ImagePlaceholder";
+import ReturnPointButton from "@/components/pesanan/ReturnPointButton";
 import { pesananAktif } from "@/lib/mock/pesanan-aktif";
 
 const KARTU = "rounded-card border border-line p-18";
@@ -81,10 +83,16 @@ export default function OrderActive() {
             <p className="mt-4 text-body-sm text-muted">{serahTerima.sub}</p>
             <ul className="mt-12 grid grid-cols-2 gap-8 sm:grid-cols-4">
               {serahTerima.sisi.map((s) => (
-                <li key={s}>
-                  <ImagePlaceholder
-                    label={`foto ${s}`}
-                    className="h-64 rounded-input"
+                <li
+                  key={s.label}
+                  className="relative h-64 overflow-hidden rounded-input bg-surface-2"
+                >
+                  <Image
+                    src={s.foto}
+                    alt={`Foto serah terima sisi ${s.label}`}
+                    fill
+                    sizes="(min-width: 640px) 25vw, 50vw"
+                    className="object-cover"
                   />
                 </li>
               ))}
@@ -132,12 +140,7 @@ export default function OrderActive() {
             >
               Hubungi penyedia
             </button>
-            <button
-              type="button"
-              className="mt-8 w-full rounded-input border border-line py-10 text-link-sm text-ink transition-colors duration-160 ease-base hover:border-green-700 hover:text-green-700"
-            >
-              Lihat titik pengembalian
-            </button>
+            <ReturnPointButton />
           </section>
 
           <section className={KARTU}>

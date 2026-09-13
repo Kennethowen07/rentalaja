@@ -20,7 +20,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import ImagePlaceholder from "@/components/ui/ImagePlaceholder";
+import PetaLokasi from "@/components/ui/PetaLokasi";
 import {
   contohIsian,
   labelDokumen,
@@ -368,9 +368,13 @@ export default function BookingForm() {
                 onUbah={setTitikAntar}
                 placeholder={contohIsian.titikAntar}
               />
-              <ImagePlaceholder
-                label="potongan peta"
-                className="mt-8 h-96 rounded-input"
+              {/* Peta mengikuti alamat yang diketik; kalau kosong, pakai
+                  alamat contoh. Tinggi 200px, bukan 96px spec: kartu info
+                  tempat Google Embed sendiri ~100px dan akan menutup peta. */}
+              <PetaLokasi
+                alamat={titikAntar.trim() || contohIsian.titikAntar}
+                className="mt-8 h-200"
+                sizes="(min-width: 1024px) 60vw, 100vw"
               />
             </div>
 

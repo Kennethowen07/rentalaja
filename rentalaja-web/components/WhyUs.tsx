@@ -1,5 +1,6 @@
 // README section 6 — split 2 kolom. Di bawah 1024px jadi 1 kolom, teks dulu.
 
+import Image from "next/image";
 import ImagePlaceholder from "@/components/ui/ImagePlaceholder";
 import { whyUsStats } from "@/lib/mock/stats";
 
@@ -49,10 +50,15 @@ export default function WhyUs() {
         </div>
 
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2">
-          <ImagePlaceholder
-            label="foto serah terima"
-            className="h-148 rounded-card"
-          />
+          <div className="relative h-148 overflow-hidden rounded-card bg-surface">
+            <Image
+              src="/landing/serah-terima.webp"
+              alt="Honda Scoopy putih siap diserahkan ke penyewa"
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover"
+            />
+          </div>
 
           <div className="flex h-148 flex-col justify-end rounded-card bg-green-900 p-16">
             <p className="text-metric text-white">

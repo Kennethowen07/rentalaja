@@ -1,5 +1,6 @@
 // README section 7 — band hijau tua #093628.
 
+import Image from "next/image";
 import { testimoni } from "@/lib/mock/testimonials";
 
 export default function Testimonials() {
@@ -18,10 +19,17 @@ export default function Testimonials() {
                 {t.kutipan}
               </blockquote>
               <div className="mt-14 flex items-center gap-9">
-                <span
-                  aria-hidden
-                  className="size-28 shrink-0 rounded-pill bg-white/18"
-                />
+                {/* alt kosong: nama penyewa sudah tertulis tepat di sebelahnya,
+                    jadi screen reader tidak perlu membacanya dua kali. */}
+                <span className="relative size-28 shrink-0 overflow-hidden rounded-pill bg-white/18">
+                  <Image
+                    src={t.foto}
+                    alt=""
+                    fill
+                    sizes="28px"
+                    className="object-cover"
+                  />
+                </span>
                 <div>
                   <p className="text-footer-title text-white">{t.nama}</p>
                   <p className="text-testimonial-meta text-green-400">

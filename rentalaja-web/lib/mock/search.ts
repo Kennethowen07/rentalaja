@@ -61,7 +61,7 @@ export const unitHasil: UnitHasil[] = [
     penyedia: "Wayan Rental",
     hargaPerHari: 55000,
     kosongPada: [true, false, true],
-    foto: null,
+    foto: "/units/honda-beat-2022.webp",
   },
   {
     id: "yamaha-nmax-2022",
@@ -85,7 +85,7 @@ export const unitHasil: UnitHasil[] = [
     penyedia: "Retro Ride Bali",
     hargaPerHari: 145000,
     kosongPada: [false, true, false],
-    foto: null,
+    foto: "/units/vespa-sprint-2021.webp",
   },
   {
     id: "honda-pcx-160-2023",
@@ -97,7 +97,7 @@ export const unitHasil: UnitHasil[] = [
     penyedia: "Dewa Motor",
     hargaPerHari: 120000,
     kosongPada: [true, true, true],
-    foto: null,
+    foto: "/units/honda-pcx-160-2023.webp",
   },
   {
     id: "yamaha-fino-2021",
@@ -109,7 +109,7 @@ export const unitHasil: UnitHasil[] = [
     penyedia: "Pererenan Rent",
     hargaPerHari: 60000,
     kosongPada: [false, true, true],
-    foto: null,
+    foto: "/units/yamaha-fino-2021.webp",
   },
 ];
 

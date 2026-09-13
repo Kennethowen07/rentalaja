@@ -40,7 +40,15 @@ export const pesananAktif = {
   serahTerima: {
     judul: "Serah terima berfoto",
     sub: "Empat foto saat unit diantar, disetujui kedua pihak. Jadi acuan saat pengembalian.",
-    sisi: ["depan", "belakang", "kiri", "kanan"],
+    // Dipetakan per sudut dari foto unggahan. Keempatnya Scoopy dengan warna
+    // berbeda, dan "kanan" sebenarnya tampak depan-kiri karena tidak ada foto
+    // sisi kanan. Untuk produk sungguhan keempatnya harus unit yang sama.
+    sisi: [
+      { label: "depan", foto: "/serah-terima/scoopy-depan.webp" },
+      { label: "belakang", foto: "/serah-terima/scoopy-belakang.webp" },
+      { label: "kiri", foto: "/serah-terima/scoopy-kiri.webp" },
+      { label: "kanan", foto: "/serah-terima/scoopy-kanan.webp" },
+    ],
     catatan:
       "Depan, belakang, kiri, kanan · diambil 12 Sep 09.05 · odometer 18.204 km · bensin setengah",
   },
@@ -58,6 +66,13 @@ export const pesananAktif = {
   penyedia: {
     nama: "Bali Motor Rent",
     meta: "★ 4,9 · Pak Wayan",
+  },
+
+  // Alamat sama dengan titik antar di Layar 4. Petanya dirender PetaLokasi
+  // dari alamat ini: Google Maps Embed, dengan gambar statis sebagai cadangan.
+  titikPengembalian: {
+    alamat: "Jl. Pantai Batu Bolong No. 12, Canggu",
+    waktu: "Senin, 14 Sep 2026 pukul 09.00 · sama dengan titik antar",
   },
 
   perluUbah: {
