@@ -10,8 +10,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import AuthModal, { type ModeAuth, type Peran } from "@/components/auth/AuthModal";
+import { usePathname } from "next/navigation";
+import AuthModal, { type ModeAuth } from "@/components/auth/AuthModal";
 
 const navLinks = [
   { label: "Cara kerja", href: "#cara-kerja" },
@@ -24,13 +24,12 @@ export default function Navbar() {
   // Masuk dan daftar hanya simulasi, jadi akunnya cukup hidup di state
   // navbar. Lihat catatan di components/auth/AuthModal.tsx.
   const [modeAuth, setModeAuth] = useState<ModeAuth | null>(null);
-  const [akun, setAkun] = useState<{ nama: string; peran: Peran } | null>(null);
+  const [akun, setAkun] = useState<string | null>(null);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
   // Navbar ini juga dirender di /cari dan /unit/[slug], jadi status aktif
   // harus mengikuti rute sebenarnya, bukan di-hardcode ke "Sewa".
   const pathname = usePathname();
-  const router = useRouter();
   const diBeranda = pathname === "/";
 
   function tutupDrawer() {
@@ -89,10 +88,7 @@ export default function Navbar() {
           <div className="ml-10 flex items-center gap-10">
             {akun ? (
               <>
-                <span className="max-w-160 truncate text-nav text-muted">
-                  {akun.nama}
-                  {akun.peran === "mitra" ? " · Mitra" : ""}
-                </span>
+                <span className="max-w-160 truncate text-nav text-muted">{akun}</span>
                 <button
                   type="button"
                   onClick={() => setAkun(null)}
@@ -168,10 +164,7 @@ export default function Navbar() {
           ))}
           {akun ? (
             <>
-              <span className="flex min-h-44 items-center text-nav text-muted">
-                {akun.nama}
-                {akun.peran === "mitra" ? " · Mitra" : ""}
-              </span>
+              <span className="flex min-h-44 items-center text-nav text-muted">{akun}</span>
               <button
                 type="button"
                 onClick={() => {
@@ -215,11 +208,9 @@ export default function Navbar() {
           mode={modeAuth}
           onTutup={() => setModeAuth(null)}
           onGantiMode={setModeAuth}
-          onBerhasil={(identitas, peran) => {
-            setAkun({ nama: identitas, peran });
+          onBerhasil={(identitas) => {
+            setAkun(identitas);
             setModeAuth(null);
-            // Mitra langsung dibawa ke panelnya, penyewa tetap di halaman.
-            if (peran === "mitra") router.push("/mitra");
           }}
         />
       )}
