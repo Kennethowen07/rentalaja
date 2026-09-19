@@ -7,8 +7,14 @@
 //
 // Modal pembayaran di components/pemesanan/BookingForm.tsx belum memakai ini
 // karena ia punya keadaan "sedang memproses" yang tidak boleh ditutup.
+//
+// Dirender lewat portal ke <body>. Tanpa itu, lapisan gelapnya bisa terkurung:
+// elemen dengan backdrop-filter, seperti navbar sticky, menjadi acuan baru
+// untuk anak yang position: fixed, jadi overlay hanya menutupi kotak navbar
+// alih-alih seluruh layar.
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export default function Modal({
   judul,
@@ -28,6 +34,20 @@ export default function Modal({
 }) {
   const judulId = useId();
   const tutupRef = useRef<HTMLButtonElement>(null);
+  // Portal baru boleh dipasang setelah komponen hidup di browser, karena
+  // document.body tidak ada saat render di server.
+  const [siap, setSiap] = useState(false);
+
+  useEffect(() => setSiap(true), []);
+
+  // Halaman di belakang dikunci supaya tidak ikut bergulir saat modal terbuka.
+  useEffect(() => {
+    const semula = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = semula;
+    };
+  }, []);
 
   useEffect(() => {
     const sebelumnya = document.activeElement as HTMLElement | null;
@@ -43,7 +63,9 @@ export default function Modal({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onTutup]);
 
-  return (
+  if (!siap) return null;
+
+  return createPortal(
     <div
       onClick={onTutup}
       className={`fixed inset-0 z-50 grid place-items-center p-20 ${
@@ -73,6 +95,7 @@ export default function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
