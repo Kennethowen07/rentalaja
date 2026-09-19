@@ -35,7 +35,7 @@ const legenda: { keadaan: Keadaan; label: string; kelas: string }[] = [
   { keadaan: "disewa", label: "Disewa", kelas: "bg-mitra-primer" },
   { keadaan: "dipesan", label: "Sudah dipesan", kelas: "bg-mitra-bar-muda" },
   { keadaan: "kosong", label: "Kosong", kelas: "bg-mitra-panel" },
-  { keadaan: "diblokir", label: "Diblokir / servis", kelas: "bg-mitra-blocked" },
+  { keadaan: "diblokir", label: "Diblokir / servis", kelas: "sel-diblokir" },
   { keadaan: "telat", label: "Lewat jadwal", kelas: "bg-mitra-plum" },
 ];
 
@@ -43,8 +43,8 @@ const warna: Record<Keadaan, string> = {
   disewa: "bg-mitra-primer",
   telat: "bg-mitra-plum",
   dipesan: "bg-mitra-bar-muda",
-  diblokir: "bg-mitra-blocked",
-  servis: "bg-mitra-blocked",
+  diblokir: "sel-diblokir",
+  servis: "sel-diblokir",
   kosong: "bg-mitra-panel",
 };
 

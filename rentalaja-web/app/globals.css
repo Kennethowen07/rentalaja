@@ -350,7 +350,10 @@
   --color-mitra-border-hover: #b9b5ac;
   --color-mitra-panel: #f1f0ec; /* thumbnail kosong, sel kalender kosong */
   --color-mitra-track: #e7ede9; /* latar bar isian */
-  --color-mitra-blocked: #e3ded4; /* sel diblokir / servis */
+  /* Spec #E3DED4 terlalu dekat dengan sel kosong #F1F0EC, keduanya nyaris
+     tidak terbedakan di layar biasa. Digelapkan, dan diberi garis diagonal
+     lewat .sel-diblokir supaya bedanya tidak bergantung warna saja. */
+  --color-mitra-blocked: #bcb4a6; /* sel diblokir / servis */
   --color-mitra-hover: #fafaf8; /* hover baris daftar */
   --color-mitra-nav-hover: rgba(255, 255, 255, 0.08);
   --color-mitra-sidebar-garis: rgba(255, 255, 255, 0.2);
@@ -587,4 +590,16 @@
   box-shadow:
     0 0 0 2px #0f4c34,
     0 0 0 4px #ffffff;
+}
+
+/* Sel kalender "diblokir / servis": warna dasar plus garis diagonal tipis. */
+.sel-diblokir {
+  background-color: var(--color-mitra-blocked);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(26, 26, 24, 0.14) 0px,
+    rgba(26, 26, 24, 0.14) 2px,
+    transparent 2px,
+    transparent 7px
+  );
 }
