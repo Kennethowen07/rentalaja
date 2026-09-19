@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AuthModal, { type ModeAuth } from "@/components/auth/AuthModal";
 
 const navLinks = [
   { label: "Cara kerja", href: "#cara-kerja" },
@@ -20,6 +21,10 @@ const navLinks = [
 
 export default function Navbar() {
   const [drawerTerbuka, setDrawerTerbuka] = useState(false);
+  // Masuk dan daftar hanya simulasi, jadi akunnya cukup hidup di state
+  // navbar. Lihat catatan di components/auth/AuthModal.tsx.
+  const [modeAuth, setModeAuth] = useState<ModeAuth | null>(null);
+  const [akun, setAkun] = useState<string | null>(null);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
   // Navbar ini juga dirender di /cari dan /unit/[slug], jadi status aktif
@@ -81,18 +86,35 @@ export default function Navbar() {
           </nav>
 
           <div className="ml-10 flex items-center gap-10">
-            <a
-              href="#masuk"
-              className="text-nav-strong text-ink transition-colors duration-160 ease-base hover:text-green-700"
-            >
-              Masuk
-            </a>
-            <a
-              href="#daftar"
-              className="rounded-input bg-green-700 px-16 py-9 text-nav-strong text-white transition-colors duration-160 ease-base hover:bg-green-800"
-            >
-              Daftar
-            </a>
+            {akun ? (
+              <>
+                <span className="max-w-160 truncate text-nav text-muted">{akun}</span>
+                <button
+                  type="button"
+                  onClick={() => setAkun(null)}
+                  className="rounded-input border border-line px-16 py-9 text-nav-strong text-ink transition-colors duration-160 ease-base hover:border-green-700 hover:text-green-700"
+                >
+                  Keluar
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setModeAuth("masuk")}
+                  className="text-nav-strong text-ink transition-colors duration-160 ease-base hover:text-green-700"
+                >
+                  Masuk
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModeAuth("daftar")}
+                  className="rounded-input bg-green-700 px-16 py-9 text-nav-strong text-white transition-colors duration-160 ease-base hover:bg-green-800"
+                >
+                  Daftar
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -140,21 +162,57 @@ export default function Navbar() {
               {l.label}
             </a>
           ))}
-          <a
-            href="#masuk"
-            onClick={tutupDrawer}
-            className="flex min-h-44 items-center text-nav-strong text-ink"
-          >
-            Masuk
-          </a>
-          <a
-            href="#daftar"
-            onClick={tutupDrawer}
-            className="mt-8 grid min-h-44 place-items-center rounded-input bg-green-700 text-nav-strong text-white"
-          >
-            Daftar
-          </a>
+          {akun ? (
+            <>
+              <span className="flex min-h-44 items-center text-nav text-muted">{akun}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setAkun(null);
+                  tutupDrawer();
+                }}
+                className="mt-8 grid min-h-44 place-items-center rounded-input border border-line text-nav-strong text-ink"
+              >
+                Keluar
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setDrawerTerbuka(false);
+                  setModeAuth("masuk");
+                }}
+                className="flex min-h-44 items-center text-nav-strong text-ink"
+              >
+                Masuk
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDrawerTerbuka(false);
+                  setModeAuth("daftar");
+                }}
+                className="mt-8 grid min-h-44 place-items-center rounded-input bg-green-700 text-nav-strong text-white"
+              >
+                Daftar
+              </button>
+            </>
+          )}
         </nav>
+      )}
+
+      {modeAuth && (
+        <AuthModal
+          mode={modeAuth}
+          onTutup={() => setModeAuth(null)}
+          onGantiMode={setModeAuth}
+          onBerhasil={(identitas) => {
+            setAkun(identitas);
+            setModeAuth(null);
+          }}
+        />
       )}
     </header>
   );

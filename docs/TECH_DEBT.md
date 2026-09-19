@@ -35,6 +35,20 @@ state mengalir.
 
 ---
 
+## 1b. Masuk dan daftar hanya simulasi
+
+Modal Masuk dan Daftar di navbar sisi penyewa sudah ada, memakai alur nomor
+ponsel lalu kode verifikasi, tanpa kata sandi. Tapi ini simulasi penuh:
+
+- Tidak ada backend, tidak ada SMS, dan kodenya statis `1234`, tertulis di layar.
+- Tombol Google **tidak** menghubungi Google. Hanya menutup modal dan menandai sesi sebagai "Akun demo Google".
+- Sesi hanya hidup di state navbar, hilang saat pindah halaman dengan reload.
+- Belum ada akun sungguhan, jadi belum ada riwayat pesanan per pengguna, dan panel mitra tetap terbuka tanpa login.
+
+Kalau nanti disambung ke backend, dua hal yang wajib berubah lebih dulu:
+verifikasi kode harus di server, dan tombol Google harus memakai OAuth
+sungguhan, bukan tombol yang menyerupai.
+
 ## 2. Konflik spec desain vs WCAG — butuh keputusan desain
 
 **Prioritas: tinggi, tapi bukan keputusan developer.** Nilai-nilai ini diterapkan
