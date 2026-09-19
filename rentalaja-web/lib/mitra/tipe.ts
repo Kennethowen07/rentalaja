@@ -80,6 +80,10 @@ export type CatatanSerah = {
   sisi: { label: string; foto: string | null }[];
   /** Kosong selama kondisi belum dicatat. */
   kondisi: { label: string; nilai: string }[];
+  /** Klaim kerusakan saat unit kembali. Sejak deposit tunai dihapus, inilah
+   *  satu-satunya jalan penyedia menagih kerusakan, dan dana penyewa ditahan
+   *  rentalaja sampai klaimnya selesai. */
+  klaim?: { nominal: number; keterangan: string };
 };
 
 /** Satu baris jadwal, diturunkan dari pesanan berjalan. */

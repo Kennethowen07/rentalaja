@@ -14,6 +14,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
+import { rupiah } from "@/lib/mitra/format";
 import { tabSerah, type KunciTabSerah } from "@/lib/mitra/tab-serah";
 import type { CatatanSerah, JadwalSerah, Pesanan, StatusSerah } from "@/lib/mitra/tipe";
 import { awalHari, hariSama, jamSaja, statusKembali, tanggalSingkat } from "@/lib/mitra/waktu";
@@ -156,13 +157,19 @@ export default function SerahTerimaPanel({
     setKabar(`Empat foto ${item.unit} terunggah.`);
   }
 
-  function simpanKondisi(item: JadwalSerah, kondisi: CatatanSerah["kondisi"]) {
-    simpanCatatan(item.id, (c) => ({ ...c, kondisi }));
+  function simpanKondisi(
+    item: JadwalSerah,
+    kondisi: CatatanSerah["kondisi"],
+    klaim: CatatanSerah["klaim"],
+  ) {
+    simpanCatatan(item.id, (c) => ({ ...c, kondisi, klaim }));
     setFormKondisi(null);
     setKabar(
-      item.sisi.every((s) => s.foto)
-        ? `Serah terima ${item.unit} selesai dicatat.`
-        : `Kondisi ${item.unit} tercatat. Empat foto masih kurang.`,
+      klaim
+        ? `Klaim ${rupiah(klaim.nominal)} diajukan untuk ${item.unit}. Dana penyewa ditahan sampai klaim selesai.`
+        : item.sisi.every((s) => s.foto)
+          ? `Serah terima ${item.unit} selesai dicatat.`
+          : `Kondisi ${item.unit} tercatat. Empat foto masih kurang.`,
     );
   }
 
@@ -367,9 +374,22 @@ export default function SerahTerimaPanel({
               </p>
             )}
           </div>
+          {terpilih?.klaim && (
+            <div className="mt-14 rounded-m-callout border border-mitra-plum p-20 min-[640px]:p-24">
+              <p className="text-m-judul-baris text-mitra-plum">
+                Klaim kerusakan {rupiah(terpilih.klaim.nominal)}
+              </p>
+              <p className="mt-6 text-m-body text-mitra-muted">{terpilih.klaim.keterangan}</p>
+              <p className="mt-10 text-m-label text-mitra-muted">
+                Dana penyewa ditahan rentalaja sampai klaim ini disepakati kedua pihak.
+                Buktinya foto serah terima di sebelah kiri.
+              </p>
+            </div>
+          )}
+
           <p className="mt-20 text-m-body text-mitra-muted">
-            Kedua pihak menyetujui foto lewat aplikasi. Selisih kondisi saat kembali otomatis
-            dibandingkan dengan foto ini.
+            Kedua pihak menyetujui foto lewat aplikasi. Kondisi saat kembali dibandingkan
+            dengan foto ini, dan jadi bukti kalau ada klaim kerusakan.
           </p>
         </section>
       </div>
@@ -404,7 +424,7 @@ export default function SerahTerimaPanel({
         <FormKondisi
           item={formKondisi}
           onTutup={() => setFormKondisi(null)}
-          onSimpan={(kondisi) => simpanKondisi(formKondisi, kondisi)}
+          onSimpan={(kondisi, klaim) => simpanKondisi(formKondisi, kondisi, klaim)}
         />
       )}
     </>
@@ -418,7 +438,7 @@ function FormKondisi({
 }: {
   item: JadwalSerah;
   onTutup: () => void;
-  onSimpan: (kondisi: CatatanSerah["kondisi"]) => void;
+  onSimpan: (kondisi: CatatanSerah["kondisi"], klaim: CatatanSerah["klaim"]) => void;
 }) {
   const awal = (label: string, bawaan: string) =>
     item.kondisi.find((k) => k.label === label)?.nilai ?? bawaan;
@@ -427,9 +447,16 @@ function FormKondisi({
   const [bensin, setBensin] = useState(awal("Bensin", "Penuh"));
   const [kelengkapan, setKelengkapan] = useState(awal("Helm", "2 · jas hujan 1"));
   const [goresan, setGoresan] = useState(awal("Goresan tercatat", "Tidak ada"));
+  const [adaKlaim, setAdaKlaim] = useState(Boolean(item.klaim));
+  const [nominalKlaim, setNominalKlaim] = useState(item.klaim ? String(item.klaim.nominal) : "");
+  const [keteranganKlaim, setKeteranganKlaim] = useState(item.klaim?.keterangan ?? "");
 
   const angka = Number(odometer.replace(/\D/g, ""));
-  const valid = angka > 0;
+  const nominal = Number(nominalKlaim.replace(/\D/g, ""));
+  // Klaim hanya masuk akal saat unit kembali, bukan saat diantar.
+  const bisaKlaim = item.jenis === "ambil";
+  const klaimValid = !adaKlaim || (nominal > 0 && keteranganKlaim.trim().length > 0);
+  const valid = angka > 0 && klaimValid;
   const kelasIsian =
     "mt-6 w-full rounded-m-thumb border border-mitra-border px-12 py-9 text-m-status text-mitra-ink";
 
@@ -444,12 +471,15 @@ function FormKondisi({
         onSubmit={(e) => {
           e.preventDefault();
           if (!valid) return;
-          onSimpan([
-            { label: "Odometer", nilai: `${new Intl.NumberFormat("id-ID").format(angka)} km` },
-            { label: "Bensin", nilai: bensin },
-            { label: "Helm", nilai: kelengkapan },
-            { label: "Goresan tercatat", nilai: goresan.trim() || "Tidak ada" },
-          ]);
+          onSimpan(
+            [
+              { label: "Odometer", nilai: `${new Intl.NumberFormat("id-ID").format(angka)} km` },
+              { label: "Bensin", nilai: bensin },
+              { label: "Helm", nilai: kelengkapan },
+              { label: "Goresan tercatat", nilai: goresan.trim() || "Tidak ada" },
+            ],
+            adaKlaim && bisaKlaim ? { nominal, keterangan: keteranganKlaim.trim() } : undefined,
+          );
         }}
       >
         <label htmlFor="odometer" className="mt-18 block text-m-label text-mitra-muted">
@@ -499,8 +529,70 @@ function FormKondisi({
           className={kelasIsian}
         />
 
+        {bisaKlaim && (
+          <>
+            <label className="mt-18 flex items-start gap-10">
+              <input
+                type="checkbox"
+                checked={adaKlaim}
+                onChange={(e) => setAdaKlaim(e.target.checked)}
+                className="mt-3 size-16"
+              />
+              <span>
+                <span className="block text-m-status text-mitra-ink">
+                  Ada kerusakan baru, ajukan klaim
+                </span>
+                <span className="mt-2 block text-m-label text-mitra-muted">
+                  Sejak deposit tunai dihapus, inilah cara menagih kerusakan. Dana penyewa
+                  ditahan rentalaja sampai klaim selesai.
+                </span>
+              </span>
+            </label>
+
+            {adaKlaim && (
+              <>
+                <label
+                  htmlFor="nominal-klaim"
+                  className="mt-14 block text-m-label text-mitra-muted"
+                >
+                  Nilai klaim
+                </label>
+                <input
+                  id="nominal-klaim"
+                  inputMode="numeric"
+                  value={nominalKlaim}
+                  onChange={(e) => setNominalKlaim(e.target.value)}
+                  placeholder="150000"
+                  className={kelasIsian}
+                />
+
+                <label
+                  htmlFor="keterangan-klaim"
+                  className="mt-14 block text-m-label text-mitra-muted"
+                >
+                  Kerusakan yang diklaim
+                </label>
+                <textarea
+                  id="keterangan-klaim"
+                  rows={2}
+                  value={keteranganKlaim}
+                  onChange={(e) => setKeteranganKlaim(e.target.value)}
+                  placeholder="Spion kiri retak, tidak ada di foto serah terima awal"
+                  className={kelasIsian}
+                />
+              </>
+            )}
+          </>
+        )}
+
         <p className="mt-10 text-m-label text-mitra-muted">
-          {valid ? "Catatan ini jadi acuan saat unit dikembalikan." : "Odometer harus diisi angka."}
+          {!angka
+            ? "Odometer harus diisi angka."
+            : !klaimValid
+              ? "Klaim butuh nilai dan keterangan kerusakannya."
+              : adaKlaim
+                ? "Klaim dikirim bersama foto serah terima sebagai bukti."
+                : "Catatan ini jadi acuan saat unit dikembalikan."}
         </p>
 
         <div className="mt-20 flex justify-end gap-8">

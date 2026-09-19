@@ -182,7 +182,7 @@ sisi penyewa maupun sisi penyedia.
 5. Pesanan yang ditolak atau batal otomatis mengembalikan dana penuh.
 
 **Yang belum diselesaikan dan perlu dipikirkan sebelum dipakai di deck**
-- **Klaim kerusakan belum punya alur.** Dulu penyedia memegang deposit tunai; sekarang tidak. Harus ada mekanisme klaim berbukti foto sebelum dana dilepas, dan layarnya belum ada.
+- ~~Klaim kerusakan belum punya alur.~~ **Sebagian selesai.** Penyedia kini bisa mengajukan klaim saat mencatat kondisi unit kembali, lengkap dengan nilai dan keterangan, dan layar menyatakan dana penyewa ditahan sampai klaim disepakati. Yang belum ada: sisi penyewa belum bisa melihat atau membantah klaim, tidak ada alur sengketa, dan pelepasan dana belum benar-benar tertahan di data karena tidak ada backend.
 - **Escrow itu kegiatan menampung dana pihak ketiga.** Di Indonesia ini menyentuh aturan uang elektronik dan penyelenggara jasa pembayaran. Untuk portofolio tidak masalah, tapi jangan diklaim sebagai fitur yang tinggal dinyalakan.
 - **Bayar penuh di muka menaikkan hambatan pesan** dibanding DP 30%. Ini tukar tambah yang disengaja: penyedia dapat kepastian, penyewa keluar uang lebih besar di awal. Kalau nanti ada data konversi, angka ini yang pertama harus diuji.
 - **Denda keterlambatan** masih ditulis sebagai angka berjalan di layar penyedia, tapi belum jelas ditagih dari mana setelah deposit hilang.
