@@ -218,6 +218,14 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 - **Kolom unit belum sticky saat digeser horizontal.** README menyebut kolom unit sebaiknya sticky; sekarang seluruh tabel bergeser bersama.
 - **Sel mengandalkan warna plus tooltip dan aria-label**, tidak ada teks di dalam sel. Untuk pengguna berpenglihatan rendah yang tidak memakai screen reader, membedakan "disewa" dan "lewat jadwal" masih bergantung warna.
 
+## M2e. Catatan layar Serah terima (#4d)
+
+- **Foto contoh empat sisi hanya ada untuk Honda Scoopy.** Tombol "Simulasikan unggah foto" karena itu hanya muncul di baris Scoopy; unit lain diberi keterangan bahwa foto contohnya belum ada. Keempat foto Scoopy itu sendiri masih unit berwarna berbeda, lihat catatan sisi penyewa.
+- **Tidak ada unggah berkas sungguhan.** Prototype hanya menyalin foto contoh ke empat slot.
+- **Catatan kondisi belum dibandingkan otomatis** saat unit kembali, padahal captionnya menjanjikan itu. Perbandingan kondisi awal dan akhir adalah pekerjaan backend.
+- **Serah terima belum terhubung ke pesanan.** Daftarnya mock terpisah, jadi menerima pesanan baru tidak memunculkan jadwal antar di layar ini.
+- **Tombol "Buka" menandai baris terpilih, bukan membuka halaman detail**, karena layar detail tidak ada di handoff.
+
 ## M3. Mock yang harus diganti saat ada backend
 
 - `ambilPesananMenunggu()` menghitung `masukPada` ulang tiap request (18 dan 6 menit lalu), jadi countdown tidak pernah habis permanen. API sungguhan wajib mengirim `createdAt` tetap, dan pembatalan otomatis harus terjadi di server, bukan hanya disembunyikan di client.

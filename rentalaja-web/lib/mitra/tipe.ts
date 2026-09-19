@@ -68,6 +68,31 @@ export type UnitKeluar = {
   kembaliPada: number;
 };
 
+export type JenisSerah = "antar" | "ambil";
+export type StatusSerah = "jadwal" | "menunggu-foto" | "selesai";
+
+export type SerahTerima = {
+  id: string;
+  jenis: JenisSerah;
+  unit: string;
+  plat: string;
+  /** Thumbnail unit. */
+  foto: string | null;
+  penyewa: string;
+  telepon: string;
+  /** Jadwal antar atau ambil kembali. */
+  waktu: number;
+  titik: string;
+  /** Tambahan di baris meta, mis. "deposit Rp 300.000 ditahan". */
+  catatan?: string;
+  telat?: boolean;
+  status: StatusSerah;
+  /** Empat sisi wajib: depan, belakang, kiri, kanan. null = belum difoto. */
+  sisi: { label: string; foto: string | null }[];
+  /** Kosong selama kondisi belum dicatat. */
+  kondisi: { label: string; nilai: string }[];
+};
+
 export type DataBeranda = {
   sekarang: number;
   pesananHariIni: { masuk: number; dikonfirmasi: number };

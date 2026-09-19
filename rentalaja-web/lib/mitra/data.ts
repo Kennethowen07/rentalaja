@@ -8,7 +8,7 @@
 
 import { cache } from "react";
 import { connection } from "next/server";
-import type { DataBeranda, Mitra, Pesanan, Unit, UnitKeluar } from "./tipe";
+import type { DataBeranda, Mitra, Pesanan, SerahTerima, Unit, UnitKeluar } from "./tipe";
 import { MENIT, namaBulan, pukulWita } from "./waktu";
 
 /** Waktu server satu request. Di-cache per request supaya layout dan halaman
@@ -270,6 +270,105 @@ export async function ambilPesanan(): Promise<{
   // sungguhan mengembalikan createdAt tetap, dan pembatalan otomatis setelah
   // 1 jam harus terjadi di server, bukan hanya disembunyikan di client.
   return { sekarangServer: sekarang, pesanan: semuaPesanan(sekarang) };
+}
+
+// Jadwal serah terima hari ini. Foto empat sisi hanya tersedia untuk Scoopy,
+// jadi dua baris yang memang menampilkan foto memakai unit itu.
+function semuaSerahTerima(sekarang: number): SerahTerima[] {
+  const sisiKosong = ["depan", "belakang", "kiri", "kanan"].map((label) => ({
+    label,
+    foto: null,
+  }));
+  const sisiScoopy = ["depan", "belakang", "kiri", "kanan"].map((label) => ({
+    label,
+    foto: `/serah-terima/scoopy-${label}.webp`,
+  }));
+
+  return [
+    {
+      id: "st-01",
+      jenis: "antar",
+      unit: "Honda Vario 160",
+      plat: "DK 3390 GH",
+      foto: null,
+      penyewa: "Dewi Anggraini",
+      telepon: "+62 812-0000-0101",
+      waktu: pukulWita(sekarang, 0, 13),
+      titik: "Villa Canggu, Jl. Pantai Batu Bolong",
+      status: "jadwal",
+      sisi: sisiKosong,
+      kondisi: [],
+    },
+    {
+      id: "st-02",
+      jenis: "ambil",
+      unit: "Yamaha NMAX 155",
+      plat: "DK 1902 CD",
+      foto: "/units/yamaha-nmax-2022.webp",
+      penyewa: "Sarah Miller",
+      telepon: "+62 812-0000-0104",
+      waktu: pukulWita(sekarang, 0, 17),
+      titik: "Villa Berawa",
+      catatan: "deposit Rp 300.000 ditahan",
+      status: "jadwal",
+      sisi: sisiKosong,
+      kondisi: [],
+    },
+    {
+      id: "st-03",
+      jenis: "ambil",
+      unit: "Honda PCX 160",
+      plat: "DK 5127 AB",
+      foto: "/units/honda-pcx-160-2023.webp",
+      penyewa: "Kevin Tan",
+      telepon: "+62 812-0000-0105",
+      waktu: pukulWita(sekarang, -1, 9),
+      titik: "Kantor rental",
+      catatan: "belum ada konfirmasi",
+      telat: true,
+      status: "jadwal",
+      sisi: sisiKosong,
+      kondisi: [],
+    },
+    {
+      id: "st-04",
+      jenis: "ambil",
+      unit: "Honda Scoopy 2023",
+      plat: "DK 4835 XY",
+      foto: "/units/honda-scoopy-2023.jpeg",
+      penyewa: "Rina Wijaya",
+      telepon: "+62 812-0000-0109",
+      waktu: pukulWita(sekarang, -1, 16),
+      titik: "Kantor rental",
+      status: "menunggu-foto",
+      sisi: sisiKosong,
+      kondisi: [],
+    },
+    {
+      id: "st-05",
+      jenis: "antar",
+      unit: "Honda Scoopy 2023",
+      plat: "DK 4821 XY",
+      foto: "/units/honda-scoopy-2023.jpeg",
+      penyewa: "Adi Prasetyo",
+      telepon: "+62 812-0000-0103",
+      waktu: pukulWita(sekarang, 0, 9),
+      titik: "Villa Canggu, Jl. Pantai Batu Bolong",
+      status: "selesai",
+      sisi: sisiScoopy,
+      kondisi: [
+        { label: "Odometer", nilai: "18.204 km" },
+        { label: "Bensin", nilai: "Setengah" },
+        { label: "Helm", nilai: "2 · jas hujan 1" },
+        { label: "Goresan tercatat", nilai: "Spakbor kanan" },
+      ],
+    },
+  ];
+}
+
+export async function ambilSerahTerima(): Promise<SerahTerima[]> {
+  const sekarang = await waktuServer();
+  return semuaSerahTerima(sekarang);
 }
 
 export async function ambilBeranda(): Promise<DataBeranda> {
