@@ -226,6 +226,14 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 - **Serah terima belum terhubung ke pesanan.** Daftarnya mock terpisah, jadi menerima pesanan baru tidak memunculkan jadwal antar di layar ini.
 - **Tombol "Buka" menandai baris terpilih, bukan membuka halaman detail**, karena layar detail tidak ada di handoff.
 
+## M2f. Catatan layar Pendapatan (#4e) dan Ulasan (#4f)
+
+- **Angka pendapatan tidak diturunkan dari daftar pesanan.** Daftar pesanan hanya berisi belasan contoh, sedangkan layar ini mewakili sebulan penuh dari 18 unit. Kalau diturunkan, angkanya akan jauh lebih kecil daripada di Beranda. Konsekuensinya, menerima pesanan tidak menambah pendapatan.
+- **Tiga periode di "Pilih periode" isinya mock terpisah**, bukan hasil hitung ulang dari transaksi.
+- **"Unduh laporan" dan "Unduh" ulasan menghasilkan CSV di browser**, bukan file dari server. Pemisahnya titik koma supaya Excel berbahasa Indonesia membuka kolomnya dengan benar.
+- **Ringkasan ulasan memakai angka 12 bulan (142 ulasan)**, sedangkan daftar hanya menampilkan 8 ulasan terbaru. Chip menghitung yang tampil, jadi "Semua · 8", bukan 142, supaya mengklik chip tidak membuka daftar yang jauh lebih pendek dari angkanya.
+- **Balasan ulasan hilang saat refresh**, seperti seluruh aksi lain di panel.
+
 ## M3. Mock yang harus diganti saat ada backend
 
 - `ambilPesananMenunggu()` menghitung `masukPada` ulang tiap request (18 dan 6 menit lalu), jadi countdown tidak pernah habis permanen. API sungguhan wajib mengirim `createdAt` tetap, dan pembatalan otomatis harus terjadi di server, bukan hanya disembunyikan di client.

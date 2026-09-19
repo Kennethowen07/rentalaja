@@ -93,6 +93,47 @@ export type SerahTerima = {
   kondisi: { label: string; nilai: string }[];
 };
 
+export type Transaksi = {
+  id: string;
+  judul: string;
+  /** "12 Sep 09.24 · Dewi Anggraini · BCA VA" */
+  meta: string;
+  nilai: number;
+  /** keluar = biaya layanan dan pencairan, ditulis dengan tanda minus. */
+  arah: "masuk" | "keluar";
+};
+
+export type Periode = {
+  kunci: string;
+  label: string;
+  /** Kicker halaman, mis. "1 - 19 September 2026". */
+  rentang: string;
+  kotor: number;
+  biaya: number;
+  bersih: number;
+  bandingan: string;
+  transaksi: Transaksi[];
+  sumber: { label: string; nilai: number }[];
+};
+
+export type Ulasan = {
+  id: string;
+  nama: string;
+  unit: string;
+  skor: number;
+  tanggal: number;
+  isi: string;
+  /** Balasan penyedia. Kosong berarti belum dibalas. */
+  balasan?: string;
+};
+
+export type RingkasanUlasan = {
+  rata: number;
+  total: number;
+  /** 5 sampai 1 bintang. */
+  distribusi: { bintang: number; jumlah: number }[];
+};
+
 export type DataBeranda = {
   sekarang: number;
   pesananHariIni: { masuk: number; dikonfirmasi: number };

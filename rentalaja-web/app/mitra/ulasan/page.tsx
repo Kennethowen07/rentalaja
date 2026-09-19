@@ -1,8 +1,18 @@
-import { LayarBelumDibangun } from "@/components/mitra/ui";
-import { ambilBeranda } from "@/lib/mitra/data";
-import { tanggalPanjang } from "@/lib/mitra/waktu";
+// Layar Ulasan (#4f). Chip saring, balasan, dan urutan butuh keadaan client,
+// jadi seluruh isinya ada di UlasanPanel.
 
-export default async function UlasanMitra() {
-  const { sekarang } = await ambilBeranda();
-  return <LayarBelumDibangun kicker={tanggalPanjang(sekarang)} judul="Ulasan" />;
+import UlasanPanel from "@/components/mitra/UlasanPanel";
+import { ambilUlasan } from "@/lib/mitra/data";
+import { kunciFilterUlasanValid } from "@/lib/mitra/filter-ulasan";
+
+export default async function UlasanMitra({ searchParams }: PageProps<"/mitra/ulasan">) {
+  const [{ saring }, { daftar, ringkasan }] = await Promise.all([searchParams, ambilUlasan()]);
+
+  return (
+    <UlasanPanel
+      daftar={daftar}
+      ringkasan={ringkasan}
+      filterAwal={kunciFilterUlasanValid(typeof saring === "string" ? saring : undefined)}
+    />
+  );
 }

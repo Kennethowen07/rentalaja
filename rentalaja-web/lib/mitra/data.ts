@@ -8,8 +8,19 @@
 
 import { cache } from "react";
 import { connection } from "next/server";
-import type { DataBeranda, Mitra, Pesanan, SerahTerima, Unit, UnitKeluar } from "./tipe";
-import { MENIT, namaBulan, pukulWita } from "./waktu";
+import type {
+  DataBeranda,
+  Mitra,
+  Periode,
+  Pesanan,
+  SerahTerima,
+  RingkasanUlasan,
+  Transaksi,
+  Ulasan,
+  Unit,
+  UnitKeluar,
+} from "./tipe";
+import { MENIT, namaBulan, pukulWita, tanggalSingkat } from "./waktu";
 
 /** Waktu server satu request. Di-cache per request supaya layout dan halaman
  *  memakai milidetik yang sama, dan `connection()` membuat halaman dirender
@@ -369,6 +380,233 @@ function semuaSerahTerima(sekarang: number): SerahTerima[] {
 export async function ambilSerahTerima(): Promise<SerahTerima[]> {
   const sekarang = await waktuServer();
   return semuaSerahTerima(sekarang);
+}
+
+// Pendapatan sengaja tidak diturunkan dari daftar pesanan: daftar itu hanya
+// contoh belasan pesanan, sementara angka di layar ini mewakili seluruh bulan
+// dari 18 unit. Menurunkannya akan membuat angka bulanan terlihat jauh lebih
+// kecil daripada di Beranda.
+function semuaPeriode(sekarang: number): Periode[] {
+  const transaksiTerbaru: Transaksi[] = [
+    {
+      id: "tr-01",
+      judul: "DP masuk · Honda Vario 160",
+      meta: `${tanggalSingkat(pukulWita(sekarang, 0, 9, 24))} 09.24 · Dewi Anggraini · BCA VA`,
+      nilai: 85_500,
+      arah: "masuk",
+    },
+    {
+      id: "tr-02",
+      judul: "Tunai diterima · Honda Scoopy 2023",
+      meta: `${tanggalSingkat(pukulWita(sekarang, 0, 9, 5))} 09.05 · Adi Prasetyo`,
+      nilai: 147_000,
+      arah: "masuk",
+    },
+    {
+      id: "tr-03",
+      judul: "Biaya layanan · pesanan #RA-284102",
+      meta: `${tanggalSingkat(pukulWita(sekarang, 0, 9, 5))} 09.05 · dipotong otomatis`,
+      nilai: 10_750,
+      arah: "keluar",
+    },
+    {
+      id: "tr-04",
+      judul: "DP masuk · Toyota Avanza 2021",
+      meta: `${tanggalSingkat(pukulWita(sekarang, -1, 20, 14))} 20.14 · Michael Lim · BCA VA`,
+      nilai: 342_000,
+      arah: "masuk",
+    },
+    {
+      id: "tr-05",
+      judul: "Pencairan ke rekening",
+      meta: `${tanggalSingkat(pukulWita(sekarang, -3, 10))} 10.00 · BCA ···4471`,
+      nilai: 6_200_000,
+      arah: "keluar",
+    },
+  ];
+
+  const bulanIni = namaBulan(sekarang);
+  const bulanLalu = namaBulan(sekarang, -1);
+  const tanggalHariIni = new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Makassar",
+    day: "numeric",
+  }).format(sekarang);
+
+  return [
+    {
+      kunci: "bulan-ini",
+      label: `${bulanIni} berjalan`,
+      rentang: `1 – ${tanggalHariIni} ${bulanIni} ${new Date(sekarang).getFullYear()}`,
+      kotor: 24_800_000,
+      biaya: 1_240_000,
+      bersih: 23_560_000,
+      bandingan: `naik 18% dari ${bulanLalu}`,
+      transaksi: transaksiTerbaru,
+      sumber: [
+        { label: "Motor", nilai: 15_800_000 },
+        { label: "Mobil", nilai: 7_400_000 },
+        { label: "Tambahan", nilai: 1_600_000 },
+      ],
+    },
+    {
+      kunci: "bulan-lalu",
+      label: `${bulanLalu} penuh`,
+      rentang: `${bulanLalu} ${new Date(sekarang).getFullYear()}`,
+      kotor: 21_000_000,
+      biaya: 1_050_000,
+      bersih: 19_950_000,
+      bandingan: "naik 9% dari bulan sebelumnya",
+      transaksi: [
+        {
+          id: "tr-11",
+          judul: "Pencairan ke rekening",
+          meta: `${tanggalSingkat(pukulWita(sekarang, -24, 10))} 10.00 · BCA ···4471`,
+          nilai: 8_400_000,
+          arah: "keluar",
+        },
+        {
+          id: "tr-12",
+          judul: "DP masuk · Yamaha NMAX 155",
+          meta: `${tanggalSingkat(pukulWita(sekarang, -26, 15, 40))} 15.40 · Tom Becker · BCA VA`,
+          nilai: 99_000,
+          arah: "masuk",
+        },
+        {
+          id: "tr-13",
+          judul: "Denda keterlambatan · Honda Beat 2022",
+          meta: `${tanggalSingkat(pukulWita(sekarang, -28, 11))} 11.00 · Gede Surya`,
+          nilai: 60_000,
+          arah: "masuk",
+        },
+      ],
+      sumber: [
+        { label: "Motor", nilai: 13_400_000 },
+        { label: "Mobil", nilai: 6_200_000 },
+        { label: "Tambahan", nilai: 1_400_000 },
+      ],
+    },
+    {
+      kunci: "90-hari",
+      label: "90 hari terakhir",
+      rentang: `90 hari sampai ${tanggalSingkat(sekarang)}`,
+      kotor: 62_400_000,
+      biaya: 3_120_000,
+      bersih: 59_280_000,
+      bandingan: "rata-rata Rp 20,8jt per bulan",
+      transaksi: transaksiTerbaru,
+      sumber: [
+        { label: "Motor", nilai: 39_500_000 },
+        { label: "Mobil", nilai: 18_700_000 },
+        { label: "Tambahan", nilai: 4_200_000 },
+      ],
+    },
+  ];
+}
+
+export async function ambilPendapatan(): Promise<Periode[]> {
+  const sekarang = await waktuServer();
+  return semuaPeriode(sekarang);
+}
+
+// Delapan ulasan terbaru. Ringkasan di kolom kanan tetap memakai angka
+// sepanjang 12 bulan (142 ulasan) seperti spec, sedangkan chip filter
+// menghitung yang benar-benar tampil, supaya mengklik chip tidak membuka
+// daftar yang isinya jauh lebih sedikit dari angkanya.
+function semuaUlasan(sekarang: number): Ulasan[] {
+  return [
+    {
+      id: "ul-01",
+      nama: "Sarah M.",
+      unit: "Yamaha NMAX 155",
+      skor: 5,
+      tanggal: pukulWita(sekarang, -1, 18),
+      isi: "Unit bersih, diantar tepat jam 9. Foto serah terima bikin tenang, jadi tidak ada debat waktu kembalikan.",
+    },
+    {
+      id: "ul-02",
+      nama: "Kevin T.",
+      unit: "Honda PCX 160",
+      skor: 4,
+      tanggal: pukulWita(sekarang, -3, 11),
+      isi: "Motor oke, tapi jas hujan cuma satu padahal disewa berdua.",
+      balasan:
+        "Maaf ya Kevin, jas hujan kedua sudah kami tambahkan di semua unit sejak minggu ini.",
+    },
+    {
+      id: "ul-03",
+      nama: "Putu A.",
+      unit: "Honda Beat 2022",
+      skor: 5,
+      tanggal: pukulWita(sekarang, -4, 9),
+      isi: "Harga jelas di depan, tidak ada biaya tambahan waktu ambil unit.",
+    },
+    {
+      id: "ul-04",
+      nama: "Michael L.",
+      unit: "Toyota Avanza 2021",
+      skor: 3.5,
+      tanggal: pukulWita(sekarang, -6, 16),
+      isi: "Mobil sesuai foto, cuma telat 30 menit waktu antar karena macet.",
+    },
+    {
+      id: "ul-05",
+      nama: "Rina W.",
+      unit: "Honda Scoopy 2023",
+      skor: 5,
+      tanggal: pukulWita(sekarang, -8, 13),
+      isi: "Scoopy-nya masih baru dan bensin penuh waktu diantar. Prosesnya cepat, tidak perlu chat panjang.",
+      balasan: "Terima kasih Rina, senang bisa membantu. Sampai jumpa lagi di Canggu.",
+    },
+    {
+      id: "ul-06",
+      nama: "Tom B.",
+      unit: "Yamaha NMAX 155",
+      skor: 3.5,
+      tanggal: pukulWita(sekarang, -11, 10),
+      isi: "Pengembalian agak lama karena saya harus menunggu pemilik datang ke titik janjian.",
+      balasan:
+        "Terima kasih masukannya Tom. Sekarang jadwal ambil kembali kami kunci di aplikasi supaya tidak bentrok.",
+    },
+    {
+      id: "ul-07",
+      nama: "Ayu L.",
+      unit: "Yamaha Fino 2021",
+      skor: 4.5,
+      tanggal: pukulWita(sekarang, -14, 15),
+      isi: "Fino nyaman buat keliling Canggu, helm bersih dan wangi.",
+      balasan: "Makasih Ayu, helm memang kami cuci tiap unit kembali.",
+    },
+    {
+      id: "ul-08",
+      nama: "Nicolas M.",
+      unit: "Vespa Sprint 2021",
+      skor: 5,
+      tanggal: pukulWita(sekarang, -18, 12),
+      isi: "Vespa terawat, pemiliknya ramah dan balas cepat sebelum saya pesan.",
+      balasan: "Terima kasih Nicolas, titip salam buat rombongannya.",
+    },
+  ];
+}
+
+export async function ambilUlasan(): Promise<{
+  daftar: Ulasan[];
+  ringkasan: RingkasanUlasan;
+}> {
+  const sekarang = await waktuServer();
+  return {
+    daftar: semuaUlasan(sekarang),
+    ringkasan: {
+      rata: 4.9,
+      total: 142,
+      distribusi: [
+        { bintang: 5, jumlah: 124 },
+        { bintang: 4, jumlah: 12 },
+        { bintang: 3, jumlah: 4 },
+        { bintang: 2, jumlah: 1 },
+        { bintang: 1, jumlah: 1 },
+      ],
+    },
+  };
 }
 
 export async function ambilBeranda(): Promise<DataBeranda> {
