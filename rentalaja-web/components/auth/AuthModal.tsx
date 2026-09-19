@@ -1,18 +1,16 @@
 "use client";
 
-// Modal Masuk dan Daftar, mengikuti pola yang lazim dipakai aplikasi lokal:
-// satu kolom isian, tombol lanjut yang mati sampai isinya sah, pemisah "atau",
-// lalu satu tombol masuk cepat.
+// Modal Masuk dan Daftar: email, kata sandi, lalu jeda 4 detik seolah
+// memverifikasi, dan masuk sebagai "Akun Demo".
 //
-// PENTING, ini simulasi. Tidak ada backend, tidak ada kode yang dikirim, dan
-// tombol Google tidak menghubungi Google. Nomor atau email yang diketik hanya
-// hidup di state komponen ini selama modal terbuka, tidak disimpan dan tidak
-// dikirim ke mana pun. Kalimat itu juga ditulis di layar supaya tidak ada yang
-// mengira sedang menyerahkan data sungguhan.
+// PENTING, ini simulasi. Tidak ada backend dan tidak ada autentikasi. Email
+// dan kata sandi yang diketik hanya hidup di state komponen ini selama modal
+// terbuka: tidak disimpan, tidak dikirim ke mana pun, dan tidak pernah ikut
+// dicatat di pesan mana pun. Tombol Google juga tidak menghubungi Google.
 //
-// Tidak ada isian kata sandi, sengaja: prototype tidak boleh meminta kata
-// sandi sungguhan. Setelah menekan lanjut, modal menahan 4 detik seolah
-// memverifikasi, lalu masuk sebagai "Akun Demo".
+// Karena orang terbiasa mengetik kata sandi aslinya, layar ini menulis
+// terang-terangan bahwa isiannya tidak dipakai dan menyarankan memakai kata
+// sandi bebas. Itu bagian dari desainnya, jangan dihapus.
 
 import { useEffect, useRef, useState } from "react";
 import Modal from "@/components/ui/Modal";
@@ -22,14 +20,10 @@ export type ModeAuth = "masuk" | "daftar";
 /** Jeda sebelum masuk otomatis, meniru waktu tunggu verifikasi sungguhan. */
 const JEDA_MASUK_MS = 4000;
 const NAMA_AKUN = "Akun Demo";
+const MIN_SANDI = 6;
 
-/** Nomor ponsel Indonesia sederhana, atau email. Keduanya diterima baik saat
- *  masuk maupun daftar. */
-function isianSah(nilai: string) {
-  const bersih = nilai.trim();
-  const nomor = bersih.replace(/[\s-]/g, "");
-  const nomorSah = /^(\+62|62|0)8\d{7,11}$/.test(nomor);
-  return nomorSah || /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(bersih);
+function emailSah(nilai: string) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(nilai.trim());
 }
 
 function LogoGoogle() {
@@ -66,12 +60,14 @@ export default function AuthModal({
   onGantiMode: (mode: ModeAuth) => void;
   onBerhasil: (identitas: string) => void;
 }) {
-  const [nilai, setNilai] = useState("");
+  const [email, setEmail] = useState("");
+  const [sandi, setSandi] = useState("");
+  const [lihatSandi, setLihatSandi] = useState(false);
   const [memproses, setMemproses] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const masuk = mode === "masuk";
-  const sah = isianSah(nilai);
+  const sah = emailSah(email) && sandi.length >= MIN_SANDI;
 
   // Timer dibersihkan kalau modal keburu ditutup, supaya tidak ada state yang
   // diubah setelah komponen mati.
@@ -88,7 +84,7 @@ export default function AuthModal({
   }
 
   const kelasIsian =
-    "mt-2 w-full rounded-input border border-line px-14 py-13 text-lead text-ink placeholder:text-placeholder disabled:bg-surface-2 disabled:text-muted";
+    "mt-6 w-full rounded-input border border-line px-14 py-13 text-lead text-ink placeholder:text-placeholder disabled:bg-surface-2 disabled:text-muted";
 
   return (
     <Modal
@@ -123,24 +119,55 @@ export default function AuthModal({
           }}
           className="mt-16"
         >
-          <label htmlFor="identitas" className="sr-only">
-            Nomor ponsel atau email
+          <label htmlFor="email" className="block text-label text-ink">
+            Email
           </label>
           <input
-            id="identitas"
-            type="text"
+            id="email"
+            type="email"
             autoComplete="off"
             disabled={memproses}
-            value={nilai}
-            onChange={(e) => setNilai(e.target.value)}
-            placeholder="Nomor ponsel atau email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="nama@email.com"
             className={kelasIsian}
           />
+
+          <label htmlFor="sandi" className="mt-14 block text-label text-ink">
+            Kata sandi
+          </label>
+          <div className="relative">
+            <input
+              id="sandi"
+              type={lihatSandi ? "text" : "password"}
+              // Sengaja off: isian ini tidak dipakai, jadi jangan sampai
+              // pengelola kata sandi menawarkan menyimpannya.
+              autoComplete="off"
+              disabled={memproses}
+              value={sandi}
+              onChange={(e) => setSandi(e.target.value)}
+              placeholder={`Minimal ${MIN_SANDI} karakter`}
+              aria-describedby="bantuan-sandi"
+              className={`${kelasIsian} pr-64`}
+            />
+            <button
+              type="button"
+              disabled={memproses}
+              onClick={() => setLihatSandi((v) => !v)}
+              className="absolute top-6 right-0 bottom-0 px-14 text-link-sm text-green-700 hover:underline disabled:text-muted"
+            >
+              {lihatSandi ? "Sembunyikan" : "Lihat"}
+            </button>
+          </div>
+          <p id="bantuan-sandi" className="mt-6 text-body-sm text-muted">
+            Isi bebas, jangan pakai kata sandi aslimu. Isian ini tidak diperiksa dan tidak
+            dikirim ke mana pun.
+          </p>
 
           <button
             type="submit"
             disabled={!sah || memproses}
-            className={`mt-12 flex w-full items-center justify-center gap-10 rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
+            className={`mt-14 flex w-full items-center justify-center gap-10 rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
               sah && !memproses
                 ? "bg-green-700 text-white hover:bg-green-800"
                 : memproses
@@ -154,17 +181,17 @@ export default function AuthModal({
                 className="size-16 animate-spin rounded-pill border-2 border-white/40 border-t-white"
               />
             )}
-            {memproses ? "Memverifikasi" : "Selanjutnya"}
+            {memproses ? "Memverifikasi" : masuk ? "Masuk" : "Buat akun"}
           </button>
         </form>
 
+        {/* Hanya emailnya yang disebut, kata sandi tidak pernah ditampilkan
+            ulang di mana pun. */}
         <p aria-live="polite" className="mt-8 text-body-sm text-muted">
-          {memproses
-            ? `Memverifikasi ${nilai.trim() || NAMA_AKUN}. Sebentar ya.`
-            : "Tanpa kata sandi. Cukup nomor ponsel atau email."}
+          {memproses ? `Memverifikasi ${email.trim()}. Sebentar ya.` : ""}
         </p>
 
-        <div className="mt-16 flex items-center gap-12">
+        <div className="mt-12 flex items-center gap-12">
           <span className="h-1 flex-1 bg-line" />
           <span className="text-body-sm text-muted">atau</span>
           <span className="h-1 flex-1 bg-line" />
@@ -181,9 +208,8 @@ export default function AuthModal({
         </button>
 
         <p className="mt-12 text-micro text-muted">
-          Prototype portofolio. Tidak ada akun sungguhan, tidak ada kode yang dikirim, dan
-          tombol Google tidak menghubungi Google. Apa pun yang diisi akan masuk sebagai{" "}
-          {NAMA_AKUN}.
+          Prototype portofolio. Tidak ada akun sungguhan, tidak ada autentikasi, dan tombol
+          Google tidak menghubungi Google. Apa pun yang diisi akan masuk sebagai {NAMA_AKUN}.
         </p>
       </div>
     </Modal>

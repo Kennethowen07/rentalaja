@@ -40,7 +40,8 @@ state mengalir.
 Modal Masuk dan Daftar di navbar sisi penyewa sudah ada, memakai alur nomor
 ponsel lalu kode verifikasi, tanpa kata sandi. Tapi ini simulasi penuh:
 
-- Tidak ada backend dan tidak ada kode verifikasi. Setelah menekan lanjut, modal menahan 4 detik seolah memverifikasi, lalu masuk sebagai **Akun Demo**, apa pun nomor atau email yang diisi. Kalimat itu tertulis di layar.
+- Formnya email dan kata sandi, tapi tidak ada backend dan tidak ada autentikasi. Setelah menekan Masuk, modal menahan 4 detik seolah memverifikasi, lalu masuk sebagai **Akun Demo**, apa pun yang diisi.
+- **Kata sandi tidak diperiksa, tidak disimpan, dan tidak dikirim ke mana pun.** Hanya hidup di state komponen selama modal terbuka. Di bawah isian ada peringatan agar tidak memakai kata sandi asli, dan `autocomplete` dimatikan supaya pengelola kata sandi tidak menawarkan menyimpannya. Kalau nanti ada backend, kata sandi wajib di-hash di server dan form ini tidak boleh dipakai apa adanya.
 - Tombol Google **tidak** menghubungi Google. Hanya menutup modal dan menandai sesi sebagai "Akun demo Google".
 - Sesi hanya hidup di state navbar, hilang saat pindah halaman dengan reload.
 - Isian menerima nomor ponsel maupun email di kedua mode. Sebelumnya mode Daftar menolak email, dan itu membuat tombol Selanjutnya terlihat rusak.
