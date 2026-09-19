@@ -4,28 +4,31 @@
 // satu kolom isian, tombol lanjut yang mati sampai isinya sah, pemisah "atau",
 // lalu satu tombol masuk cepat.
 //
-// PENTING, ini simulasi. Tidak ada backend, tidak ada SMS yang dikirim, dan
-// tombol Google tidak menghubungi Google. Nomor yang diketik hanya hidup di
-// state komponen ini selama modal terbuka, tidak disimpan dan tidak dikirim
-// ke mana pun. Kalimat itu juga ditulis di layar supaya tidak ada yang
+// PENTING, ini simulasi. Tidak ada backend, tidak ada kode yang dikirim, dan
+// tombol Google tidak menghubungi Google. Nomor atau email yang diketik hanya
+// hidup di state komponen ini selama modal terbuka, tidak disimpan dan tidak
+// dikirim ke mana pun. Kalimat itu juga ditulis di layar supaya tidak ada yang
 // mengira sedang menyerahkan data sungguhan.
 //
-// Tidak ada isian kata sandi, sengaja: alurnya nomor ponsel lalu kode, sama
-// seperti kebanyakan aplikasi Indonesia, dan prototype tidak boleh meminta
-// kata sandi sungguhan.
+// Tidak ada isian kata sandi, sengaja: prototype tidak boleh meminta kata
+// sandi sungguhan. Setelah menekan lanjut, modal menahan 4 detik seolah
+// memverifikasi, lalu masuk sebagai "Akun Demo".
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Modal from "@/components/ui/Modal";
 
 export type ModeAuth = "masuk" | "daftar";
-const KODE_DEMO = "1234";
 
-/** Nomor ponsel Indonesia sederhana, atau email kalau sedang masuk. */
-function isianSah(nilai: string, mode: ModeAuth) {
+/** Jeda sebelum masuk otomatis, meniru waktu tunggu verifikasi sungguhan. */
+const JEDA_MASUK_MS = 4000;
+const NAMA_AKUN = "Akun Demo";
+
+/** Nomor ponsel Indonesia sederhana, atau email. Keduanya diterima baik saat
+ *  masuk maupun daftar. */
+function isianSah(nilai: string) {
   const bersih = nilai.trim();
   const nomor = bersih.replace(/[\s-]/g, "");
   const nomorSah = /^(\+62|62|0)8\d{7,11}$/.test(nomor);
-  if (mode === "daftar") return nomorSah;
   return nomorSah || /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(bersih);
 }
 
@@ -63,176 +66,125 @@ export default function AuthModal({
   onGantiMode: (mode: ModeAuth) => void;
   onBerhasil: (identitas: string) => void;
 }) {
-  const [tahap, setTahap] = useState<"isian" | "kode">("isian");
   const [nilai, setNilai] = useState("");
-  const [kode, setKode] = useState("");
-  const [salah, setSalah] = useState(false);
+  const [memproses, setMemproses] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const masuk = mode === "masuk";
-  const sah = isianSah(nilai, mode);
-  const kelasIsian =
-    "mt-2 w-full rounded-input border border-line px-14 py-13 text-lead text-ink placeholder:text-placeholder";
+  const sah = isianSah(nilai);
 
-  function gantiMode(tujuan: ModeAuth) {
-    setTahap("isian");
-    setKode("");
-    setSalah(false);
-    onGantiMode(tujuan);
+  // Timer dibersihkan kalau modal keburu ditutup, supaya tidak ada state yang
+  // diubah setelah komponen mati.
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  function mulaiMasuk() {
+    if (memproses) return;
+    setMemproses(true);
+    timerRef.current = setTimeout(() => onBerhasil(NAMA_AKUN), JEDA_MASUK_MS);
   }
+
+  const kelasIsian =
+    "mt-2 w-full rounded-input border border-line px-14 py-13 text-lead text-ink placeholder:text-placeholder disabled:bg-surface-2 disabled:text-muted";
 
   return (
     <Modal
       judul={masuk ? "Masuk" : "Daftar"}
-      onTutup={onTutup}
+      // Selama memproses, modal tidak bisa ditutup, sama seperti jendela
+      // pembayaran yang sedang menunggu.
+      onTutup={memproses ? () => {} : onTutup}
       lebar="max-w-[420px]"
       latar="pekat"
     >
-      {/* key membuat React memasang ulang isinya setiap kali mode atau tahap
-          berganti, jadi animasi tukar berjalan lagi alih-alih isi lama hilang
-          begitu saja. */}
-      <div key={`${mode}-${tahap}`} className="animasi-modal-isi">
-        {tahap === "isian" ? (
-          <>
-            <p className="mt-2 text-body text-muted">
-              {masuk
-                ? "Belum punya akun rentalaja?"
-                : "Sudah punya akun rentalaja?"}{" "}
-              <button
-                type="button"
-                onClick={() => gantiMode(masuk ? "daftar" : "masuk")}
-                className="text-nav-strong text-green-700 hover:underline"
-              >
-                {masuk ? "Daftar" : "Masuk"}
-              </button>
-            </p>
+      {/* key membuat React memasang ulang isinya setiap kali mode berganti,
+          jadi animasi tukar berjalan lagi alih-alih isi lama hilang begitu
+          saja. */}
+      <div key={mode} className="animasi-modal-isi">
+        <p className="mt-2 text-body text-muted">
+          {masuk ? "Belum punya akun rentalaja?" : "Sudah punya akun rentalaja?"}{" "}
+          <button
+            type="button"
+            disabled={memproses}
+            onClick={() => onGantiMode(masuk ? "daftar" : "masuk")}
+            className="text-nav-strong text-green-700 hover:underline disabled:text-muted"
+          >
+            {masuk ? "Daftar" : "Masuk"}
+          </button>
+        </p>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!sah) return;
-                setTahap("kode");
-              }}
-              className="mt-16"
-            >
-              <label htmlFor="identitas" className="sr-only">
-                {masuk ? "Nomor ponsel atau email" : "Nomor ponsel"}
-              </label>
-              <input
-                id="identitas"
-                type="text"
-                inputMode={masuk ? "text" : "tel"}
-                autoComplete="off"
-                value={nilai}
-                onChange={(e) => setNilai(e.target.value)}
-                placeholder={masuk ? "Nomor ponsel atau email" : "Nomor ponsel"}
-                className={kelasIsian}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!sah) return;
+            mulaiMasuk();
+          }}
+          className="mt-16"
+        >
+          <label htmlFor="identitas" className="sr-only">
+            Nomor ponsel atau email
+          </label>
+          <input
+            id="identitas"
+            type="text"
+            autoComplete="off"
+            disabled={memproses}
+            value={nilai}
+            onChange={(e) => setNilai(e.target.value)}
+            placeholder="Nomor ponsel atau email"
+            className={kelasIsian}
+          />
+
+          <button
+            type="submit"
+            disabled={!sah || memproses}
+            className={`mt-12 flex w-full items-center justify-center gap-10 rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
+              sah && !memproses
+                ? "bg-green-700 text-white hover:bg-green-800"
+                : memproses
+                  ? "bg-green-700/70 text-white"
+                  : "bg-surface-2 text-placeholder"
+            }`}
+          >
+            {memproses && (
+              <span
+                aria-hidden
+                className="size-16 animate-spin rounded-pill border-2 border-white/40 border-t-white"
               />
+            )}
+            {memproses ? "Memverifikasi" : "Selanjutnya"}
+          </button>
+        </form>
 
-              <button
-                type="submit"
-                disabled={!sah}
-                className={`mt-12 w-full rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
-                  sah
-                    ? "bg-green-700 text-white hover:bg-green-800"
-                    : "bg-surface-2 text-placeholder"
-                }`}
-              >
-                Selanjutnya
-              </button>
-            </form>
+        <p aria-live="polite" className="mt-8 text-body-sm text-muted">
+          {memproses
+            ? `Memverifikasi ${nilai.trim() || NAMA_AKUN}. Sebentar ya.`
+            : "Tanpa kata sandi. Cukup nomor ponsel atau email."}
+        </p>
 
-            <div className="mt-16 flex items-center gap-12">
-              <span className="h-1 flex-1 bg-line" />
-              <span className="text-body-sm text-muted">atau</span>
-              <span className="h-1 flex-1 bg-line" />
-            </div>
+        <div className="mt-16 flex items-center gap-12">
+          <span className="h-1 flex-1 bg-line" />
+          <span className="text-body-sm text-muted">atau</span>
+          <span className="h-1 flex-1 bg-line" />
+        </div>
 
-            <button
-              type="button"
-              onClick={() => onBerhasil("Akun demo Google")}
-              className="mt-16 flex w-full items-center justify-center gap-10 rounded-input border border-line py-13 text-btn text-ink transition-colors duration-160 ease-base hover:border-green-700"
-            >
-              <LogoGoogle />
-              {masuk ? "Masuk dengan Google" : "Daftar dengan Google"}
-            </button>
+        <button
+          type="button"
+          disabled={memproses}
+          onClick={mulaiMasuk}
+          className="mt-16 flex w-full items-center justify-center gap-10 rounded-input border border-line py-13 text-btn text-ink transition-colors duration-160 ease-base hover:border-green-700 disabled:text-muted"
+        >
+          <LogoGoogle />
+          {masuk ? "Masuk dengan Google" : "Daftar dengan Google"}
+        </button>
 
-            <p className="mt-12 text-micro text-muted">
-              Prototype portofolio. Tidak ada akun sungguhan, tidak ada SMS yang
-              dikirim, dan tombol Google tidak menghubungi Google.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="mt-2 text-body text-muted">
-              Masukkan kode verifikasi untuk{" "}
-              <span className="text-body-strong">{nilai}</span>.{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setTahap("isian");
-                  setKode("");
-                  setSalah(false);
-                }}
-                className="text-nav-strong text-green-700 hover:underline"
-              >
-                Ganti
-              </button>
-            </p>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (kode.trim() !== KODE_DEMO) {
-                  setSalah(true);
-                  return;
-                }
-                onBerhasil(nilai.trim());
-              }}
-              className="mt-16"
-            >
-              <label htmlFor="kode" className="sr-only">
-                Kode verifikasi
-              </label>
-              <input
-                id="kode"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={4}
-                value={kode}
-                onChange={(e) => {
-                  setKode(e.target.value);
-                  setSalah(false);
-                }}
-                placeholder="4 digit"
-                aria-describedby="bantuan-kode"
-                aria-invalid={salah}
-                className={`${kelasIsian} tracking-[0.4em]`}
-              />
-
-              <p
-                id="bantuan-kode"
-                aria-live="polite"
-                className={`mt-8 text-body-sm ${salah ? "text-error" : "text-muted"}`}
-              >
-                {salah
-                  ? `Kode salah. Untuk simulasi ini kodenya ${KODE_DEMO}.`
-                  : `Tidak ada SMS yang dikirim. Kode simulasinya ${KODE_DEMO}.`}
-              </p>
-
-              <button
-                type="submit"
-                disabled={kode.trim().length !== 4}
-                className={`mt-12 w-full rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
-                  kode.trim().length === 4
-                    ? "bg-green-700 text-white hover:bg-green-800"
-                    : "bg-surface-2 text-placeholder"
-                }`}
-              >
-                {masuk ? "Masuk" : "Buat akun"}
-              </button>
-            </form>
-          </>
-        )}
+        <p className="mt-12 text-micro text-muted">
+          Prototype portofolio. Tidak ada akun sungguhan, tidak ada kode yang dikirim, dan
+          tombol Google tidak menghubungi Google. Apa pun yang diisi akan masuk sebagai{" "}
+          {NAMA_AKUN}.
+        </p>
       </div>
     </Modal>
   );

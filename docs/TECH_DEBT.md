@@ -40,9 +40,10 @@ state mengalir.
 Modal Masuk dan Daftar di navbar sisi penyewa sudah ada, memakai alur nomor
 ponsel lalu kode verifikasi, tanpa kata sandi. Tapi ini simulasi penuh:
 
-- Tidak ada backend, tidak ada SMS, dan kodenya statis `1234`, tertulis di layar.
+- Tidak ada backend dan tidak ada kode verifikasi. Setelah menekan lanjut, modal menahan 4 detik seolah memverifikasi, lalu masuk sebagai **Akun Demo**, apa pun nomor atau email yang diisi. Kalimat itu tertulis di layar.
 - Tombol Google **tidak** menghubungi Google. Hanya menutup modal dan menandai sesi sebagai "Akun demo Google".
 - Sesi hanya hidup di state navbar, hilang saat pindah halaman dengan reload.
+- Isian menerima nomor ponsel maupun email di kedua mode. Sebelumnya mode Daftar menolak email, dan itu membuat tombol Selanjutnya terlihat rusak.
 - Belum ada akun sungguhan, jadi belum ada riwayat pesanan per pengguna.
 - Loginnya universal, tidak menanyakan peran. Panel mitra tetap bisa dibuka langsung tanpa masuk, jadi tidak ada penjagaan akses sama sekali. Itu baru mungkin setelah ada backend.
 
