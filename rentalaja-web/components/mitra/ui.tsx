@@ -59,14 +59,22 @@ export function HeaderHalaman({
   );
 }
 
-/** Titik 7px + label. Status telat dibedakan warna DAN kata ("Lewat ..."). */
-export function TitikStatus({ label, telat }: { label: string; telat: boolean }) {
+/** Titik 7px + label. Status telat dibedakan warna DAN kata ("Lewat ..."),
+ *  jadi tidak bergantung pada warna saja. `netral` untuk unit yang tidak
+ *  sedang dipakai (kosong, servis). */
+export function TitikStatus({
+  label,
+  telat,
+  netral = false,
+}: {
+  label: string;
+  telat: boolean;
+  netral?: boolean;
+}) {
+  const titik = telat ? "bg-mitra-plum" : netral ? "bg-mitra-faint" : "bg-mitra-primer";
   return (
     <span className="flex items-center gap-9 whitespace-nowrap">
-      <span
-        aria-hidden
-        className={`size-7 shrink-0 rounded-pill ${telat ? "bg-mitra-plum" : "bg-mitra-primer"}`}
-      />
+      <span aria-hidden className={`size-7 shrink-0 rounded-pill ${titik}`} />
       <span className={`text-m-status ${telat ? "text-mitra-plum" : "text-mitra-ink-2"}`}>
         {label}
       </span>

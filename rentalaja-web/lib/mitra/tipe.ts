@@ -43,6 +43,21 @@ export type Pesanan = {
   alasan?: string;
 };
 
+export type Unit = {
+  id: string;
+  nama: string;
+  plat: string;
+  foto: string | null;
+  /** "matic 110cc · 2 helm" */
+  spesifikasi: string;
+  hargaPerHari: number;
+  /** Status dasar. "out" tidak disimpan di sini: unit dianggap keluar kalau
+   *  platnya cocok dengan pesanan berjalan, jadi sumbernya tetap satu. */
+  status: Extract<StatusUnit, "available" | "service">;
+  /** Hanya untuk status service. */
+  servisSampai?: number;
+};
+
 export type UnitKeluar = {
   id: string;
   nama: string;

@@ -8,7 +8,7 @@
 
 import { cache } from "react";
 import { connection } from "next/server";
-import type { DataBeranda, Mitra, Pesanan, UnitKeluar } from "./tipe";
+import type { DataBeranda, Mitra, Pesanan, Unit, UnitKeluar } from "./tipe";
 import { MENIT, namaBulan, pukulWita } from "./waktu";
 
 /** Waktu server satu request. Di-cache per request supaya layout dan halaman
@@ -53,7 +53,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
     {
       id: "RA-284211",
       unit: "Toyota Avanza 2021",
-      plat: "DK 8812 JK",
+      plat: "DK 8912 GH",
       foto: "/units/toyota-avanza-2021.webp",
       penyewa: "Michael Lim",
       telepon: "+62 812-0000-0102",
@@ -169,7 +169,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
     {
       id: "RA-283744",
       unit: "Toyota Avanza 2021",
-      plat: "DK 8812 JK",
+      plat: "DK 8912 GH",
       foto: "/units/toyota-avanza-2021.webp",
       penyewa: "James Carter",
       telepon: "+62 812-0000-0110",
@@ -210,6 +210,54 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       alasan: "Dibatalkan penyewa",
     },
   ];
+}
+
+// 18 unit, sesuai kicker "18 unit terdaftar" di spec. Mock desain hanya
+// menggambar 6 baris padahal chipnya menghitung 18; kalau itu ditiru mentah,
+// chip "Kosong · 11" akan membuka daftar kosong. Plat unit yang sedang
+// disewa sengaja sama dengan plat di daftar pesanan, karena status "sedang
+// keluar" diturunkan dari pesanan berjalan, bukan disimpan dua kali.
+function semuaUnit(sekarang: number): Unit[] {
+  const motor = (
+    id: string,
+    nama: string,
+    plat: string,
+    foto: string | null,
+    spesifikasi: string,
+    hargaPerHari: number,
+    status: Unit["status"] = "available",
+    servisSampai?: number,
+  ): Unit => ({ id, nama, plat, foto, spesifikasi, hargaPerHari, status, servisSampai });
+
+  return [
+    // Enam unit di bawah platnya cocok dengan pesanan berstatus active.
+    motor("u-01", "Honda Scoopy 2023", "DK 4821 XY", "/units/honda-scoopy-2023.jpeg", "matic 110cc · 2 helm", 70_000),
+    motor("u-02", "Yamaha NMAX 155", "DK 1902 CD", "/units/yamaha-nmax-2022.webp", "matic 155cc · 2 helm", 110_000),
+    motor("u-03", "Honda PCX 160", "DK 5127 AB", "/units/honda-pcx-160-2023.webp", "matic 160cc · 2 helm", 120_000),
+    motor("u-04", "Honda Beat 2022", "DK 7734 EF", "/units/honda-beat-2022.webp", "matic 110cc · 1 helm", 65_000),
+    motor("u-05", "Vespa Sprint 2021", "DK 2251 MN", "/units/vespa-sprint-2021.webp", "matic 150cc · 2 helm", 150_000),
+    motor("u-06", "Yamaha Fino 2021", "DK 6043 PQ", "/units/yamaha-fino-2021.webp", "matic 125cc · 2 helm", 75_000),
+
+    motor("u-07", "Toyota Avanza 2021", "DK 8890 GH", "/units/toyota-avanza-2021.webp", "MPV 7 kursi · bensin", 285_000),
+    motor("u-08", "Toyota Avanza 2021", "DK 8912 GH", "/units/toyota-avanza-2021.webp", "MPV 7 kursi · bensin", 285_000),
+    motor("u-09", "Honda Scoopy 2023", "DK 4835 XY", "/units/honda-scoopy-2023.jpeg", "matic 110cc · 2 helm", 70_000),
+    motor("u-10", "Honda Scoopy 2022", "DK 4102 TR", "/units/honda-scoopy-2023.jpeg", "matic 110cc · 2 helm", 65_000),
+    motor("u-11", "Honda Beat 2022", "DK 7740 EF", "/units/honda-beat-2022.webp", "matic 110cc · 1 helm", 65_000),
+    motor("u-12", "Honda Beat 2021", "DK 7128 LM", "/units/honda-beat-2022.webp", "matic 110cc · 1 helm", 60_000),
+    motor("u-13", "Yamaha NMAX 155", "DK 1955 CD", "/units/yamaha-nmax-2022.webp", "matic 155cc · 2 helm", 110_000),
+    motor("u-14", "Yamaha Fino 2021", "DK 6077 PQ", "/units/yamaha-fino-2021.webp", "matic 125cc · 2 helm", 75_000),
+    motor("u-15", "Vespa Sprint 2021", "DK 2260 MN", "/units/vespa-sprint-2021.webp", "matic 150cc · 2 helm", 150_000),
+    motor("u-16", "Honda PCX 160", "DK 5130 AB", "/units/honda-pcx-160-2023.webp", "matic 160cc · 2 helm", 120_000),
+    // Plat ini dipakai pesanan yang masih menunggu konfirmasi.
+    motor("u-17", "Honda Vario 160", "DK 3390 GH", null, "matic 160cc · 2 helm", 95_000),
+
+    motor("u-18", "Honda Vario 160", "DK 3312 JK", null, "matic 160cc · 2 helm", 95_000, "service", pukulWita(sekarang, 2, 17)),
+  ];
+}
+
+export async function ambilUnit(): Promise<Unit[]> {
+  const sekarang = await waktuServer();
+  return semuaUnit(sekarang);
 }
 
 export async function ambilPesanan(): Promise<{

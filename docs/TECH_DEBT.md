@@ -201,6 +201,14 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 - **Aksi "Buka" mengarah ke layar Serah terima**, belum ke detail pesanan, karena layar detail belum dirancang di handoff.
 - **Keadaan hanya bertahan selama sesi browser.** Terima dan Tolak hidup di React state; refresh mengembalikan mock awal dari server. Ini konsisten dengan status prototype tanpa backend.
 
+## M2c. Catatan layar Unit kendaraan (#4b)
+
+- **Mock hanya menggambar 6 baris padahal chipnya menghitung 18.** Dibuat 18 unit sungguhan supaya chip "Kosong · 11" tidak membuka daftar kosong. Enam unit memakai plat yang sama dengan pesanan berjalan.
+- **Status "sedang keluar" tidak disimpan di data unit**, melainkan dicocokkan lewat plat dengan pesanan berjalan. Konsekuensinya plat wajib unik; kalau nanti ada backend, relasinya harus lewat id unit, bukan plat.
+- **Tombol "Impor dari file" dan "Tambah unit" belum berfungsi**, keduanya masih tautan ke layar lain.
+- **Fokus keyboard lepas setelah menandai unit servis** saat filter "Kosong" aktif, karena barisnya langsung hilang dari daftar. Idealnya fokus pindah ke grup chip.
+- **Dua unit Honda Vario belum punya foto**, jadi barisnya memakai kotak placeholder.
+
 ## M3. Mock yang harus diganti saat ada backend
 
 - `ambilPesananMenunggu()` menghitung `masukPada` ulang tiap request (18 dan 6 menit lalu), jadi countdown tidak pernah habis permanen. API sungguhan wajib mengirim `createdAt` tetap, dan pembatalan otomatis harus terjadi di server, bukan hanya disembunyikan di client.
