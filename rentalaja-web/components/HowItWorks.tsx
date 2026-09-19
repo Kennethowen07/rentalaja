@@ -13,8 +13,8 @@ const langkah = [
   },
   {
     no: "02",
-    judul: "Bayar DP 30%",
-    body: "Sisanya dibayar saat unit diantar. Nota digital langsung terbit.",
+    judul: "Bayar penuh sekali",
+    body: "Uangnya ditahan rentalaja, diteruskan ke pemilik setelah unit kembali.",
   },
   {
     no: "03",

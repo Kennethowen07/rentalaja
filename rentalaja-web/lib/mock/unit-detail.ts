@@ -22,14 +22,13 @@ export type DetailUnit = {
   kalender: HariKalender[];
   paket: string[];
   tidakTermasuk: string[];
-  deposit: string[];
+  jaminan: string[];
   penyedia: { nama: string; meta: string };
   harga: {
     perHari: number;
     subtotal: number;
-    deposit: number;
+    layanan: number;
     total: number;
-    dp: number;
   };
 };
 
@@ -50,14 +49,15 @@ const TIDAK_TERMASUK = [
   "Kerusakan di luar pemakaian normal, tarif perbaikan tertulis di lampiran perjanjian.",
 ];
 
-const DEPOSIT = [
-  "Deposit Rp 300.000, tunai saat serah terima, kembali utuh saat unit diterima tanpa kerusakan baru.",
+const JAMINAN = [
+  "Tanpa deposit tunai. Pembayaranmu ditahan rentalaja sampai unit kembali, lalu diteruskan ke penyedia.",
   "Dokumen wajib, KTP atau paspor dan SIM C atau SIM internasional. Diunggah di langkah pemesanan, diverifikasi penyedia sebelum unit diantar.",
   "Batas usia penyewa 18 tahun.",
 ];
 
 const HARI = 3;
-const DEPOSIT_NILAI = 300000;
+// Biaya layanan rentalaja, sudah termasuk di angka yang dibayar penyewa.
+const LAYANAN = 5000;
 
 /** Satu-satunya sumber detail. Mengembalikan null kalau slug tidak dikenal. */
 export function detailUnit(slug: string): DetailUnit | null {
@@ -79,7 +79,7 @@ export function detailUnit(slug: string): DetailUnit | null {
       "STNK asli di unit",
     ],
     tidakTermasuk: TIDAK_TERMASUK,
-    deposit: DEPOSIT,
+    jaminan: JAMINAN,
     penyedia: {
       nama: unit.penyedia,
       meta: `★ ${unit.rating} · 18 unit · bergabung 2023 · balas dalam 1 jam`,
@@ -87,9 +87,8 @@ export function detailUnit(slug: string): DetailUnit | null {
     harga: {
       perHari: unit.hargaPerHari,
       subtotal,
-      deposit: DEPOSIT_NILAI,
-      total: subtotal,
-      dp: Math.round(subtotal * 0.3),
+      layanan: LAYANAN,
+      total: subtotal + LAYANAN,
     },
   };
 }

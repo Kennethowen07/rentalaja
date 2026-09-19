@@ -1,9 +1,9 @@
 // Data Layar 5 "Pesanan aktif" — verbatim dari .dc.html turn 1a.
 //
-// Angkanya menyambung dari Layar 4: DP Rp 68.000 sudah terbayar, sisa tunai
-// Rp 147.000 sudah diterima penyedia, dan deposit Rp 300.000 masih ditahan
-// — yang terakhir itu satu-satunya baris yang diberi warna peringatan di
-// desain, karena uang penyewa masih ada di pihak lain.
+// Angkanya menyambung dari Layar 4: pembayaran penuh Rp 215.000 sudah masuk
+// dan masih ditahan rentalaja sampai unit kembali. Baris escrow itu yang
+// diberi warna peringatan, karena uang penyewa memang belum selesai
+// perjalanannya, walaupun sekarang ditahan platform, bukan pemilik unit.
 
 export type TahapPesanan = {
   label: string;
@@ -14,7 +14,7 @@ export type TahapPesanan = {
 export type BarisBayar = {
   label: string;
   nilai: string;
-  /** true untuk deposit yang masih ditahan penyedia (warna peringatan). */
+  /** true untuk dana yang masih ditahan escrow (warna peringatan). */
   ditahan?: boolean;
 };
 
@@ -54,11 +54,11 @@ export const pesananAktif = {
   },
 
   pembayaran: [
-    { label: "DP terbayar 11 Sep · BCA VA", nilai: "Rp 68.000" },
-    { label: "Sisa tunai, diterima penyedia 12 Sep", nilai: "Rp 147.000" },
+    { label: "Dibayar penuh 11 Sep · BCA VA", nilai: "Rp 215.000" },
+    { label: "Deposit tunai ke pemilik", nilai: "Tidak ada" },
     {
-      label: "Deposit tunai ditahan penyedia",
-      nilai: "Rp 300.000",
+      label: "Ditahan rentalaja sampai unit kembali",
+      nilai: "Rp 215.000",
       ditahan: true,
     },
   ] satisfies BarisBayar[],

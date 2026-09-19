@@ -80,25 +80,22 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
         }
       />
 
+      {/* Satu angka saja: yang benar-benar diterima penyedia. Kotor dan biaya
+          layanan tetap disebut, tapi sebagai keterangan, bukan tiga kartu
+          yang saling bersaing. */}
       <section
-        aria-label={`Ringkasan pendapatan ${p.label}`}
-        className="mt-36 grid rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:grid-cols-3 min-[640px]:p-24"
+        aria-label={`Pendapatan bersih ${p.label}`}
+        className="mt-36 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24"
       >
-        <div className="border-b border-mitra-hairline pb-20 min-[640px]:border-r min-[640px]:border-b-0 min-[640px]:pb-0 min-[640px]:pr-30">
-          <p className="text-m-label text-mitra-faint">Pendapatan kotor</p>
-          <p className="mt-6 text-m-metrik text-mitra-ink">{rupiahSingkat(p.kotor)}</p>
-          <p className="mt-2 text-m-label text-mitra-muted">{p.bandingan}</p>
-        </div>
-        <div className="border-b border-mitra-hairline py-20 min-[640px]:border-r min-[640px]:border-b-0 min-[640px]:px-30 min-[640px]:py-0">
-          <p className="text-m-label text-mitra-faint">Biaya layanan rentalaja</p>
-          <p className="mt-6 text-m-metrik text-mitra-ink">{rupiahSingkat(p.biaya)}</p>
-          <p className="mt-2 text-m-label text-mitra-muted">5% dari nilai sewa</p>
-        </div>
-        <div className="pt-20 min-[640px]:pt-0 min-[640px]:pl-30">
-          <p className="text-m-label text-mitra-faint">Bersih diterima</p>
-          <p className="mt-6 text-m-metrik text-mitra-primer">{rupiahSingkat(p.bersih)}</p>
-          <p className="mt-2 text-m-label text-mitra-muted">pencairan DP tiap Senin</p>
-        </div>
+        <p className="text-m-label text-mitra-faint">Bersih diterima</p>
+        <p className="mt-6 text-m-metrik text-mitra-primer">{rupiahSingkat(p.bersih)}</p>
+        <p className="mt-6 max-w-620 text-m-body text-mitra-muted">
+          Dari nilai sewa {rupiahSingkat(p.kotor)}, setelah biaya layanan rentalaja 5%
+          sebesar {rupiahSingkat(p.biaya)}. {p.bandingan}.
+        </p>
+        <p className="mt-4 max-w-620 text-m-body text-mitra-muted">
+          Dana penyewa ditahan rentalaja dan dilepas 1x24 jam setelah unit kembali.
+        </p>
       </section>
 
       <div className="mt-44 grid items-start gap-44 min-[1100px]:grid-cols-[1.55fr_1fr] min-[1100px]:gap-64">

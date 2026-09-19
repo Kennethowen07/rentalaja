@@ -1,6 +1,6 @@
 // Layar 5 · Pesanan aktif.
 //
-// Dicapai dari /pemesanan setelah DP dibayar. Belum ada di navbar karena
+// Dicapai dari /pemesanan setelah pembayaran. Belum ada di navbar karena
 // navbar landing page dikunci spec ke Sewa / Cara kerja / Jadi penyedia /
 // Bantuan — menambah item ke sana akan mengubah Layar 1 yang sudah final.
 

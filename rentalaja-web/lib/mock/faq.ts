@@ -13,15 +13,15 @@ export type FaqItem = {
 export const faqItems: FaqItem[] = [
   {
     id: "harga-berubah",
-    pertanyaan: "Apakah harga bisa berubah setelah saya bayar DP?",
+    pertanyaan: "Apakah harga bisa berubah setelah saya bayar?",
     jawaban:
-      "Tidak. Harga yang kamu lihat saat membayar DP adalah harga akhir. Sisa pembayaran dan deposit sudah tertulis di rincian sebelum kamu bayar.",
+      "Tidak. Angka yang kamu bayar adalah harga akhir, sudah termasuk biaya layanan. Tidak ada pembayaran susulan saat unit diantar.",
   },
   {
     id: "pembatalan",
     pertanyaan: "Bagaimana kalau saya ingin membatalkan pesanan?",
     jawaban:
-      "Pembatalan bisa dilakukan dari halaman pesanan aktif. Ketentuan pengembalian DP mengikuti kebijakan penyedia yang tertera di halaman unit sebelum kamu memesan.",
+      "Pembatalan bisa dilakukan dari halaman pesanan aktif. Karena dananya masih ditahan rentalaja dan belum diteruskan ke penyedia, pengembalian mengikuti kebijakan penyedia yang tertera di halaman unit sebelum kamu memesan.",
   },
   {
     id: "dokumen",
@@ -30,9 +30,9 @@ export const faqItems: FaqItem[] = [
       "KTP atau paspor, dan SIM yang masih berlaku. Keduanya diunggah saat pemesanan lalu dicocokkan kembali oleh penyedia saat serah terima.",
   },
   {
-    id: "deposit",
-    pertanyaan: "Apakah deposit dikembalikan penuh?",
+    id: "escrow",
+    pertanyaan: "Kenapa tidak ada deposit tunai?",
     jawaban:
-      "Ya, selama kondisi unit saat dikembalikan sama dengan foto serah terima awal. Potongan hanya berlaku untuk kerusakan yang tercatat di serah terima akhir.",
+      "Karena pembayaranmu ditahan rentalaja sampai unit kembali, jadi penyedia tidak perlu memegang uang jaminanmu. Klaim kerusakan hanya bisa diajukan dengan bukti foto serah terima, dan ditagih terpisah, bukan dipotong diam-diam.",
   },
 ];

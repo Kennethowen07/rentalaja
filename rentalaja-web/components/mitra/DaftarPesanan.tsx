@@ -213,7 +213,7 @@ export default function DaftarPesanan({ tabAwal }: { tabAwal: KunciTab }) {
             {jumlahHari(konfirmasi.mulai, konfirmasi.selesai)} hari · {konfirmasi.total}
           </p>
           <p className="mt-14 text-m-body text-mitra-callout">
-            Penolakan tidak bisa dibatalkan. DP penyewa dikembalikan otomatis, dan unit
+            Penolakan tidak bisa dibatalkan. Dana penyewa dikembalikan penuh dari escrow, dan unit
             kembali terlihat kosong di tanggal tersebut.
           </p>
           <div className="mt-20 flex justify-end gap-8">

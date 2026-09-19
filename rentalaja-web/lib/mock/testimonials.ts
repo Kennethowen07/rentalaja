@@ -25,7 +25,7 @@ export const testimoni: Testimoni[] = [
   {
     id: "sarah",
     kutipan:
-      "“DP 30% bikin tenang. Sisanya bayar saat motor sampai di penginapan.”",
+      "“Bayar sekali di aplikasi, tidak ada tarik-tarikan uang tunai waktu motor sampai.”",
     nama: "Sarah",
     meta: "Seminyak, 5 hari",
     foto: "/avatars/testimoni-sarah.webp",

@@ -127,9 +127,9 @@ export default function UnitDetail({ data }: { data: DetailUnit }) {
             </ul>
           </Seksi>
 
-          <Seksi judul="Deposit dan syarat">
+          <Seksi judul="Jaminan dan syarat">
             <ul className="mt-9 grid list-disc gap-8 rounded-result border border-line bg-surface-3 py-14 pr-14 pl-32 text-prose text-ink marker:text-green-700">
-              {data.deposit.map((d) => (
+              {data.jaminan.map((d) => (
                 <li key={d}>{d}</li>
               ))}
             </ul>
@@ -160,14 +160,11 @@ export default function UnitDetail({ data }: { data: DetailUnit }) {
               nilai={formatRupiah(harga.subtotal)}
             />
             <Baris label={`Antar jemput ${unit.area}`} nilai="Gratis" />
-            <Baris
-              label="Deposit tunai di lokasi"
-              nilai={formatRupiah(harga.deposit)}
-            />
+            <Baris label="Biaya layanan" nilai={formatRupiah(harga.layanan)} />
           </dl>
 
           <div className="mt-12 flex items-baseline justify-between gap-12 border-t border-line pt-12">
-            <p className="text-total-label text-ink">Total sewa</p>
+            <p className="text-total-label text-ink">Total bayar</p>
             <p className="text-total text-ink">{formatRupiah(harga.total)}</p>
           </div>
 
@@ -185,8 +182,8 @@ export default function UnitDetail({ data }: { data: DetailUnit }) {
           </Link>
 
           <p className="mt-10 text-micro text-muted">
-            DP 30% dibayar sekarang, {formatRupiah(harga.dp)}. Sisa dibayar
-            tunai saat unit diantar.
+            Dibayar penuh sekarang. Uangnya ditahan rentalaja sampai unit
+            kembali, tanpa deposit tunai ke pemilik.
           </p>
         </aside>
       </div>

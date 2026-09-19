@@ -1,10 +1,12 @@
 // Data Layar 4 "Pemesanan" — dari .dc.html turn 1a.
 //
 // Angka di desain konsisten dan dipertahankan apa adanya:
-//   3 hari x Rp 70.000            = Rp 210.000
-//   DP 30% dari sewa (Rp 63.000) + biaya layanan Rp 5.000 = Rp 68.000
-//   sisa tunai saat serah terima  = Rp 147.000
-//   deposit tunai (dikembalikan)  = Rp 300.000
+//   3 hari x Rp 70.000     = Rp 210.000
+//   biaya layanan          = Rp 5.000
+//   dibayar penuh sekarang = Rp 215.000, ditahan rentalaja sampai unit kembali
+//
+// Mekanismenya bayar penuh di muka, bukan DP. Tidak ada sisa tunai saat
+// serah terima dan tidak ada deposit tunai ke pemilik.
 //
 // Nilai yang di desain tampil sebagai isi form (nama penyewa, nomor, email,
 // titik antar) di sini turun jadi PLACEHOLDER. Formnya mulai kosong supaya
@@ -22,15 +24,13 @@ export const pesanan = {
     { label: "Antar jemput", nilai: "Gratis" },
     { label: "Biaya layanan", nilai: "Rp 5.000" },
   ],
-  dp: "Rp 68.000",
-  sisa: "Rp 147.000",
-  deposit: "Rp 300.000",
+  total: "Rp 215.000",
 } as const;
 
 export const langkah = [
   "1 · Konfirmasi",
   "2 · Dokumen",
-  "3 · Bayar DP",
+  "3 · Bayar penuh",
 ] as const;
 
 export const opsiPengambilan = [

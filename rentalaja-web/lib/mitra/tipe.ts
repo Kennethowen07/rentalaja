@@ -26,7 +26,8 @@ export type Pesanan = {
   mulai: number;
   selesai: number;
   total: string;
-  /** "DP 30% terbayar", "Lunas", "Sisa tunai Rp 231.000". */
+  /** Perjalanan dana di escrow: "Dibayar penuh · di escrow", "Ditahan
+   *  escrow", "Dana dilepas", "Dana dikembalikan". */
   statusBayar: string;
   status: StatusPesanan;
   /** pending: createdAt dari server, dasar hitungan batas 1 jam. */

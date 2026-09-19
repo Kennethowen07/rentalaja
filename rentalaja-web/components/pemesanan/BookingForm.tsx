@@ -151,7 +151,7 @@ function Unggah({
 
 type Tahap = "form" | "qr" | "proses";
 
-/** Pop-up pembayaran. Muncul setelah "Bayar DP", menutupi halaman dengan
+/** Pop-up pembayaran. Muncul setelah "Bayar penuh", menutupi halaman dengan
  *  lapisan hitam transparan (bukan pekat) supaya form di belakangnya masih
  *  terlihat samar. Pembayarannya tidak nyata — hanya simulasi alur. */
 function ModalPembayaran({
@@ -197,13 +197,13 @@ function ModalPembayaran({
           Simulasi MidTrans
         </h2>
         <p className="mt-5 text-body-sm text-muted">
-          Pindai QR untuk membayar DP.
+          Pindai QR untuk membayar penuh.
         </p>
 
         <div className="relative mx-auto mt-16 size-200">
           <Image
             src="/qr-midtrans.png"
-            alt={`Kode QR pembayaran simulasi MidTrans sebesar ${pesanan.dp}`}
+            alt={`Kode QR pembayaran simulasi MidTrans sebesar ${pesanan.total}`}
             fill
             sizes="200px"
             className="object-contain"
@@ -213,8 +213,8 @@ function ModalPembayaran({
         {/* Nominal ditaruh tepat di bawah QR: pengguna harus bisa mencocokkan
             angka di aplikasi pembayaran tanpa menggulir ke mana pun. */}
         <div className="mt-14 rounded-input bg-green-100 px-12 py-10">
-          <p className="text-meta text-green-800">Total DP</p>
-          <p className="mt-2 text-price-lg text-green-700">{pesanan.dp}</p>
+          <p className="text-meta text-green-800">Total bayar</p>
+          <p className="mt-2 text-price-lg text-green-700">{pesanan.total}</p>
         </div>
 
         <button
@@ -277,7 +277,7 @@ export default function BookingForm() {
   ];
   const semuaSelesai = selesai.every(Boolean);
 
-  // Jeda 3 detik sebelum pindah ke pesanan aktif — memberi kesan DP sedang
+  // Jeda 3 detik sebelum pindah ke pesanan aktif — memberi kesan pembayaran sedang
   // diproses, bukan langsung lompat. Timer dibersihkan saat unmount supaya
   // navigasi tidak terpicu setelah pengguna meninggalkan halaman.
   useEffect(() => {
@@ -449,7 +449,7 @@ export default function BookingForm() {
 
           <Kartu
             nomor={3}
-            judul="Bayar DP"
+            judul="Bayar penuh"
             selesai={selesai[2]}
             className="mt-14"
           >
@@ -524,16 +524,16 @@ export default function BookingForm() {
 
           <div className="mt-12 border-t border-line pt-12">
             <div className="flex items-baseline justify-between gap-12">
-              <p className="text-total-label text-ink">DP dibayar sekarang</p>
-              <p className="text-total text-ink">{pesanan.dp}</p>
+              <p className="text-total-label text-ink">Dibayar penuh sekarang</p>
+              <p className="text-total text-ink">{pesanan.total}</p>
             </div>
             <div className="mt-6 flex justify-between gap-12 text-body-sm text-muted">
-              <span>Sisa tunai saat serah terima</span>
-              <span>{pesanan.sisa}</span>
+              <span>Ditahan rentalaja sampai unit kembali</span>
+              <span>{pesanan.total}</span>
             </div>
             <div className="mt-4 flex justify-between gap-12 text-body-sm text-muted">
-              <span>Deposit tunai, dikembalikan</span>
-              <span>{pesanan.deposit}</span>
+              <span>Deposit tunai ke pemilik</span>
+              <span>Tidak ada</span>
             </div>
           </div>
 
@@ -547,14 +547,14 @@ export default function BookingForm() {
                 : "bg-surface-2 text-placeholder"
             }`}
           >
-            Bayar DP {pesanan.dp}
+            Bayar {pesanan.total}
           </button>
 
           <p aria-live="polite" className="mt-10 text-micro text-muted">
             {tahap !== "form"
               ? "Menunggu pembayaran di jendela MidTrans."
               : semuaSelesai
-                ? "Pesanan menunggu konfirmasi penyedia maksimal 1 jam. DP kembali penuh kalau ditolak."
+                ? "Pesanan menunggu konfirmasi penyedia maksimal 1 jam. Dana kembali penuh kalau ditolak."
                 : `Lengkapi ketiga langkah di atas untuk melanjutkan. Sisa ${
                     selesai.filter((s) => !s).length
                   } langkah.`}

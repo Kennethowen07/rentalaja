@@ -14,8 +14,8 @@ const checklist = [
     body: "Kondisi unit tercatat saat diantar dan saat dikembalikan.",
   },
   {
-    judul: "Deposit dan denda tertulis sejak awal",
-    body: "Semua biaya muncul di rincian sebelum kamu bayar DP.",
+    judul: "Tanpa deposit tunai ke pemilik",
+    body: "Pembayaranmu ditahan rentalaja sampai unit kembali. Semua biaya tertulis sebelum bayar.",
   },
 ];
 

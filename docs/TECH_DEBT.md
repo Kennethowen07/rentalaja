@@ -169,6 +169,24 @@ dijalankan ulang. Semuanya diminta atau disengaja.
 
 ---
 
+## P1. Perubahan mekanisme pembayaran: full payment plus escrow
+
+Diputuskan pemilik proyek, 19 Sep 2026. Menggantikan DP 30% di seluruh produk,
+sisi penyewa maupun sisi penyedia.
+
+**Aturan yang sekarang berlaku**
+1. Penyewa membayar penuh saat memesan, sewa plus biaya layanan. Tidak ada DP dan tidak ada sisa tunai saat serah terima.
+2. Dana ditahan rentalaja (escrow), bukan langsung ke penyedia.
+3. Deposit tunai dihapus. Jaminannya dokumen yang diunggah plus foto serah terima.
+4. Dana dilepas ke penyedia 1x24 jam setelah unit kembali, dipotong biaya layanan 5%.
+5. Pesanan yang ditolak atau batal otomatis mengembalikan dana penuh.
+
+**Yang belum diselesaikan dan perlu dipikirkan sebelum dipakai di deck**
+- **Klaim kerusakan belum punya alur.** Dulu penyedia memegang deposit tunai; sekarang tidak. Harus ada mekanisme klaim berbukti foto sebelum dana dilepas, dan layarnya belum ada.
+- **Escrow itu kegiatan menampung dana pihak ketiga.** Di Indonesia ini menyentuh aturan uang elektronik dan penyelenggara jasa pembayaran. Untuk portofolio tidak masalah, tapi jangan diklaim sebagai fitur yang tinggal dinyalakan.
+- **Bayar penuh di muka menaikkan hambatan pesan** dibanding DP 30%. Ini tukar tambah yang disengaja: penyedia dapat kepastian, penyewa keluar uang lebih besar di awal. Kalau nanti ada data konversi, angka ini yang pertama harus diuji.
+- **Denda keterlambatan** masih ditulis sebagai angka berjalan di layar penyedia, tapi belum jelas ditagih dari mana setelah deposit hilang.
+
 # Panel mitra (sisi penyedia)
 
 Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →

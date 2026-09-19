@@ -70,7 +70,7 @@ export function PesananProvider({
               ...p,
               status: "cancelled" as const,
               masukPada: undefined,
-              statusBayar: "DP dikembalikan",
+              statusBayar: "Dana dikembalikan",
               alasan: "Ditolak penyedia",
             }
           : p,
@@ -84,7 +84,7 @@ export function PesananProvider({
         ? {
             ...p,
             status: "cancelled" as const,
-            statusBayar: "DP dikembalikan",
+            statusBayar: "Dana dikembalikan",
             alasan: "Batal otomatis, lewat batas 1 jam",
           }
         : p,

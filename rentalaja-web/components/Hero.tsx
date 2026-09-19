@@ -34,7 +34,7 @@ export default function Hero() {
           </h1>
 
           <p className="mt-13 text-lead text-hero-sub">
-            Harga tetap, tanpa chat dulu. Pilih tanggal, bayar DP 30%, unit
+            Harga tetap, tanpa chat dulu. Pilih tanggal, bayar penuh sekali, unit
             diantar ke titik yang kamu tentukan.
           </p>
 
