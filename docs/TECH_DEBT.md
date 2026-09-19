@@ -43,7 +43,8 @@ ponsel lalu kode verifikasi, tanpa kata sandi. Tapi ini simulasi penuh:
 - Tidak ada backend, tidak ada SMS, dan kodenya statis `1234`, tertulis di layar.
 - Tombol Google **tidak** menghubungi Google. Hanya menutup modal dan menandai sesi sebagai "Akun demo Google".
 - Sesi hanya hidup di state navbar, hilang saat pindah halaman dengan reload.
-- Belum ada akun sungguhan, jadi belum ada riwayat pesanan per pengguna, dan panel mitra tetap terbuka tanpa login.
+- Belum ada akun sungguhan, jadi belum ada riwayat pesanan per pengguna.
+- Modal menanyakan peran, penyewa atau mitra, dan yang memilih mitra diarahkan ke `/mitra`. Tapi itu hanya pengarahan, bukan penjagaan: `/mitra` tetap bisa dibuka langsung tanpa masuk, dan peran yang dipilih tidak mengubah isi panel. Penjagaan sungguhan baru mungkin setelah ada backend.
 
 Kalau nanti disambung ke backend, dua hal yang wajib berubah lebih dulu:
 verifikasi kode harus di server, dan tombol Google harus memakai OAuth

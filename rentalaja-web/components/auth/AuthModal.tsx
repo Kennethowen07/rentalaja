@@ -18,6 +18,20 @@ import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 
 export type ModeAuth = "masuk" | "daftar";
+export type Peran = "penyewa" | "mitra";
+
+const peranPilihan = [
+  {
+    kunci: "penyewa" as const,
+    judul: "Saya mau menyewa",
+    ket: "Cari motor atau mobil yang benar-benar kosong di tanggalmu.",
+  },
+  {
+    kunci: "mitra" as const,
+    judul: "Saya punya unit",
+    ket: "Kelola kalender, pesanan, dan pendapatan di panel mitra.",
+  },
+];
 
 const KODE_DEMO = "1234";
 
@@ -62,12 +76,13 @@ export default function AuthModal({
   mode: ModeAuth;
   onTutup: () => void;
   onGantiMode: (mode: ModeAuth) => void;
-  onBerhasil: (identitas: string) => void;
+  onBerhasil: (identitas: string, peran: Peran) => void;
 }) {
   const [tahap, setTahap] = useState<"isian" | "kode">("isian");
   const [nilai, setNilai] = useState("");
   const [kode, setKode] = useState("");
   const [salah, setSalah] = useState(false);
+  const [peran, setPeran] = useState<Peran>("penyewa");
 
   const masuk = mode === "masuk";
   const sah = isianSah(nilai, mode);
@@ -82,7 +97,12 @@ export default function AuthModal({
   }
 
   return (
-    <Modal judul={masuk ? "Masuk" : "Daftar"} onTutup={onTutup} lebar="max-w-[420px]">
+    <Modal
+      judul={masuk ? "Masuk" : "Daftar"}
+      onTutup={onTutup}
+      lebar="max-w-[420px]"
+      latar="pekat"
+    >
       {tahap === "isian" ? (
         <>
           <p className="mt-2 text-body text-muted">
@@ -96,13 +116,47 @@ export default function AuthModal({
             </button>
           </p>
 
+          {/* Peran menentukan ke mana pengguna diantar setelah verifikasi:
+              penyewa tetap di halaman, mitra dibawa ke panel. */}
+          <fieldset className="mt-16">
+            <legend className="text-label text-ink">
+              {masuk ? "Masuk sebagai" : "Daftar sebagai"}
+            </legend>
+            <div className="mt-8 grid gap-8">
+              {peranPilihan.map((p) => {
+                const dipilih = peran === p.kunci;
+                return (
+                  <label
+                    key={p.kunci}
+                    className={`flex cursor-pointer items-start gap-10 rounded-input border p-12 transition-colors duration-160 ease-base ${
+                      dipilih ? "border-green-700 bg-green-50" : "border-line hover:border-green-700"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="peran"
+                      value={p.kunci}
+                      checked={dipilih}
+                      onChange={() => setPeran(p.kunci)}
+                      className="mt-3 size-16 accent-green-700"
+                    />
+                    <span>
+                      <span className="block text-nav-strong text-ink">{p.judul}</span>
+                      <span className="mt-2 block text-body-sm text-muted">{p.ket}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
               if (!sah) return;
               setTahap("kode");
             }}
-            className="mt-16"
+            className="mt-14"
           >
             <label htmlFor="identitas" className="sr-only">
               {masuk ? "Nomor ponsel atau email" : "Nomor ponsel"}
@@ -137,7 +191,7 @@ export default function AuthModal({
 
           <button
             type="button"
-            onClick={() => onBerhasil("Akun demo Google")}
+            onClick={() => onBerhasil("Akun demo Google", peran)}
             className="mt-16 flex w-full items-center justify-center gap-10 rounded-input border border-line py-13 text-btn text-ink transition-colors duration-160 ease-base hover:border-green-700"
           >
             <LogoGoogle />
@@ -173,7 +227,7 @@ export default function AuthModal({
                 setSalah(true);
                 return;
               }
-              onBerhasil(nilai.trim());
+              onBerhasil(nilai.trim(), peran);
             }}
             className="mt-16"
           >
@@ -206,6 +260,12 @@ export default function AuthModal({
                 : `Tidak ada SMS yang dikirim. Kode simulasinya ${KODE_DEMO}.`}
             </p>
 
+            <p className="mt-10 text-body-sm text-muted">
+              {peran === "mitra"
+                ? "Setelah ini kamu dibawa ke panel mitra."
+                : "Setelah ini kamu kembali ke pencarian unit."}
+            </p>
+
             <button
               type="submit"
               disabled={kode.trim().length !== 4}
@@ -216,6 +276,7 @@ export default function AuthModal({
               }`}
             >
               {masuk ? "Masuk" : "Buat akun"}
+              {peran === "mitra" ? " sebagai mitra" : ""}
             </button>
           </form>
         </>

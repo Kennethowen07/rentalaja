@@ -14,12 +14,16 @@ export default function Modal({
   judul,
   onTutup,
   lebar = "max-w-[340px]",
+  latar = "biasa",
   children,
 }: {
   judul: string;
   onTutup: () => void;
   /** Kelas lebar maksimum dialog, ditulis utuh supaya Tailwind menemukannya. */
   lebar?: string;
+  /** "pekat" untuk dialog yang menuntut perhatian penuh, misalnya masuk dan
+   *  daftar: halaman di belakangnya digelapkan lebih dalam dan diburamkan. */
+  latar?: "biasa" | "pekat";
   children: React.ReactNode;
 }) {
   const judulId = useId();
@@ -42,7 +46,9 @@ export default function Modal({
   return (
     <div
       onClick={onTutup}
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/55 p-20 backdrop-blur-[2px]"
+      className={`fixed inset-0 z-50 grid place-items-center p-20 ${
+        latar === "pekat" ? "bg-ink/72 backdrop-blur-[8px]" : "bg-ink/55 backdrop-blur-[2px]"
+      }`}
     >
       <div
         role="dialog"
