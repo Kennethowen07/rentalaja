@@ -481,6 +481,28 @@
 }
 
 @layer base {
+  /* Tautan navbar menuju section di halaman yang sama. Tanpa ini browser
+     melompat mendadak, dan pengguna kehilangan rasa "di mana tadi saya".
+     Dimatikan untuk yang memilih reduce motion, karena gulir panjang yang
+     bergerak sendiri bisa memicu pusing. */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  /* Navbar menempel setinggi 60px, jadi target gulir diberi jarak aman
+     supaya judul sectionnya tidak tertutup. */
+  #cara-kerja,
+  #jadi-penyedia,
+  #faq {
+    scroll-margin-top: 76px;
+  }
+
   /* Preflight Tailwind v4 menyetel `cursor: default` pada <button>, beda
      dengan v3. Tanpa aturan ini semua tombol (Cari unit, tab Motor/Mobil,
      chip tanggal, accordion FAQ, hamburger) tidak menunjukkan kursor
