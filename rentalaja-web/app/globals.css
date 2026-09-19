@@ -320,6 +320,139 @@
   /* ---------- Easing ----------
      README: "Transisi umum 160-200ms ease." */
   --ease-base: ease;
+
+  /* ==================================================================
+     Panel mitra (sisi penyedia)
+     Sumber: design_handoff_rentalaja_mitra/README.md
+     Semua token diberi awalan "mitra" / "m-" supaya tidak bertabrakan
+     dengan palet sisi penyewa (mis. ink #1A1A18 di sini vs #1A1A1A).
+     ================================================================== */
+  --color-mitra-sidebar: #0f4c34;
+  --color-mitra-primer: #10241d; /* tombol primer, chip aktif, tautan */
+  --color-mitra-primer-hover: #1b4234;
+  --color-mitra-bar-pekat: #1b4234; /* bar isian >= 75% */
+  --color-mitra-bar-sedang: #5c8974; /* bar isian 40-74% */
+  --color-mitra-bar-muda: #a9c6b6; /* bar isian < 40%, sel "sudah dipesan" */
+  --color-mitra-nav: #cfe3d8; /* item nav non-aktif */
+  --color-mitra-nav-sub: #a8c6b6; /* "Panel mitra", alamat rental */
+  --color-mitra-tint: #f1f5f2; /* latar callout */
+  --color-mitra-callout: #3a4a42; /* body copy di dalam callout */
+  --color-mitra-plum: #6d3b52; /* telat / lewat jadwal, pengganti merah */
+  --color-mitra-ink: #1a1a18;
+  --color-mitra-ink-2: #3a3a35; /* label status normal */
+  --color-mitra-muted: #6b6b63;
+  /* Spec #8A8A82 hanya 3,48:1 di atas putih, gagal WCAG AA untuk teks
+     14px. Digelapkan ke nilai paling terang yang masih lulus 4,5:1,
+     termasuk di atas latar hover baris #FAFAF8 (4,51:1). */
+  --color-mitra-faint: #74746c;
+  --color-mitra-hairline: #e8e6e1;
+  --color-mitra-border: #dcdad4; /* border tombol sekunder */
+  --color-mitra-border-hover: #b9b5ac;
+  --color-mitra-panel: #f1f0ec; /* thumbnail kosong, sel kalender kosong */
+  --color-mitra-track: #e7ede9; /* latar bar isian */
+  --color-mitra-blocked: #e3ded4; /* sel diblokir / servis */
+  --color-mitra-hover: #fafaf8; /* hover baris daftar */
+  --color-mitra-nav-hover: rgba(255, 255, 255, 0.08);
+  --color-mitra-sidebar-garis: rgba(255, 255, 255, 0.2);
+
+  --text-m-logo: 20px;
+  --text-m-logo--letter-spacing: -0.02em;
+  --text-m-logo--font-weight: 700;
+
+  --text-m-sublogo: 13px;
+  --text-m-sublogo--font-weight: 500;
+
+  --text-m-nav: 15px;
+  --text-m-nav--font-weight: 500;
+
+  --text-m-nav-aktif: 15px;
+  --text-m-nav-aktif--font-weight: 600;
+
+  /* Mock 12px, tapi README: teks terkecil di panel 13px. README menang. */
+  --text-m-badge: 13px;
+  --text-m-badge--font-weight: 600;
+
+  --text-m-mitra-nama: 15px;
+  --text-m-mitra-nama--font-weight: 600;
+
+  --text-m-mitra-meta: 13px;
+  --text-m-mitra-meta--line-height: 1.5;
+  --text-m-mitra-meta--font-weight: 400;
+
+  --text-m-kicker: 14px;
+  --text-m-kicker--letter-spacing: 0.06em;
+  --text-m-kicker--font-weight: 400;
+
+  --text-m-h1: 30px;
+  --text-m-h1--line-height: 1.2;
+  --text-m-h1--letter-spacing: -0.02em;
+  --text-m-h1--font-weight: 600;
+
+  --text-m-h2: 20px;
+  --text-m-h2--font-weight: 600;
+
+  --text-m-metrik: 36px;
+  --text-m-metrik--letter-spacing: -0.02em;
+  --text-m-metrik--font-weight: 600;
+
+  --text-m-penyebut: 20px;
+  --text-m-penyebut--font-weight: 400;
+
+  --text-m-rating: 48px;
+  --text-m-rating--font-weight: 600;
+
+  --text-m-callout-judul: 19px;
+  --text-m-callout-judul--font-weight: 600;
+
+  --text-m-callout: 15px;
+  --text-m-callout--line-height: 1.55;
+  --text-m-callout--font-weight: 400;
+
+  --text-m-label: 14px;
+  --text-m-label--font-weight: 400;
+
+  --text-m-judul-baris: 17px;
+  --text-m-judul-baris--font-weight: 600;
+
+  --text-m-meta: 14.5px;
+  --text-m-meta--line-height: 1.5;
+  --text-m-meta--font-weight: 400;
+
+  --text-m-status: 14.5px;
+  --text-m-status--font-weight: 500;
+
+  --text-m-tautan: 14.5px;
+  --text-m-tautan--font-weight: 500;
+
+  --text-m-body: 14.5px;
+  --text-m-body--line-height: 1.6;
+  --text-m-body--font-weight: 400;
+
+  --text-m-angka: 15px;
+  --text-m-angka--font-weight: 600;
+
+  --text-m-btn: 15px;
+  --text-m-btn--font-weight: 600;
+
+  --text-m-btn-sekunder: 15px;
+  --text-m-btn-sekunder--font-weight: 500;
+
+  --radius-m-tombol: 9px;
+  --radius-m-thumb: 8px;
+  --radius-m-callout: 12px;
+  --radius-m-sel: 6px;
+
+  /* Deviasi dari README ("tidak ada shadow"): bayangan lembut untuk kotak
+     seksi di Beranda, karena garis rambut saja terlalu samar. Dibuat
+     sangat tipis supaya tidak berubah jadi kartu melayang. */
+  --shadow-m-panel: 0 1px 2px rgba(26, 26, 24, 0.05), 0 10px 26px rgba(26, 26, 24, 0.07);
+}
+
+/* Panel mitra: variabel font Instrument Sans dipasang di wrapper
+   app/mitra/layout.tsx, bukan di <html>. Tanpa `inline`, --font-mitra
+   dihitung di :root tempat --font-instrument belum ada, lalu gugur. */
+@theme inline {
+  --font-mitra: var(--font-instrument), system-ui, sans-serif;
 }
 
 @layer base {
@@ -420,4 +553,20 @@
       0 1px 2px rgba(0, 0, 0, 0.35),
       0 2px 12px rgba(0, 0, 0, 0.25);
   }
+}
+
+/* Panel mitra: focus ring bawaan (hijau 28%) hanya 1,88:1 dan tidak
+   terlihat di atas sidebar hijau tua. Di panel dipakai ring dua lapis
+   yang kontras di latar putih maupun di sidebar. */
+.panel-mitra :is(a, button, input, select, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 4px #10241d;
+}
+
+.panel-mitra .sidebar-mitra :is(a, button):focus-visible {
+  box-shadow:
+    0 0 0 2px #0f4c34,
+    0 0 0 4px #ffffff;
 }

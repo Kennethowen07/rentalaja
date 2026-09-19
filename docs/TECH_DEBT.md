@@ -166,3 +166,36 @@ dijalankan ulang. Semuanya diminta atau disengaja.
 | Strip kalender | 9,5 / 14 / 8,5px | 11 / 16 / 10,5px | 8,5px terlalu kecil untuk informasi inti produk |
 | Kartu form pemesanan | putih | `#F9FAFB` → `#F4F8F5` saat lengkap | Pembeda untuk buta warna, dipasangkan dengan badge ✓ dan label teks |
 | Stepper & timeline | warna saja | warna + ✓ + teks | Status harus terbaca dalam grayscale |
+
+---
+
+# Panel mitra (sisi penyedia)
+
+Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
+`design_handoff_rentalaja_mitra/`. Dicatat saat shell + Beranda (`#3a`) selesai,
+14 Sep 2026. Enam layar lain masih placeholder.
+
+## M1. Deviasi dari spec yang disengaja
+
+| Spec | Diterapkan | Alasan |
+|---|---|---|
+| Faint `#8A8A82` | `#74746C` | 3,48:1 di atas putih, gagal AA untuk teks 14px (kicker, label metrik, caption). `#74746C` = nilai paling terang yang lulus 4,5:1, termasuk di latar hover `#FAFAF8`. |
+| Badge sidebar 12px | 13px | README sendiri melarang teks di bawah 13px. |
+| Tanggal statis "Sabtu, 12 September 2026" | Relatif ke hari ini (WITA) | Demo yang dibuka kapan pun tetap masuk akal ("kembali hari ini", "lewat 1 hari", label 7 hari). |
+| Focus ring global hijau 28% | Ring dua lapis (putih + `#10241D`, di sidebar kebalikannya) | Ring lama 1,88:1 dan tidak terlihat di sidebar hijau tua. |
+| Nav aktif teks `#0F4C34` (mock) | `#10241D` | Mengikuti tabel Interactions di README, bukan mock. |
+| "Pemisah adalah garis rambut, bukan box", tanpa shadow | Empat blok Beranda dibungkus kotak `#DCDAD4` radius 12px + bayangan lembut `--shadow-m-panel` | Diminta pemilik proyek: berdampingan, kolom kiri dan kanan terbaca menyatu, dan garis rambut saja terlalu samar. Callout tetap bergaris hijau tua supaya hirarkinya tidak hilang. Kalau layar lain nanti mengikuti gaya mock (tanpa box), Beranda akan terlihat beda sendiri. |
+
+## M2. Konflik yang belum diputuskan (keputusan desain, bukan developer)
+
+- **Dua tombol solid di Beranda** ("Tambah unit" + "Tinjau"). Brief bagian 15 mengunci "satu tombol solid per layar". Mock melanggarnya; saat ini mengikuti mock.
+- **Bar "muda" `#A9C6B6` di atas track `#E7EDE9` hanya 1,55:1.** Tidak fatal karena angkanya tertulis di sebelah bar, tapi bar pendek nyaris hilang.
+- **Hijau merek `#0F6B4F` dan Plus Jakarta Sans tidak dipakai di panel.** Brief bagian 15 menyebut ini risiko dibaca sebagai inkonsistensi; alasan (dipakai berjam-jam di desktop) belum tertulis di UI mana pun.
+- **Login.** Rute `/mitra` terbuka tanpa login (tidak ada backend). Belum ada tautan dari landing ke panel.
+
+## M3. Mock yang harus diganti saat ada backend
+
+- `ambilPesananMenunggu()` menghitung `masukPada` ulang tiap request (18 dan 6 menit lalu), jadi countdown tidak pernah habis permanen. API sungguhan wajib mengirim `createdAt` tetap, dan pembatalan otomatis harus terjadi di server, bukan hanya disembunyikan di client.
+- Tidak ada polling/websocket untuk pesanan baru (README State Management).
+- Angka metrik (7 pesanan, Rp 24,8jt, 18%) dan grafik mingguan statis.
+- Ikon belum ada di mana pun; repo belum punya icon set.

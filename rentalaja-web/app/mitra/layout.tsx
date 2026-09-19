@@ -1,0 +1,38 @@
+import type { Metadata } from "next";
+import { Instrument_Sans } from "next/font/google";
+import { PesananMenungguProvider } from "@/components/mitra/PesananMenungguProvider";
+import Sidebar from "@/components/mitra/Sidebar";
+import { ambilMitra, ambilPesananMenunggu } from "@/lib/mitra/data";
+
+// README mitra: Instrument Sans, bukan Plus Jakarta Sans seperti sisi
+// penyewa, karena panel dipakai berjam-jam di desktop. Variable font, jadi
+// weight 400/500/600/700 tercakup satu deklarasi.
+const instrument = Instrument_Sans({
+  subsets: ["latin"],
+  variable: "--font-instrument",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: "Panel mitra · rentalaja",
+};
+
+export default async function LayoutMitra({ children }: LayoutProps<"/mitra">) {
+  const [mitra, { sekarangServer, pesanan }] = await Promise.all([
+    ambilMitra(),
+    ambilPesananMenunggu(),
+  ]);
+
+  return (
+    <div
+      className={`${instrument.variable} panel-mitra flex flex-1 flex-col bg-white font-mitra text-mitra-ink min-[900px]:flex-row`}
+    >
+      <PesananMenungguProvider sekarangServer={sekarangServer} pesanan={pesanan}>
+        <Sidebar mitra={mitra} />
+        <main className="min-w-0 flex-1 px-20 pt-28 pb-40 min-[640px]:px-32 min-[900px]:pt-40 min-[900px]:pb-44 min-[1100px]:px-48">
+          {children}
+        </main>
+      </PesananMenungguProvider>
+    </div>
+  );
+}
