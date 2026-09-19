@@ -353,7 +353,7 @@
   /* Spec #E3DED4 terlalu dekat dengan sel kosong #F1F0EC, keduanya nyaris
      tidak terbedakan di layar biasa. Digelapkan, dan diberi garis diagonal
      lewat .sel-diblokir supaya bedanya tidak bergantung warna saja. */
-  --color-mitra-blocked: #bcb4a6; /* sel diblokir / servis */
+  --color-mitra-blocked: #8a8377; /* sel diblokir / servis */
   --color-mitra-hover: #fafaf8; /* hover baris daftar */
   --color-mitra-nav-hover: rgba(255, 255, 255, 0.08);
   --color-mitra-sidebar-garis: rgba(255, 255, 255, 0.2);
@@ -597,8 +597,8 @@
   background-color: var(--color-mitra-blocked);
   background-image: repeating-linear-gradient(
     -45deg,
-    rgba(26, 26, 24, 0.14) 0px,
-    rgba(26, 26, 24, 0.14) 2px,
+    rgba(255, 255, 255, 0.22) 0px,
+    rgba(255, 255, 255, 0.22) 2px,
     transparent 2px,
     transparent 7px
   );
