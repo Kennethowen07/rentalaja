@@ -68,8 +68,10 @@ export default function Modal({
   return createPortal(
     <div
       onClick={onTutup}
-      className={`fixed inset-0 z-50 grid place-items-center p-20 ${
-        latar === "pekat" ? "bg-ink/72 backdrop-blur-[8px]" : "bg-ink/55 backdrop-blur-[2px]"
+      className={`animasi-modal-latar fixed inset-0 z-50 grid place-items-center p-20 ${
+        latar === "pekat"
+          ? "bg-ink/72 backdrop-blur-[8px]"
+          : "bg-ink/55 backdrop-blur-[2px]"
       }`}
     >
       <div
@@ -77,10 +79,14 @@ export default function Modal({
         aria-modal="true"
         aria-labelledby={judulId}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full ${lebar} rounded-card border border-line bg-white p-20 shadow-search`}
+        className={`animasi-modal-kotak w-full ${lebar} rounded-card border border-line bg-white p-20 shadow-search`}
       >
         <div className="flex items-center justify-between gap-12">
-          <h2 id={judulId} className="text-result-head text-ink">
+          <h2
+            key={judul}
+            id={judulId}
+            className="animasi-modal-isi text-result-head text-ink"
+          >
             {judul}
           </h2>
           <button

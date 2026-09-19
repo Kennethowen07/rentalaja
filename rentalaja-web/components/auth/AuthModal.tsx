@@ -87,143 +87,153 @@ export default function AuthModal({
       lebar="max-w-[420px]"
       latar="pekat"
     >
-      {tahap === "isian" ? (
-        <>
-          <p className="mt-2 text-body text-muted">
-            {masuk ? "Belum punya akun rentalaja?" : "Sudah punya akun rentalaja?"}{" "}
-            <button
-              type="button"
-              onClick={() => gantiMode(masuk ? "daftar" : "masuk")}
-              className="text-nav-strong text-green-700 hover:underline"
-            >
-              {masuk ? "Daftar" : "Masuk"}
-            </button>
-          </p>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!sah) return;
-              setTahap("kode");
-            }}
-            className="mt-16"
-          >
-            <label htmlFor="identitas" className="sr-only">
-              {masuk ? "Nomor ponsel atau email" : "Nomor ponsel"}
-            </label>
-            <input
-              id="identitas"
-              type="text"
-              inputMode={masuk ? "text" : "tel"}
-              autoComplete="off"
-              value={nilai}
-              onChange={(e) => setNilai(e.target.value)}
-              placeholder={masuk ? "Nomor ponsel atau email" : "Nomor ponsel"}
-              className={kelasIsian}
-            />
-
-            <button
-              type="submit"
-              disabled={!sah}
-              className={`mt-12 w-full rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
-                sah ? "bg-green-700 text-white hover:bg-green-800" : "bg-surface-2 text-placeholder"
-              }`}
-            >
-              Selanjutnya
-            </button>
-          </form>
-
-          <div className="mt-16 flex items-center gap-12">
-            <span className="h-1 flex-1 bg-line" />
-            <span className="text-body-sm text-muted">atau</span>
-            <span className="h-1 flex-1 bg-line" />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onBerhasil("Akun demo Google")}
-            className="mt-16 flex w-full items-center justify-center gap-10 rounded-input border border-line py-13 text-btn text-ink transition-colors duration-160 ease-base hover:border-green-700"
-          >
-            <LogoGoogle />
-            {masuk ? "Masuk dengan Google" : "Daftar dengan Google"}
-          </button>
-
-          <p className="mt-12 text-micro text-muted">
-            Prototype portofolio. Tidak ada akun sungguhan, tidak ada SMS yang dikirim, dan
-            tombol Google tidak menghubungi Google.
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="mt-2 text-body text-muted">
-            Masukkan kode verifikasi untuk <span className="text-body-strong">{nilai}</span>.{" "}
-            <button
-              type="button"
-              onClick={() => {
-                setTahap("isian");
-                setKode("");
-                setSalah(false);
-              }}
-              className="text-nav-strong text-green-700 hover:underline"
-            >
-              Ganti
-            </button>
-          </p>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (kode.trim() !== KODE_DEMO) {
-                setSalah(true);
-                return;
-              }
-              onBerhasil(nilai.trim());
-            }}
-            className="mt-16"
-          >
-            <label htmlFor="kode" className="sr-only">
-              Kode verifikasi
-            </label>
-            <input
-              id="kode"
-              inputMode="numeric"
-              autoComplete="off"
-              maxLength={4}
-              value={kode}
-              onChange={(e) => {
-                setKode(e.target.value);
-                setSalah(false);
-              }}
-              placeholder="4 digit"
-              aria-describedby="bantuan-kode"
-              aria-invalid={salah}
-              className={`${kelasIsian} tracking-[0.4em]`}
-            />
-
-            <p
-              id="bantuan-kode"
-              aria-live="polite"
-              className={`mt-8 text-body-sm ${salah ? "text-error" : "text-muted"}`}
-            >
-              {salah
-                ? `Kode salah. Untuk simulasi ini kodenya ${KODE_DEMO}.`
-                : `Tidak ada SMS yang dikirim. Kode simulasinya ${KODE_DEMO}.`}
+      {/* key membuat React memasang ulang isinya setiap kali mode atau tahap
+          berganti, jadi animasi tukar berjalan lagi alih-alih isi lama hilang
+          begitu saja. */}
+      <div key={`${mode}-${tahap}`} className="animasi-modal-isi">
+        {tahap === "isian" ? (
+          <>
+            <p className="mt-2 text-body text-muted">
+              {masuk
+                ? "Belum punya akun rentalaja?"
+                : "Sudah punya akun rentalaja?"}{" "}
+              <button
+                type="button"
+                onClick={() => gantiMode(masuk ? "daftar" : "masuk")}
+                className="text-nav-strong text-green-700 hover:underline"
+              >
+                {masuk ? "Daftar" : "Masuk"}
+              </button>
             </p>
 
-            <button
-              type="submit"
-              disabled={kode.trim().length !== 4}
-              className={`mt-12 w-full rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
-                kode.trim().length === 4
-                  ? "bg-green-700 text-white hover:bg-green-800"
-                  : "bg-surface-2 text-placeholder"
-              }`}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!sah) return;
+                setTahap("kode");
+              }}
+              className="mt-16"
             >
-              {masuk ? "Masuk" : "Buat akun"}
+              <label htmlFor="identitas" className="sr-only">
+                {masuk ? "Nomor ponsel atau email" : "Nomor ponsel"}
+              </label>
+              <input
+                id="identitas"
+                type="text"
+                inputMode={masuk ? "text" : "tel"}
+                autoComplete="off"
+                value={nilai}
+                onChange={(e) => setNilai(e.target.value)}
+                placeholder={masuk ? "Nomor ponsel atau email" : "Nomor ponsel"}
+                className={kelasIsian}
+              />
+
+              <button
+                type="submit"
+                disabled={!sah}
+                className={`mt-12 w-full rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
+                  sah
+                    ? "bg-green-700 text-white hover:bg-green-800"
+                    : "bg-surface-2 text-placeholder"
+                }`}
+              >
+                Selanjutnya
+              </button>
+            </form>
+
+            <div className="mt-16 flex items-center gap-12">
+              <span className="h-1 flex-1 bg-line" />
+              <span className="text-body-sm text-muted">atau</span>
+              <span className="h-1 flex-1 bg-line" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onBerhasil("Akun demo Google")}
+              className="mt-16 flex w-full items-center justify-center gap-10 rounded-input border border-line py-13 text-btn text-ink transition-colors duration-160 ease-base hover:border-green-700"
+            >
+              <LogoGoogle />
+              {masuk ? "Masuk dengan Google" : "Daftar dengan Google"}
             </button>
-          </form>
-        </>
-      )}
+
+            <p className="mt-12 text-micro text-muted">
+              Prototype portofolio. Tidak ada akun sungguhan, tidak ada SMS yang
+              dikirim, dan tombol Google tidak menghubungi Google.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mt-2 text-body text-muted">
+              Masukkan kode verifikasi untuk{" "}
+              <span className="text-body-strong">{nilai}</span>.{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setTahap("isian");
+                  setKode("");
+                  setSalah(false);
+                }}
+                className="text-nav-strong text-green-700 hover:underline"
+              >
+                Ganti
+              </button>
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (kode.trim() !== KODE_DEMO) {
+                  setSalah(true);
+                  return;
+                }
+                onBerhasil(nilai.trim());
+              }}
+              className="mt-16"
+            >
+              <label htmlFor="kode" className="sr-only">
+                Kode verifikasi
+              </label>
+              <input
+                id="kode"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={4}
+                value={kode}
+                onChange={(e) => {
+                  setKode(e.target.value);
+                  setSalah(false);
+                }}
+                placeholder="4 digit"
+                aria-describedby="bantuan-kode"
+                aria-invalid={salah}
+                className={`${kelasIsian} tracking-[0.4em]`}
+              />
+
+              <p
+                id="bantuan-kode"
+                aria-live="polite"
+                className={`mt-8 text-body-sm ${salah ? "text-error" : "text-muted"}`}
+              >
+                {salah
+                  ? `Kode salah. Untuk simulasi ini kodenya ${KODE_DEMO}.`
+                  : `Tidak ada SMS yang dikirim. Kode simulasinya ${KODE_DEMO}.`}
+              </p>
+
+              <button
+                type="submit"
+                disabled={kode.trim().length !== 4}
+                className={`mt-12 w-full rounded-input py-13 text-btn transition-colors duration-160 ease-base ${
+                  kode.trim().length === 4
+                    ? "bg-green-700 text-white hover:bg-green-800"
+                    : "bg-surface-2 text-placeholder"
+                }`}
+              >
+                {masuk ? "Masuk" : "Buat akun"}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
     </Modal>
   );
 }
