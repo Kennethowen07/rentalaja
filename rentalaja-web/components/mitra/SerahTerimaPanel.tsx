@@ -1,28 +1,33 @@
 "use client";
 
-// Layar Serah terima (#4d). Tiga tab, jadwal hari ini di kiri, dan di
-// bawahnya foto empat sisi milik baris yang sedang dipilih. Kolom kanan
-// berisi catatan kondisi baris yang sama.
+// Layar Serah terima (#4d).
+//
+// Jadwalnya diturunkan dari pesanan berjalan, bukan disimpan terpisah:
+// pesanan yang mulai hari ini memunculkan baris "Antar", yang jatuh tempo
+// hari ini memunculkan "Ambil kembali", dan yang lewat jadwal ditandai plum.
+// Akibatnya, menerima pesanan di layar Pesanan langsung menambah jadwal di
+// sini. Yang disimpan hanya catatannya: empat foto dan kondisi unit.
 //
 // Serah terima berfoto adalah salah satu pembeda produk (lihat project-brief),
-// jadi alurnya dibuat benar-benar jalan: pilih baris, catat kondisi lewat
-// form, dan begitu empat sisi terisi barisnya pindah ke tab Selesai.
+// jadi alurnya dibuat benar-benar jalan sampai baris pindah ke tab Selesai.
 
 import Image from "next/image";
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { tabSerah, type KunciTabSerah } from "@/lib/mitra/tab-serah";
-import type { SerahTerima } from "@/lib/mitra/tipe";
-import { hariSama, jamSaja, statusKembali, tanggalSingkat } from "@/lib/mitra/waktu";
+import type { CatatanSerah, JadwalSerah, Pesanan, StatusSerah } from "@/lib/mitra/tipe";
+import { awalHari, hariSama, jamSaja, statusKembali, tanggalSingkat } from "@/lib/mitra/waktu";
+import { usePesanan } from "./PesananProvider";
 import { HeaderHalaman, ThumbnailUnit, kelasTombol, kelasTombolBaris } from "./ui";
 
 const SISI = ["depan", "belakang", "kiri", "kanan"];
+const sisiKosong = () => SISI.map((label) => ({ label, foto: null }));
 
-function judul(item: SerahTerima) {
+function judul(item: JadwalSerah) {
   return `${item.jenis === "antar" ? "Antar" : "Ambil kembali"} · ${item.unit}`;
 }
 
-function meta(item: SerahTerima, sekarang: number) {
+function meta(item: JadwalSerah, sekarang: number) {
   if (item.telat) {
     const { label } = statusKembali(item.waktu, sekarang);
     return `${item.penyewa} · ${label.toLowerCase()}${item.catatan ? ` · ${item.catatan}` : ""}`;
@@ -32,32 +37,93 @@ function meta(item: SerahTerima, sekarang: number) {
   const waktu = hariSama(item.waktu, sekarang)
     ? jamSaja(item.waktu)
     : `${tanggalSingkat(item.waktu)} ${jamSaja(item.waktu)}`;
-  return `${item.penyewa} · ${waktu} · ${item.titik}${item.catatan ? ` · ${item.catatan}` : ""}`;
+  return `${item.penyewa} · ${waktu} · ${item.titik}`;
+}
+
+function statusDari(c: CatatanSerah): StatusSerah {
+  const fotoLengkap = c.sisi.every((s) => s.foto);
+  const adaKondisi = c.kondisi.length > 0;
+  if (fotoLengkap && adaKondisi) return "selesai";
+  if (fotoLengkap || adaKondisi) return "menunggu-foto";
+  return "jadwal";
+}
+
+/** Satu pesanan berjalan bisa memunculkan dua baris: antar dan ambil kembali. */
+function jadwalDariPesanan(
+  pesanan: Pesanan[],
+  catatan: Record<string, CatatanSerah>,
+  sekarang: number,
+): JadwalSerah[] {
+  const hariIni = awalHari(sekarang);
+  const hasil: JadwalSerah[] = [];
+
+  for (const p of pesanan) {
+    if (p.status !== "active") continue;
+    const kembali = p.kembaliPada ?? p.selesai;
+
+    const peristiwa: { jenis: "antar" | "ambil"; waktu: number; telat: boolean }[] = [];
+    if (awalHari(p.mulai) === hariIni) {
+      peristiwa.push({ jenis: "antar", waktu: p.mulai, telat: false });
+    }
+    if (awalHari(kembali) === hariIni) {
+      peristiwa.push({ jenis: "ambil", waktu: kembali, telat: false });
+    } else if (awalHari(kembali) < hariIni) {
+      // Belum dikembalikan, jadi tetap muncul di jadwal sampai selesai.
+      peristiwa.push({ jenis: "ambil", waktu: kembali, telat: true });
+    }
+
+    for (const e of peristiwa) {
+      const id = `${p.id}-${e.jenis}`;
+      const tercatat = catatan[id] ?? { sisi: sisiKosong(), kondisi: [] };
+      hasil.push({
+        ...tercatat,
+        id,
+        pesananId: p.id,
+        jenis: e.jenis,
+        unit: p.unit,
+        plat: p.plat,
+        foto: p.foto,
+        penyewa: p.penyewa,
+        telepon: p.telepon,
+        waktu: e.waktu,
+        titik: p.titik ?? "Kantor rental",
+        catatan: e.telat ? "belum ada konfirmasi" : undefined,
+        telat: e.telat,
+        status: statusDari(tercatat),
+      });
+    }
+  }
+
+  return hasil.sort((a, b) => a.waktu - b.waktu);
 }
 
 export default function SerahTerimaPanel({
-  daftar,
-  sekarang,
+  catatanAwal,
   tabAwal,
   kicker,
 }: {
-  daftar: SerahTerima[];
-  sekarang: number;
+  catatanAwal: Record<string, CatatanSerah>;
   tabAwal: KunciTabSerah;
   kicker: string;
 }) {
-  const [items, setItems] = useState(daftar);
+  const { pesanan, sekarang } = usePesanan();
+  const [catatan, setCatatan] = useState(catatanAwal);
   const [tab, setTab] = useState<KunciTabSerah>(tabAwal);
-  const [idTerpilih, setIdTerpilih] = useState(
-    daftar.find((d) => d.status === "selesai")?.id ?? daftar[0]?.id,
-  );
-  const [kontak, setKontak] = useState<SerahTerima | null>(null);
-  const [formKondisi, setFormKondisi] = useState<SerahTerima | null>(null);
+  const [idTerpilih, setIdTerpilih] = useState<string | null>(null);
+  const [kontak, setKontak] = useState<JadwalSerah | null>(null);
+  const [formKondisi, setFormKondisi] = useState<JadwalSerah | null>(null);
   const [kabar, setKabar] = useState("");
 
+  const jadwal = jadwalDariPesanan(pesanan, catatan, sekarang);
   const status = tabSerah.find((t) => t.kunci === tab)!.status;
-  const isi = items.filter((i) => i.status === status);
-  const terpilih = items.find((i) => i.id === idTerpilih) ?? items[0];
+  const isi = jadwal.filter((i) => i.status === status);
+
+  // Tanpa pilihan manual, yang ditampilkan adalah serah terima yang sudah
+  // lengkap, lalu baris pertama yang ada.
+  const terpilih =
+    jadwal.find((i) => i.id === idTerpilih) ??
+    jadwal.find((i) => i.status === "selesai") ??
+    jadwal[0];
   const lengkap = terpilih?.sisi.every((s) => s.foto) ?? false;
 
   function pindahTab(e: React.KeyboardEvent) {
@@ -74,30 +140,27 @@ export default function SerahTerimaPanel({
     document.getElementById(`tab-${tabSerah[tujuan].kunci}`)?.focus();
   }
 
-  function perbarui(id: string, ubah: (i: SerahTerima) => SerahTerima) {
-    setItems((d) => d.map((i) => (i.id === id ? ubah(i) : i)));
+  function simpanCatatan(id: string, ubah: (c: CatatanSerah) => CatatanSerah) {
+    setCatatan((lama) => ({
+      ...lama,
+      [id]: ubah(lama[id] ?? { sisi: sisiKosong(), kondisi: [] }),
+    }));
+    setIdTerpilih(id);
   }
 
-  function simulasikanFoto(item: SerahTerima) {
-    perbarui(item.id, (i) => ({
-      ...i,
+  function simulasikanFoto(item: JadwalSerah) {
+    simpanCatatan(item.id, (c) => ({
+      ...c,
       sisi: SISI.map((label) => ({ label, foto: `/serah-terima/scoopy-${label}.webp` })),
-      status: i.kondisi.length > 0 ? "selesai" : "menunggu-foto",
     }));
     setKabar(`Empat foto ${item.unit} terunggah.`);
   }
 
-  function simpanKondisi(item: SerahTerima, kondisi: { label: string; nilai: string }[]) {
-    const fotoLengkap = item.sisi.every((s) => s.foto);
-    perbarui(item.id, (i) => ({
-      ...i,
-      kondisi,
-      status: fotoLengkap ? "selesai" : "menunggu-foto",
-    }));
-    setIdTerpilih(item.id);
+  function simpanKondisi(item: JadwalSerah, kondisi: CatatanSerah["kondisi"]) {
+    simpanCatatan(item.id, (c) => ({ ...c, kondisi }));
     setFormKondisi(null);
     setKabar(
-      fotoLengkap
+      item.sisi.every((s) => s.foto)
         ? `Serah terima ${item.unit} selesai dicatat.`
         : `Kondisi ${item.unit} tercatat. Empat foto masih kurang.`,
     );
@@ -136,7 +199,7 @@ export default function SerahTerimaPanel({
       >
         {tabSerah.map((t) => {
           const dipilih = t.kunci === tab;
-          const jumlah = items.filter((i) => i.status === t.status).length;
+          const jumlah = jadwal.filter((i) => i.status === t.status).length;
           return (
             <button
               key={t.kunci}
@@ -180,7 +243,7 @@ export default function SerahTerimaPanel({
                 {isi.map((item) => (
                   <li
                     key={item.id}
-                    aria-current={item.id === idTerpilih ? "true" : undefined}
+                    aria-current={item.id === terpilih?.id ? "true" : undefined}
                     className="flex flex-wrap items-center gap-16 border-t border-mitra-hairline py-22 first:border-t-0 min-[640px]:flex-nowrap min-[640px]:gap-22 min-[640px]:py-26"
                   >
                     <ThumbnailUnit foto={item.foto} nama={item.unit} />
@@ -206,7 +269,7 @@ export default function SerahTerimaPanel({
                           type="button"
                           onClick={() => setIdTerpilih(item.id)}
                           className={
-                            item.id === idTerpilih
+                            item.id === terpilih?.id
                               ? kelasTombolBaris.primer
                               : kelasTombolBaris.sekunder
                           }
@@ -353,9 +416,9 @@ function FormKondisi({
   onTutup,
   onSimpan,
 }: {
-  item: SerahTerima;
+  item: JadwalSerah;
   onTutup: () => void;
-  onSimpan: (kondisi: { label: string; nilai: string }[]) => void;
+  onSimpan: (kondisi: CatatanSerah["kondisi"]) => void;
 }) {
   const awal = (label: string, bawaan: string) =>
     item.kondisi.find((k) => k.label === label)?.nilai ?? bawaan;

@@ -34,7 +34,8 @@ function meta(p: Pesanan, sekarang: number) {
   if (p.status === "pending") {
     const menit = Math.floor((sekarang - (p.masukPada ?? sekarang)) / MENIT);
     const masuk = menit < 1 ? "baru saja masuk" : `masuk ${menit} menit lalu`;
-    return `${rentang} · ${jumlahHari(p.mulai, p.selesai)} hari · ${p.titik} · ${masuk}`;
+    const titik = `${p.diantar ? "antar ke" : "ambil di"} ${p.titik}`;
+    return `${rentang} · ${jumlahHari(p.mulai, p.selesai)} hari · ${titik} · ${masuk}`;
   }
 
   if (p.status === "active") {

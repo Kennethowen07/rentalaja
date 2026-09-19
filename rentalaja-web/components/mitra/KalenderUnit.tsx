@@ -189,7 +189,7 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
       <div className="mt-26 overflow-x-auto rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
         <div className="min-w-[760px]">
           <div className="grid grid-cols-[200px_repeat(7,1fr)] min-[1100px]:grid-cols-[290px_repeat(7,1fr)]">
-            <div />
+            <div className="sticky left-0 z-1 bg-white" />
             {hari.map((h) => {
               const ini = awalHari(h) === hariIni;
               return (
@@ -210,7 +210,9 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
               key={u.id}
               className="grid grid-cols-[200px_repeat(7,1fr)] items-center border-t border-mitra-hairline last:border-b min-[1100px]:grid-cols-[290px_repeat(7,1fr)]"
             >
-              <div className="flex items-center gap-16 py-16 pr-18">
+              {/* Sticky supaya nama unit tetap terlihat saat tabel digeser
+                  ke samping di layar sempit (README/Responsif). */}
+              <div className="sticky left-0 z-1 flex items-center gap-16 bg-white py-16 pr-18">
                 <ThumbnailUnit foto={u.foto} nama={u.nama} className="h-46 w-64" />
                 <div className="min-w-0">
                   <p className="text-m-unit-kalender text-mitra-ink">{u.nama}</p>

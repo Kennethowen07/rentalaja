@@ -108,6 +108,12 @@ export default function Sidebar({ mitra }: { mitra: Mitra }) {
               <br />
               {mitra.area}
             </p>
+            {/* Panel dibuka tanpa login karena prototype belum punya backend.
+                Ditulis terang-terangan supaya tidak terbaca sebagai lubang
+                keamanan. */}
+            <p className="mt-10 text-m-mitra-meta text-mitra-nav-sub">
+              Mode demo, tanpa login
+            </p>
           </div>
         </div>
       </div>

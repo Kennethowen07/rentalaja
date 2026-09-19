@@ -192,7 +192,7 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 - **Dua tombol solid di Beranda** ("Tambah unit" + "Tinjau"). Brief bagian 15 mengunci "satu tombol solid per layar". Mock melanggarnya; saat ini mengikuti mock.
 - **Bar "muda" `#A9C6B6` di atas track `#E7EDE9` hanya 1,55:1.** Tidak fatal karena angkanya tertulis di sebelah bar, tapi bar pendek nyaris hilang.
 - **Hijau merek `#0F6B4F` dan Plus Jakarta Sans tidak dipakai di panel.** Brief bagian 15 menyebut ini risiko dibaca sebagai inkonsistensi; alasan (dipakai berjam-jam di desktop) belum tertulis di UI mana pun.
-- **Login.** Rute `/mitra` terbuka tanpa login (tidak ada backend). Belum ada tautan dari landing ke panel.
+- **Login.** Rute `/mitra` tetap terbuka tanpa login karena tidak ada backend, tapi sekarang ditulis terang-terangan di sidebar sebagai "Mode demo, tanpa login". Landing juga sudah punya tautan ke panel lewat tombol "Buka panel mitra" di blok CTA penyedia.
 
 ## M2b. Catatan layar Pesanan (#4a)
 
@@ -215,7 +215,7 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 - **Tombol "Tambah unit" di header diganti "Minggu depan".** Spec hanya menyediakan "Minggu lalu", padahal tanpa tombol maju pengguna tidak bisa kembali setelah mundur. "Tambah unit" sudah ada di dua layar lain.
 - **Status sel diturunkan, tidak disimpan.** Urutan menangnya: pesanan berjalan, lewat jadwal, pesanan menunggu, blokir manual, servis, kosong. Artinya blokir manual tidak bisa menimpa tanggal yang sudah ada pesanannya, dan itu memang disengaja.
 - **Blokir manual hilang saat refresh** karena hanya hidup di state client.
-- **Kolom unit belum sticky saat digeser horizontal.** README menyebut kolom unit sebaiknya sticky; sekarang seluruh tabel bergeser bersama.
+- ~~Kolom unit belum sticky saat digeser horizontal.~~ **Selesai**, kolom kiri kini menempel saat tabel digeser.
 - **Sel mengandalkan warna plus tooltip dan aria-label**, tidak ada teks di dalam sel. Untuk pengguna berpenglihatan rendah yang tidak memakai screen reader, membedakan "disewa" dan "lewat jadwal" masih bergantung warna.
 
 ## M2e. Catatan layar Serah terima (#4d)
@@ -223,7 +223,7 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 - **Foto contoh empat sisi hanya ada untuk Honda Scoopy.** Tombol "Simulasikan unggah foto" karena itu hanya muncul di baris Scoopy; unit lain diberi keterangan bahwa foto contohnya belum ada. Keempat foto Scoopy itu sendiri masih unit berwarna berbeda, lihat catatan sisi penyewa.
 - **Tidak ada unggah berkas sungguhan.** Prototype hanya menyalin foto contoh ke empat slot.
 - **Catatan kondisi belum dibandingkan otomatis** saat unit kembali, padahal captionnya menjanjikan itu. Perbandingan kondisi awal dan akhir adalah pekerjaan backend.
-- **Serah terima belum terhubung ke pesanan.** Daftarnya mock terpisah, jadi menerima pesanan baru tidak memunculkan jadwal antar di layar ini.
+- ~~Serah terima belum terhubung ke pesanan.~~ **Selesai.** Jadwal kini diturunkan dari pesanan berjalan: pesanan yang mulai hari ini memunculkan baris Antar, yang jatuh tempo hari ini memunculkan Ambil kembali. Yang disimpan hanya catatannya (foto dan kondisi), dikunci ke id pesanan.
 - **Tombol "Buka" menandai baris terpilih, bukan membuka halaman detail**, karena layar detail tidak ada di handoff.
 
 ## M2f. Catatan layar Pendapatan (#4e) dan Ulasan (#4f)

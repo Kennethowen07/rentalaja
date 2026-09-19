@@ -31,8 +31,10 @@ export type Pesanan = {
   status: StatusPesanan;
   /** pending: createdAt dari server, dasar hitungan batas 1 jam. */
   masukPada?: number;
-  /** pending: "antar ke Villa Canggu" atau "ambil di kantor". */
+  /** Titik temu, tempatnya saja: "Villa Canggu, Jl. Pantai Batu Bolong". */
   titik?: string;
+  /** true = unit diantar ke penyewa, false = penyewa ambil sendiri. */
+  diantar?: boolean;
   /** active: jadwal kembali. */
   kembaliPada?: number;
   /** active yang lewat jadwal. */
@@ -71,26 +73,29 @@ export type UnitKeluar = {
 export type JenisSerah = "antar" | "ambil";
 export type StatusSerah = "jadwal" | "menunggu-foto" | "selesai";
 
-export type SerahTerima = {
-  id: string;
-  jenis: JenisSerah;
-  unit: string;
-  plat: string;
-  /** Thumbnail unit. */
-  foto: string | null;
-  penyewa: string;
-  telepon: string;
-  /** Jadwal antar atau ambil kembali. */
-  waktu: number;
-  titik: string;
-  /** Tambahan di baris meta, mis. "deposit Rp 300.000 ditahan". */
-  catatan?: string;
-  telat?: boolean;
-  status: StatusSerah;
+/** Foto dan kondisi yang sudah tercatat untuk satu jadwal serah terima. */
+export type CatatanSerah = {
   /** Empat sisi wajib: depan, belakang, kiri, kanan. null = belum difoto. */
   sisi: { label: string; foto: string | null }[];
   /** Kosong selama kondisi belum dicatat. */
   kondisi: { label: string; nilai: string }[];
+};
+
+/** Satu baris jadwal, diturunkan dari pesanan berjalan. */
+export type JadwalSerah = CatatanSerah & {
+  id: string;
+  pesananId: string;
+  jenis: JenisSerah;
+  unit: string;
+  plat: string;
+  foto: string | null;
+  penyewa: string;
+  telepon: string;
+  waktu: number;
+  titik: string;
+  catatan?: string;
+  telat: boolean;
+  status: StatusSerah;
 };
 
 export type Transaksi = {

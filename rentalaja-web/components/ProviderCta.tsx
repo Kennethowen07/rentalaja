@@ -1,5 +1,12 @@
 // README section 9 — blok gradient CTA penyedia.
 // <640px: jadi kolom, tombol full width (README/Responsive).
+//
+// "Jadi penyedia" mengarah langsung ke /mitra. Di produk sungguhan tombol ini
+// membuka pendaftaran, tapi di prototype tanpa login panel itulah yang ingin
+// ditunjukkan, dan tanpa tautan ini panel mitra tidak bisa ditemukan sama
+// sekali dari landing.
+
+import Link from "next/link";
 
 export default function ProviderCta() {
   return (
@@ -17,12 +24,12 @@ export default function ProviderCta() {
           </div>
 
           <div className="flex w-full flex-col gap-10 sm:w-auto sm:flex-row">
-            <a
-              href="#daftar-penyedia"
+            <Link
+              href="/mitra"
               className="rounded-cta bg-white px-22 py-13 text-center text-btn-sm text-green-700"
             >
-              Jadi penyedia
-            </a>
+              Buka panel mitra
+            </Link>
             <a
               href="#simulasi"
               className="rounded-cta border border-white/45 px-22 py-13 text-center text-btn-sm text-white"
