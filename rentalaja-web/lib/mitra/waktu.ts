@@ -74,3 +74,32 @@ export function statusKembali(kembaliPada: number, sekarang: number) {
   if (samaHari(kembaliPada, sekarang)) return { label: "Kembali hari ini", telat: false };
   return { label: "Tepat waktu", telat: false };
 }
+
+/** "13–15 Sep", atau "30 Sep – 02 Okt" kalau beda bulan. */
+export function rentangTanggal(mulai: number, selesai: number) {
+  const bulan = (t: number) => format(t, { month: "short" });
+  const hari = (t: number) => format(t, { day: "2-digit" });
+  return bulan(mulai) === bulan(selesai)
+    ? `${hari(mulai)}–${hari(selesai)} ${bulan(selesai)}`
+    : `${hari(mulai)} ${bulan(mulai)} – ${hari(selesai)} ${bulan(selesai)}`;
+}
+
+/** "14 Sep" */
+export function tanggalSingkat(t: number) {
+  return format(t, { day: "numeric", month: "short" });
+}
+
+/** "09.00" */
+export function jamSaja(t: number) {
+  return format(t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).replace(":", ".");
+}
+
+/** Hari sewa dihitung inklusif, sesuai spec: 13-15 Sep = 3 hari. Sama dengan
+ *  cara sisi penyewa menghitung (12 Sep 09.00 sampai 14 Sep 09.00 = 3 hari). */
+export function jumlahHari(mulai: number, selesai: number) {
+  return Math.max(1, Math.round((selesai - mulai) / HARI) + 1);
+}
+
+export function hariSama(a: number, b: number) {
+  return samaHari(a, b);
+}

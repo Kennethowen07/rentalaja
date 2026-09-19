@@ -1,18 +1,17 @@
 "use client";
 
-// Keterangan metrik "Pesanan masuk hari ini". Ikut jam yang sama dengan
-// callout, supaya angka "menunggu" di sini tidak berbeda dengan callout
-// setelah ada pesanan yang batal otomatis.
+// Keterangan metrik "Pesanan masuk hari ini". Ikut keadaan pesanan yang sama
+// dengan callout dan badge sidebar, jadi begitu satu pesanan diterima atau
+// ditolak di layar Pesanan, angka di Beranda ikut berubah.
 
-import { usePesananMenunggu } from "./PesananMenungguProvider";
+import { usePesanan } from "./PesananProvider";
 
 export default function KeteranganPesananHariIni({ dikonfirmasi }: { dikonfirmasi: number }) {
-  const { semua, menunggu } = usePesananMenunggu();
-  const batal = semua.length - menunggu.length;
+  const { menunggu, jumlahDiterima, jumlahBatal } = usePesanan();
   return (
     <>
-      {dikonfirmasi} dikonfirmasi, {menunggu.length} menunggu
-      {batal > 0 && `, ${batal} batal otomatis`}
+      {dikonfirmasi + jumlahDiterima} dikonfirmasi, {menunggu.length} menunggu
+      {jumlahBatal > 0 && `, ${jumlahBatal} batal`}
     </>
   );
 }

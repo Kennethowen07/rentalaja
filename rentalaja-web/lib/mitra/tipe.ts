@@ -15,10 +15,32 @@ export type Mitra = {
   area: string;
 };
 
-/** Pesanan berstatus pending. `masukPada` = createdAt dari server (epoch ms). */
-export type PesananMenunggu = {
+export type Pesanan = {
   id: string;
-  masukPada: number;
+  unit: string;
+  plat: string;
+  foto: string | null;
+  penyewa: string;
+  /** Nomor contoh untuk prototype, bukan nomor asli siapa pun. */
+  telepon: string;
+  mulai: number;
+  selesai: number;
+  total: string;
+  /** "DP 30% terbayar", "Lunas", "Sisa tunai Rp 231.000". */
+  statusBayar: string;
+  status: StatusPesanan;
+  /** pending: createdAt dari server, dasar hitungan batas 1 jam. */
+  masukPada?: number;
+  /** pending: "antar ke Villa Canggu" atau "ambil di kantor". */
+  titik?: string;
+  /** active: jadwal kembali. */
+  kembaliPada?: number;
+  /** active yang lewat jadwal. */
+  denda?: string;
+  /** completed */
+  selesaiPada?: number;
+  /** cancelled */
+  alasan?: string;
 };
 
 export type UnitKeluar = {

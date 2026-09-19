@@ -141,3 +141,7 @@ sebaiknya ganti dengan foto milik sendiri, foto berlisensi bebas (Unsplash, Pexe
 atau foto resmi yang memang boleh dipakai ulang. Hal yang sama berlaku untuk
 33 aset di atas — terutama avatar, yang sebaiknya **bukan wajah orang sungguhan**
 tanpa izin, karena testimoninya fiktif.
+
+## Panel mitra
+
+- **Foto Honda Vario 160.** Dipakai di layar Pesanan, baris pesanan menunggu pertama. Sekarang masih kotak abu.

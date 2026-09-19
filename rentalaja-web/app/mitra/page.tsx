@@ -106,7 +106,7 @@ export default async function BerandaMitra() {
             {unitKeluar.map((u) => (
               <li key={u.id} className="border-t border-mitra-hairline">
                 <Link
-                  href="/mitra/pesanan"
+                  href="/mitra/pesanan?tab=berjalan"
                   className="-mx-12 flex items-center gap-16 px-12 py-26 transition-colors duration-160 ease-base hover:bg-mitra-hover min-[640px]:gap-22"
                 >
                   <ThumbnailUnit foto={u.foto} nama={u.nama} />

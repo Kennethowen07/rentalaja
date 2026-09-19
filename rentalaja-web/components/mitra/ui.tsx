@@ -11,6 +11,17 @@ export const kelasTombol = {
     "inline-flex items-center justify-center whitespace-nowrap rounded-m-tombol border border-mitra-border bg-white text-m-btn-sekunder text-mitra-ink transition-colors duration-160 ease-base hover:border-mitra-border-hover",
 };
 
+/** Tombol kecil di dalam baris daftar (spec: 14px, radius 8px). */
+export const kelasTombolBaris = {
+  primer:
+    "inline-flex items-center justify-center whitespace-nowrap rounded-m-thumb border border-mitra-primer bg-mitra-primer px-16 py-9 text-m-btn-baris text-white transition-colors duration-160 ease-base hover:border-mitra-primer-hover hover:bg-mitra-primer-hover",
+  sekunder:
+    "inline-flex items-center justify-center whitespace-nowrap rounded-m-thumb border border-mitra-border bg-white px-15 py-9 text-m-btn-baris-2 text-mitra-ink transition-colors duration-160 ease-base hover:border-mitra-border-hover",
+  // Tindakan merusak memakai plum, bukan merah, sesuai README panel mitra.
+  bahaya:
+    "inline-flex items-center justify-center whitespace-nowrap rounded-m-thumb border border-mitra-plum bg-mitra-plum px-16 py-9 text-m-btn-baris text-white transition-colors duration-160 ease-base hover:border-mitra-plum-hover hover:bg-mitra-plum-hover",
+};
+
 export function TombolLink({
   href,
   varian,

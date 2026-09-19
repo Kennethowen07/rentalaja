@@ -7,7 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { Mitra } from "@/lib/mitra/tipe";
-import { usePesananMenunggu } from "./PesananMenungguProvider";
+import { usePesanan } from "./PesananProvider";
 
 const menu = [
   { label: "Beranda", href: "/mitra" },
@@ -21,7 +21,7 @@ const menu = [
 
 export default function Sidebar({ mitra }: { mitra: Mitra }) {
   const pathname = usePathname();
-  const { menunggu } = usePesananMenunggu();
+  const { menunggu } = usePesanan();
   const [terbuka, setTerbuka] = useState(false);
   const tombolMenuRef = useRef<HTMLButtonElement>(null);
 

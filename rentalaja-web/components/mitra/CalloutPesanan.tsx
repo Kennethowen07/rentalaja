@@ -6,11 +6,11 @@
 
 import Link from "next/link";
 import { MENIT } from "@/lib/mitra/waktu";
-import { usePesananMenunggu } from "./PesananMenungguProvider";
+import { usePesanan } from "./PesananProvider";
 import { kelasTombol } from "./ui";
 
 export default function CalloutPesanan() {
-  const { menunggu, sekarang } = usePesananMenunggu();
+  const { menunggu, sekarang } = usePesanan();
 
   if (menunggu.length === 0) {
     return (
@@ -20,7 +20,7 @@ export default function CalloutPesanan() {
     );
   }
 
-  const tertua = Math.min(...menunggu.map((p) => p.masukPada));
+  const tertua = Math.min(...menunggu.map((p) => p.masukPada ?? sekarang));
   const menit = Math.floor((sekarang - tertua) / MENIT);
 
   return (
@@ -38,7 +38,7 @@ export default function CalloutPesanan() {
         </p>
       </div>
       <Link
-        href="/mitra/pesanan"
+        href="/mitra/pesanan?tab=menunggu"
         className={`${kelasTombol.primer} shrink-0 self-start px-20 py-12 min-[640px]:self-auto`}
       >
         Tinjau

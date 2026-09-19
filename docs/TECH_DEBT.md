@@ -193,6 +193,14 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 - **Hijau merek `#0F6B4F` dan Plus Jakarta Sans tidak dipakai di panel.** Brief bagian 15 menyebut ini risiko dibaca sebagai inkonsistensi; alasan (dipakai berjam-jam di desktop) belum tertulis di UI mana pun.
 - **Login.** Rute `/mitra` terbuka tanpa login (tidak ada backend). Belum ada tautan dari landing ke panel.
 
+## M2b. Catatan layar Pesanan (#4a)
+
+- **Seksi "Sedang berjalan" di mock tidak dibuat terpisah.** Di mock, layar menampilkan daftar menunggu lalu seksi berjalan di bawahnya, padahal tab "Berjalan" sudah ada. Sekarang isinya mengikuti tab, supaya tidak ada dua tempat yang menampilkan hal sama.
+- **Tombol baris tingginya sekitar 41px**, di bawah anjuran target sentuh 44px. Mengikuti padding spec (9px). Perlu keputusan desain kalau panel dipakai di tablet.
+- **Foto Honda Vario 160 belum ada**, jadi baris itu memakai kotak placeholder abu.
+- **Aksi "Buka" mengarah ke layar Serah terima**, belum ke detail pesanan, karena layar detail belum dirancang di handoff.
+- **Keadaan hanya bertahan selama sesi browser.** Terima dan Tolak hidup di React state; refresh mengembalikan mock awal dari server. Ini konsisten dengan status prototype tanpa backend.
+
 ## M3. Mock yang harus diganti saat ada backend
 
 - `ambilPesananMenunggu()` menghitung `masukPada` ulang tiap request (18 dan 6 menit lalu), jadi countdown tidak pernah habis permanen. API sungguhan wajib mengirim `createdAt` tetap, dan pembatalan otomatis harus terjadi di server, bukan hanya disembunyikan di client.

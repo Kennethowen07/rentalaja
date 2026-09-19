@@ -440,6 +440,17 @@
   --radius-m-tombol: 9px;
   --radius-m-thumb: 8px;
   --radius-m-callout: 12px;
+  --color-mitra-plum-hover: #562d40;
+
+  --text-m-total: 16px;
+  --text-m-total--font-weight: 600;
+
+  --text-m-btn-baris: 14px;
+  --text-m-btn-baris--font-weight: 600;
+
+  --text-m-btn-baris-2: 14px;
+  --text-m-btn-baris-2--font-weight: 500;
+
   --radius-m-sel: 6px;
 
   /* Deviasi dari README ("tidak ada shadow"): bayangan lembut untuk kotak
