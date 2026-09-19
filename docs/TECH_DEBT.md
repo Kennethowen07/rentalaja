@@ -185,6 +185,7 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 | Focus ring global hijau 28% | Ring dua lapis (putih + `#10241D`, di sidebar kebalikannya) | Ring lama 1,88:1 dan tidak terlihat di sidebar hijau tua. |
 | Nav aktif teks `#0F4C34` (mock) | `#10241D` | Mengikuti tabel Interactions di README, bukan mock. |
 | "Pemisah adalah garis rambut, bukan box", tanpa shadow | Empat blok Beranda dibungkus kotak `#DCDAD4` radius 12px + bayangan lembut `--shadow-m-panel` | Diminta pemilik proyek: berdampingan, kolom kiri dan kanan terbaca menyatu, dan garis rambut saja terlalu samar. Callout tetap bergaris hijau tua supaya hirarkinya tidak hilang. Kalau layar lain nanti mengikuti gaya mock (tanpa box), Beranda akan terlihat beda sendiri. |
+| Tombol tanpa shadow | Tombol header memakai `--shadow-m-tombol` | Diminta pemilik proyek, seragam dengan kotak seksi. Tombol di dalam baris daftar sengaja tetap rata supaya daftar tidak ramai. |
 
 ## M2. Konflik yang belum diputuskan (keputusan desain, bukan developer)
 
@@ -208,6 +209,14 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 - **Tombol "Impor dari file" dan "Tambah unit" belum berfungsi**, keduanya masih tautan ke layar lain.
 - **Fokus keyboard lepas setelah menandai unit servis** saat filter "Kosong" aktif, karena barisnya langsung hilang dari daftar. Idealnya fokus pindah ke grup chip.
 - **Dua unit Honda Vario belum punya foto**, jadi barisnya memakai kotak placeholder.
+
+## M2d. Catatan layar Kalender (#4c)
+
+- **Tombol "Tambah unit" di header diganti "Minggu depan".** Spec hanya menyediakan "Minggu lalu", padahal tanpa tombol maju pengguna tidak bisa kembali setelah mundur. "Tambah unit" sudah ada di dua layar lain.
+- **Status sel diturunkan, tidak disimpan.** Urutan menangnya: pesanan berjalan, lewat jadwal, pesanan menunggu, blokir manual, servis, kosong. Artinya blokir manual tidak bisa menimpa tanggal yang sudah ada pesanannya, dan itu memang disengaja.
+- **Blokir manual hilang saat refresh** karena hanya hidup di state client.
+- **Kolom unit belum sticky saat digeser horizontal.** README menyebut kolom unit sebaiknya sticky; sekarang seluruh tabel bergeser bersama.
+- **Sel mengandalkan warna plus tooltip dan aria-label**, tidak ada teks di dalam sel. Untuk pengguna berpenglihatan rendah yang tidak memakai screen reader, membedakan "disewa" dan "lewat jadwal" masih bergantung warna.
 
 ## M3. Mock yang harus diganti saat ada backend
 

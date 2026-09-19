@@ -6,9 +6,9 @@ import Link from "next/link";
 
 export const kelasTombol = {
   primer:
-    "inline-flex items-center justify-center whitespace-nowrap rounded-m-tombol border border-mitra-primer bg-mitra-primer text-m-btn text-white transition-colors duration-160 ease-base hover:border-mitra-primer-hover hover:bg-mitra-primer-hover",
+    "inline-flex items-center justify-center whitespace-nowrap rounded-m-tombol border border-mitra-primer bg-mitra-primer text-m-btn text-white shadow-m-tombol transition-colors duration-160 ease-base hover:border-mitra-primer-hover hover:bg-mitra-primer-hover",
   sekunder:
-    "inline-flex items-center justify-center whitespace-nowrap rounded-m-tombol border border-mitra-border bg-white text-m-btn-sekunder text-mitra-ink transition-colors duration-160 ease-base hover:border-mitra-border-hover",
+    "inline-flex items-center justify-center whitespace-nowrap rounded-m-tombol border border-mitra-border bg-white text-m-btn-sekunder text-mitra-ink shadow-m-tombol transition-colors duration-160 ease-base hover:border-mitra-border-hover",
 };
 
 /** Tombol kecil di dalam baris daftar (spec: 14px, radius 8px). */

@@ -451,6 +451,13 @@
   --text-m-btn-baris-2: 14px;
   --text-m-btn-baris-2--font-weight: 500;
 
+  /* Bayangan tombol header, lebih rapat daripada --shadow-m-panel supaya
+     tombol tetap terasa menempel, bukan melayang. */
+  --shadow-m-tombol: 0 1px 2px rgba(26, 26, 24, 0.08), 0 4px 10px rgba(26, 26, 24, 0.1);
+
+  --text-m-unit-kalender: 16px;
+  --text-m-unit-kalender--font-weight: 600;
+
   --radius-m-sel: 6px;
 
   /* Deviasi dari README ("tidak ada shadow"): bayangan lembut untuk kotak

@@ -103,3 +103,29 @@ export function jumlahHari(mulai: number, selesai: number) {
 export function hariSama(a: number, b: number) {
   return samaHari(a, b);
 }
+
+/** Tengah malam WITA hari itu. Dipakai untuk membandingkan tanggal, bukan jam. */
+export function awalHari(t: number) {
+  return pukulWita(t, 0, 0);
+}
+
+/** Kunci tanggal "2026-09-19" untuk id sel kalender. */
+export function kunciTanggal(t: number) {
+  const bagian = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ZONA,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return bagian.format(t);
+}
+
+/** "19 - 25 September 2026", atau "28 September - 4 Oktober 2026". */
+export function rentangMinggu(mulai: number, akhir: number) {
+  const bulan = (t: number) => format(t, { month: "long" });
+  const hari = (t: number) => format(t, { day: "numeric" });
+  const tahun = format(akhir, { year: "numeric" });
+  return bulan(mulai) === bulan(akhir)
+    ? `${hari(mulai)} – ${hari(akhir)} ${bulan(akhir)} ${tahun}`
+    : `${hari(mulai)} ${bulan(mulai)} – ${hari(akhir)} ${bulan(akhir)} ${tahun}`;
+}
