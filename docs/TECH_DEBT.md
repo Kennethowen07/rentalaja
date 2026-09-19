@@ -209,7 +209,7 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 
 - **Dua tombol solid di Beranda** ("Tambah unit" + "Tinjau"). Brief bagian 15 mengunci "satu tombol solid per layar". Mock melanggarnya; saat ini mengikuti mock.
 - **Bar "muda" `#A9C6B6` di atas track `#E7EDE9` hanya 1,55:1.** Tidak fatal karena angkanya tertulis di sebelah bar, tapi bar pendek nyaris hilang.
-- **Hijau merek `#0F6B4F` dan Plus Jakarta Sans tidak dipakai di panel.** Brief bagian 15 menyebut ini risiko dibaca sebagai inkonsistensi; alasan (dipakai berjam-jam di desktop) belum tertulis di UI mana pun.
+- **Hijau merek `#0F6B4F` dan Plus Jakarta Sans tidak dipakai di panel. Diputuskan 19 Sep 2026: dipertahankan.** Alasannya, panel mitra adalah alat kerja yang dibuka berjam-jam di desktop, sedangkan sisi penyewa adalah halaman jualan yang dilihat sekali. Keduanya memang dibedakan supaya penyedia tahu ia sedang di alat kerja, bukan di etalase. Risiko yang diterima: kalau ditanya juri atau investor, ini harus dijawab sebagai pilihan, bukan kelalaian, dan jawabannya ya kalimat di atas. Yang tetap sama di kedua sisi: wordmark rentalaja, bahasa Indonesia kasual, dan aturan tanpa merah atau kuning semantik.
 - **Login.** Rute `/mitra` tetap terbuka tanpa login karena tidak ada backend, tapi sekarang ditulis terang-terangan di sidebar sebagai "Mode demo, tanpa login". Landing juga sudah punya tautan ke panel lewat tombol "Buka panel mitra" di blok CTA penyedia.
 
 ## M2b. Catatan layar Pesanan (#4a)
