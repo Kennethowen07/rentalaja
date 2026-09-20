@@ -9,6 +9,7 @@
 // navbar alih-alih menempel di kanan bersama Masuk/Daftar.
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AuthModal, { type ModeAuth } from "@/components/auth/AuthModal";
@@ -52,11 +53,19 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-5 border-b border-green-200 bg-white/94 backdrop-blur-[8px]">
       <div className="container-page flex h-60 items-stretch justify-between">
-        <Link
-          href="/"
-          className="flex items-center text-wordmark text-green-700"
-        >
-          rentalaja
+        {/* Wordmark aslinya teks 19px. Sekarang gambar: logonya dua baris,
+            jadi tingginya dinaikkan ke 42px supaya kedua baris masih terbaca
+            di dalam navbar 60px. alt jadi nama tautan ini bagi pembaca layar,
+            jangan dikosongkan. */}
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/logo-rentalaja.png"
+            alt="rentalaja"
+            width={402}
+            height={240}
+            priority
+            className="h-42 w-auto"
+          />
         </Link>
 
         <div className="hidden items-stretch gap-26 sm:flex">
