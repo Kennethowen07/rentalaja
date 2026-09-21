@@ -2,16 +2,18 @@
 
 // README section 3 + Interactions/State Management.
 //
-// Dua penyimpangan sadar dari nilai harfiah di desain, keduanya karena
-// desain bertentangan dengan aturannya sendiri:
+// Urutan field: Area antar, Tanggal ambil, Tanggal kembali, Jam ambil.
+// Field "Durasi" dari desain awal diganti "Tanggal kembali" atas permintaan
+// pemilik proyek: orang lebih mudah menyebut tanggal pulangnya daripada
+// menghitung jumlah hari.
 //
-// 1. Desain menampilkan "12 Sep 2026" sebagai tanggal ambil, padahal README
-//    juga menetapkan "Tanggal tidak boleh di masa lalu". Tanggal itu sudah
-//    lewat, jadi default diisi hari ini dan "12 Sep 2026" diperlakukan
-//    sebagai ilustrasi kanvas.
-// 2. Desain menulis durasi "3 hari" tapi helper text menyebut kembali
-//    "14 Sep" (= +2 hari). Karena helper harus dihitung live, rumus yang
-//    dipakai adalah tanggalAmbil + durasiHari.
+// /cari masih membaca ?durasi= (lihat app/cari/page.tsx), jadi durasi tetap
+// dikirim, dihitung dari selisih kedua tanggal. Jam kembali mengikuti jam
+// ambil, sama seperti sebelumnya.
+//
+// Penyimpangan sadar dari desain: desain menampilkan "12 Sep 2026" sebagai
+// tanggal ambil, padahal README juga menetapkan "Tanggal tidak boleh di masa
+// lalu". Default diisi hari ini, tanggal kembali tiga hari setelahnya.
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -23,15 +25,18 @@ type SearchForm = {
   jenis: Jenis;
   area: string;
   tanggalAmbil: string; // yyyy-mm-dd
+  tanggalKembali: string; // yyyy-mm-dd
   jamAmbil: string; // "09.00"
-  durasiHari: number;
 };
 
-type FieldTervalidasi = "area" | "tanggalAmbil" | "durasiHari";
+type FieldTervalidasi = "area" | "tanggalAmbil" | "tanggalKembali";
 type Errors = Partial<Record<FieldTervalidasi, string>>;
 
-/** Urutan fokus saat submit gagal — mengikuti urutan visual field. */
-const URUTAN_FIELD: FieldTervalidasi[] = ["area", "tanggalAmbil", "durasiHari"];
+/** Urutan fokus saat submit gagal, mengikuti urutan visual field. */
+const URUTAN_FIELD: FieldTervalidasi[] = ["area", "tanggalAmbil", "tanggalKembali"];
+
+const DURASI_AWAL = 3;
+const HARI_MS = 24 * 60 * 60 * 1000;
 
 const formatTanggalPanjang = new Intl.DateTimeFormat("id-ID", {
   weekday: "long",
@@ -56,24 +61,23 @@ function parseIso(iso: string): Date | null {
   return Number.isNaN(tanggal.getTime()) ? null : tanggal;
 }
 
-function tanggalKembali(
-  tanggalAmbil: string,
-  durasiHari: number,
-): string | null {
-  const mulai = parseIso(tanggalAmbil);
-  if (!mulai || !Number.isFinite(durasiHari) || durasiHari < 1) return null;
-  const kembali = new Date(
-    mulai.getFullYear(),
-    mulai.getMonth(),
-    mulai.getDate() + durasiHari,
-  );
-  return formatTanggalPanjang.format(kembali);
+function geserHari(iso: string, hari: number): string {
+  const d = parseIso(iso);
+  if (!d) return "";
+  return isoTanggalLokal(new Date(d.getFullYear(), d.getMonth(), d.getDate() + hari));
 }
 
-/** Fungsi murni — dipanggil saat render supaya pesan error selalu
- *  mencerminkan isi form saat ini. Versi sebelumnya menyimpan errors di
- *  state dan hanya menghitungnya saat submit, sehingga pesan tetap tampil
- *  setelah user memperbaiki field-nya. */
+/** Jumlah hari dari ambil ke kembali. Math.round menyerap geseran satu jam
+ *  kalau rentangnya melewati pergantian jam musim panas di zona pengguna. */
+function selisihHari(ambil: string, kembali: string): number | null {
+  const a = parseIso(ambil);
+  const b = parseIso(kembali);
+  if (!a || !b) return null;
+  return Math.round((b.getTime() - a.getTime()) / HARI_MS);
+}
+
+/** Fungsi murni, dipanggil saat render supaya pesan error selalu
+ *  mencerminkan isi form saat ini. */
 function hitungErrors(form: SearchForm, minTanggal: string): Errors {
   const next: Errors = {};
   if (!form.area) next.area = "Pilih area antar.";
@@ -82,8 +86,10 @@ function hitungErrors(form: SearchForm, minTanggal: string): Errors {
   } else if (minTanggal && form.tanggalAmbil < minTanggal) {
     next.tanggalAmbil = "Tanggal tidak boleh di masa lalu.";
   }
-  if (!Number.isFinite(form.durasiHari) || form.durasiHari < 1) {
-    next.durasiHari = "Durasi minimal 1 hari.";
+  if (!form.tanggalKembali) {
+    next.tanggalKembali = "Pilih tanggal kembali.";
+  } else if (form.tanggalAmbil && form.tanggalKembali <= form.tanggalAmbil) {
+    next.tanggalKembali = "Tanggal kembali harus setelah tanggal ambil.";
   }
   return next;
 }
@@ -94,34 +100,56 @@ const KELAS_FIELD =
 export default function SearchCard() {
   const router = useRouter();
 
-  // tanggalAmbil sengaja kosong pada render pertama. Mengisinya dengan
+  // Kedua tanggal sengaja kosong pada render pertama. Mengisinya dengan
   // new Date() saat inisialisasi state akan menghasilkan nilai berbeda di
   // server dan di browser, yaitu hydration mismatch.
   const [form, setForm] = useState<SearchForm>({
     jenis: "motor",
     area: areaAntarOptions[0],
     tanggalAmbil: "",
+    tanggalKembali: "",
     jamAmbil: "09.00",
-    durasiHari: 3,
   });
   const [minTanggal, setMinTanggal] = useState("");
   const [sudahSubmit, setSudahSubmit] = useState(false);
 
   const areaRef = useRef<HTMLSelectElement>(null);
-  const tanggalRef = useRef<HTMLInputElement>(null);
-  const durasiRef = useRef<HTMLInputElement>(null);
+  const tanggalAmbilRef = useRef<HTMLInputElement>(null);
+  const tanggalKembaliRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const hariIni = isoTanggalLokal(new Date());
     setMinTanggal(hariIni);
-    setForm((f) => (f.tanggalAmbil ? f : { ...f, tanggalAmbil: hariIni }));
+    setForm((f) =>
+      f.tanggalAmbil
+        ? f
+        : { ...f, tanggalAmbil: hariIni, tanggalKembali: geserHari(hariIni, DURASI_AWAL) },
+    );
   }, []);
 
-  const kembali = tanggalKembali(form.tanggalAmbil, form.durasiHari);
+  const durasi = selisihHari(form.tanggalAmbil, form.tanggalKembali);
+  const kembaliSah = durasi !== null && durasi >= 1;
+  const kembaliTeks = kembaliSah
+    ? formatTanggalPanjang.format(parseIso(form.tanggalKembali)!)
+    : null;
 
   const errors = hitungErrors(form, minTanggal);
   // Jangan tampilkan error sebelum user pernah menekan "Cari unit".
   const errorTampil: Errors = sudahSubmit ? errors : {};
+
+  function ubahTanggalAmbil(nilai: string) {
+    setForm((f) => {
+      // Kalau tanggal ambil dimajukan sampai melewati tanggal kembali,
+      // tanggal kembali ikut digeser supaya lama sewanya tetap sama, alih-alih
+      // meninggalkan form dalam keadaan tidak sah.
+      if (nilai && f.tanggalKembali && f.tanggalKembali <= nilai) {
+        const lama = selisihHari(f.tanggalAmbil, f.tanggalKembali);
+        const geser = lama && lama >= 1 ? lama : 1;
+        return { ...f, tanggalAmbil: nilai, tanggalKembali: geserHari(nilai, geser) };
+      }
+      return { ...f, tanggalAmbil: nilai };
+    });
+  }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -129,14 +157,14 @@ export default function SearchCard() {
 
     const fieldGagal = URUTAN_FIELD.find((f) => errors[f]);
     if (fieldGagal) {
-      // WCAG 3.3.1 — pindahkan fokus ke field invalid pertama supaya
+      // WCAG 3.3.1: pindahkan fokus ke field invalid pertama supaya
       // pengguna screen reader tahu submit gagal dan di mana letaknya.
       const ref =
         fieldGagal === "area"
           ? areaRef
           : fieldGagal === "tanggalAmbil"
-            ? tanggalRef
-            : durasiRef;
+            ? tanggalAmbilRef
+            : tanggalKembaliRef;
       ref.current?.focus();
       return;
     }
@@ -146,7 +174,7 @@ export default function SearchCard() {
       area: form.area,
       mulai: form.tanggalAmbil,
       jam: form.jamAmbil,
-      durasi: String(form.durasiHari),
+      durasi: String(durasi),
     });
     router.push(`/cari?${query.toString()}`);
   }
@@ -183,7 +211,7 @@ export default function SearchCard() {
           ))}
         </div>
 
-        <div className="grid items-end gap-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_.8fr_auto]">
+        <div className="grid items-end gap-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_.9fr_auto]">
           {/* Area antar */}
           <div>
             <label htmlFor="area" className="mb-6 block text-label text-muted">
@@ -228,7 +256,7 @@ export default function SearchCard() {
             </label>
             <input
               id="tanggal-ambil"
-              ref={tanggalRef}
+              ref={tanggalAmbilRef}
               type="date"
               required
               value={form.tanggalAmbil}
@@ -237,9 +265,7 @@ export default function SearchCard() {
               aria-describedby={
                 errorTampil.tanggalAmbil ? "tanggal-ambil-error" : undefined
               }
-              onChange={(e) =>
-                setForm((f) => ({ ...f, tanggalAmbil: e.target.value }))
-              }
+              onChange={(e) => ubahTanggalAmbil(e.target.value)}
               className={`${KELAS_FIELD} ${
                 errorTampil.tanggalAmbil ? "border-error" : "border-line"
               }`}
@@ -251,6 +277,44 @@ export default function SearchCard() {
                 className="mt-6 text-body-sm text-error"
               >
                 {errorTampil.tanggalAmbil}
+              </p>
+            )}
+          </div>
+
+          {/* Tanggal kembali */}
+          <div>
+            <label
+              htmlFor="tanggal-kembali"
+              className="mb-6 block text-label text-muted"
+            >
+              Tanggal kembali
+            </label>
+            <input
+              id="tanggal-kembali"
+              ref={tanggalKembaliRef}
+              type="date"
+              required
+              value={form.tanggalKembali}
+              // Paling cepat sehari setelah tanggal ambil.
+              min={geserHari(form.tanggalAmbil, 1) || minTanggal || undefined}
+              aria-invalid={Boolean(errorTampil.tanggalKembali)}
+              aria-describedby={
+                errorTampil.tanggalKembali ? "tanggal-kembali-error" : undefined
+              }
+              onChange={(e) =>
+                setForm((f) => ({ ...f, tanggalKembali: e.target.value }))
+              }
+              className={`${KELAS_FIELD} ${
+                errorTampil.tanggalKembali ? "border-error" : "border-line"
+              }`}
+            />
+            {errorTampil.tanggalKembali && (
+              <p
+                id="tanggal-kembali-error"
+                role="alert"
+                className="mt-6 text-body-sm text-error"
+              >
+                {errorTampil.tanggalKembali}
               </p>
             )}
           </div>
@@ -279,55 +343,6 @@ export default function SearchCard() {
             </select>
           </div>
 
-          {/* Durasi */}
-          <div>
-            <label htmlFor="durasi" className="mb-6 block text-label text-muted">
-              Durasi
-              {/* Satuan "hari" di dalam kotak bersifat dekoratif (aria-hidden),
-                  jadi satuannya disediakan di sini untuk pembaca layar. */}
-              <span className="sr-only"> dalam hari</span>
-            </label>
-            <div className="relative">
-              <input
-                id="durasi"
-                ref={durasiRef}
-                type="number"
-                min={1}
-                required
-                inputMode="numeric"
-                value={Number.isFinite(form.durasiHari) ? form.durasiHari : ""}
-                aria-invalid={Boolean(errorTampil.durasiHari)}
-                aria-describedby={
-                  errorTampil.durasiHari ? "durasi-error" : undefined
-                }
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    durasiHari: Number.parseInt(e.target.value, 10),
-                  }))
-                }
-                className={`${KELAS_FIELD} pr-44 ${
-                  errorTampil.durasiHari ? "border-error" : "border-line"
-                }`}
-              />
-              <span
-                aria-hidden
-                className="pointer-events-none absolute top-1/2 right-12 -translate-y-1/2 text-nav-strong text-ink"
-              >
-                hari
-              </span>
-            </div>
-            {errorTampil.durasiHari && (
-              <p
-                id="durasi-error"
-                role="alert"
-                className="mt-6 text-body-sm text-error"
-              >
-                {errorTampil.durasiHari}
-              </p>
-            )}
-          </div>
-
           {/* <1024px tombol jatuh ke baris terakhir, full width */}
           <button
             type="submit"
@@ -337,18 +352,22 @@ export default function SearchCard() {
           </button>
         </div>
 
+        {/* Durasi tidak lagi diisi, tapi tetap disebut di sini supaya orang
+            tahu berapa hari yang akan dibayar. */}
         <p aria-live="polite" className="mt-11 text-body-sm text-muted">
-          {kembali ? (
+          {kembaliTeks ? (
             <>
-              Kembali{" "}
+              Sewa{" "}
+              <strong className="text-body-strong text-ink">{durasi} hari</strong>,
+              kembali{" "}
               <strong className="text-body-strong text-ink">
-                {kembali} pukul {form.jamAmbil}
+                {kembaliTeks} pukul {form.jamAmbil}
               </strong>
               . Hasil pencarian hanya menampilkan unit yang kosong di rentang
               itu.
             </>
           ) : (
-            "Lengkapi tanggal ambil dan durasi untuk melihat tanggal kembali."
+            "Pilih tanggal ambil dan tanggal kembali untuk melihat lama sewa."
           )}
         </p>
       </form>
