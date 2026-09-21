@@ -9,9 +9,21 @@ import {
   hariSingkat,
   hariTanggal,
   statusKembali,
-  tanggalJam,
+  tanggalLengkap,
   tanggalPanjang,
 } from "@/lib/mitra/waktu";
+
+// Kolom kanan "Unit yang lagi keluar" menampilkan tanggal kembali, bukan label
+// status. Unit yang lewat jadwal tetap diberi titik dan warna plum, plus teks
+// tersembunyi untuk pembaca layar, supaya tanda telatnya tidak hilang.
+function TanggalKembali({ kembaliPada, telat }: { kembaliPada: number; telat: boolean }) {
+  return (
+    <>
+      <TitikStatus label={tanggalLengkap(kembaliPada)} telat={telat} />
+      {telat && <span className="sr-only">, lewat jadwal kembali</span>}
+    </>
+  );
+}
 
 function warnaBar(persen: number) {
   if (persen >= 75) return "bg-mitra-bar-pekat";
@@ -113,15 +125,14 @@ export default async function BerandaMitra() {
                   <div className="min-w-0 flex-1">
                     <p className="text-m-judul-baris text-mitra-ink">{u.nama}</p>
                     <p className="mt-5 text-m-meta text-mitra-muted">
-                      {u.plat} · {u.penyewa} ·{" "}
-                      {u.status.telat ? "jatuh tempo" : "kembali"} {tanggalJam(u.kembaliPada)}
+                      {u.plat} · {u.penyewa}
                     </p>
                     <div className="mt-8 min-[640px]:hidden">
-                      <TitikStatus {...u.status} />
+                      <TanggalKembali kembaliPada={u.kembaliPada} telat={u.status.telat} />
                     </div>
                   </div>
                   <div className="hidden shrink-0 min-[640px]:block">
-                    <TitikStatus {...u.status} />
+                    <TanggalKembali kembaliPada={u.kembaliPada} telat={u.status.telat} />
                   </div>
                 </Link>
               </li>

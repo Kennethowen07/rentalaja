@@ -89,6 +89,11 @@ export function tanggalSingkat(t: number) {
   return format(t, { day: "numeric", month: "short" });
 }
 
+/** "14 Sep 2026" */
+export function tanggalLengkap(t: number) {
+  return format(t, { day: "numeric", month: "short", year: "numeric" });
+}
+
 /** "09.00" */
 export function jamSaja(t: number) {
   return format(t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).replace(":", ".");
