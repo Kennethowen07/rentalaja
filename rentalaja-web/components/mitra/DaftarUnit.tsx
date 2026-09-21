@@ -15,7 +15,7 @@ import Modal from "@/components/ui/Modal";
 import { filterUnit, type KunciFilter } from "@/lib/mitra/filter-unit";
 import { rupiah } from "@/lib/mitra/format";
 import type { Pesanan, Unit } from "@/lib/mitra/tipe";
-import { pukulWita, statusKembali, tanggalSingkat } from "@/lib/mitra/waktu";
+import { pukulWita, statusKembali, tanggalLengkap, tanggalSingkat } from "@/lib/mitra/waktu";
 import { usePesanan } from "./PesananProvider";
 import { ThumbnailUnit, TitikStatus, kelasTombolBaris } from "./ui";
 
@@ -24,17 +24,21 @@ type StatusTampil = {
   label: string;
   telat: boolean;
   netral: boolean;
+  /** Jadwal kembali, hanya untuk unit yang sedang keluar. */
+  kembali?: number;
 };
 
 function statusUnit(u: Unit, berjalan: Pesanan[], sekarang: number): StatusTampil {
   const sewa = berjalan.find((p) => p.plat === u.plat);
   if (sewa) {
-    const s = statusKembali(sewa.kembaliPada ?? sewa.selesai, sekarang);
+    const kembali = sewa.kembaliPada ?? sewa.selesai;
+    const s = statusKembali(kembali, sekarang);
     return {
       kunci: "keluar",
       label: s.telat ? "Lewat jadwal" : "Sedang keluar",
       telat: s.telat,
       netral: false,
+      kembali,
     };
   }
   if (u.status === "service") {
@@ -121,8 +125,15 @@ export default function DaftarUnit({
                   <p className="mt-4 text-m-label text-mitra-faint">per hari</p>
                 </div>
 
-                <div className="shrink-0 min-[900px]:w-170">
+                <div className="shrink-0 min-[900px]:w-190">
                   <TitikStatus label={status.label} telat={status.telat} netral={status.netral} />
+                  {/* Menjorok 16px (titik 7px + jarak 9px) supaya sejajar dengan
+                      teks label di atasnya, bukan dengan titiknya. */}
+                  {status.kembali !== undefined && (
+                    <p className="mt-4 pl-16 text-m-label text-mitra-faint">
+                      {status.telat ? "Jatuh tempo" : "Kembali"} {tanggalLengkap(status.kembali)}
+                    </p>
+                  )}
                 </div>
 
                 <div className="shrink-0">
