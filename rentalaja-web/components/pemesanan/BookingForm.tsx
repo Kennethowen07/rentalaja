@@ -251,9 +251,11 @@ function ModalPembayaran({
   );
 }
 
-export default function BookingForm() {
-  const [ambil, setAmbil] = useState("");
-  const [kembali, setKembali] = useState("");
+/** Rentang sewa yang sudah dipilih sebelum masuk halaman ini, sudah dalam
+ *  bentuk teks siap tampil. Tidak bisa diubah di sini. */
+export type PeriodeSewa = { ambil: string; kembali: string };
+
+export default function BookingForm({ periode }: { periode: PeriodeSewa }) {
   const [titikAntar, setTitikAntar] = useState("");
   const [pengambilan, setPengambilan] = useState<number | null>(null);
 
@@ -271,7 +273,7 @@ export default function BookingForm() {
 
   // Satu langkah hijau hanya kalau SELURUH field miliknya terisi.
   const selesai = [
-    Boolean(ambil && kembali && titikAntar.trim() && pengambilan !== null),
+    Boolean(titikAntar.trim() && pengambilan !== null),
     Boolean(ktp && sim && nama.trim() && whatsapp.trim() && email.trim()),
     pembayaran !== null,
   ];
@@ -300,8 +302,6 @@ export default function BookingForm() {
   /** Isi seluruh form sekaligus dengan data contoh, supaya alur bisa dicoba
    *  berulang tanpa mengetik ulang. */
   function isiOtomatis() {
-    setAmbil(simulasi.ambil);
-    setKembali(simulasi.kembali);
     setTitikAntar(simulasi.titikAntar);
     setPengambilan(simulasi.pengambilan);
     setKtp(simulasi.ktp);
@@ -346,20 +346,21 @@ export default function BookingForm() {
       <div className="grid items-start gap-24 lg:grid-cols-[1fr_320px]">
         <div>
           <Kartu nomor={1} judul="Tanggal dan titik antar" selesai={selesai[0]}>
-            <div className="mt-14 grid gap-12 sm:grid-cols-2">
-              <Isian
-                label="Ambil"
-                tipe="datetime-local"
-                nilai={ambil}
-                onUbah={setAmbil}
-              />
-              <Isian
-                label="Kembali"
-                tipe="datetime-local"
-                nilai={kembali}
-                onUbah={setKembali}
-              />
-            </div>
+            {/* Tanggal sudah dipilih sejak pencarian, jadi di sini hanya
+                ditampilkan, bukan diisi ulang. */}
+            <dl className="mt-14 grid gap-12 sm:grid-cols-2">
+              {(
+                [
+                  ["Ambil", periode.ambil],
+                  ["Kembali", periode.kembali],
+                ] as const
+              ).map(([label, nilai]) => (
+                <div key={label} className="rounded-input border border-line bg-white px-12 py-11">
+                  <dt className="text-label text-muted">{label}</dt>
+                  <dd className="mt-2 text-nav-strong text-ink">{nilai}</dd>
+                </div>
+              ))}
+            </dl>
 
             <div className="mt-12">
               <Isian

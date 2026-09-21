@@ -21,7 +21,6 @@ export const pesanan = {
   },
   rincian: [
     { label: "3 hari sewa", nilai: "Rp 210.000" },
-    { label: "Antar jemput", nilai: "Gratis" },
     { label: "Biaya layanan", nilai: "Rp 5.000" },
   ],
   total: "Rp 215.000",
@@ -66,8 +65,6 @@ export const petunjukBerkas = "Tarik file ke sini atau pilih";
  *  ditampilkan Layar 5, jadi hasil simulasi nyambung dengan halaman pesanan
  *  aktif yang muncul setelahnya. */
 export const simulasi = {
-  ambil: "2026-09-12T09:00",
-  kembali: "2026-09-14T09:00",
   titikAntar: contohIsian.titikAntar,
   pengambilan: 0,
   ktp: "ktp-adi.jpg",
