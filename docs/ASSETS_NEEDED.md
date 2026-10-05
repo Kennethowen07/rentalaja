@@ -142,8 +142,23 @@ atau foto resmi yang memang boleh dipakai ulang. Hal yang sama berlaku untuk
 33 aset di atas — terutama avatar, yang sebaiknya **bukan wajah orang sungguhan**
 tanpa izin, karena testimoninya fiktif.
 
-**Status 5 Okt 2026.** Empat foto sisa (Beat, PCX, Vespa, Fino) asalnya juga
-belum dipastikan. Hanya satu foto yang sumbernya bersih:
+**Selesai 5 Okt 2026.** Ketujuh foto lama sudah diganti. Tidak ada lagi foto
+yang asalnya tidak jelas di `public/units/`. Semua pengganti berasal dari
+Wikimedia Commons, dipotong ke 3:2 dan dikecilkan ke 900×600.
+
+Daftar lengkap pembuat dan lisensinya ada di `lib/mock/kredit-foto.ts` dan
+tampil ke pengunjung di halaman `/kredit`, yang ditautkan dari footer. Enam
+foto berlisensi CC BY-SA sehingga atribusinya **wajib**; dua berlisensi CC0
+dan dicantumkan sebagai kesopanan saja. Jangan hapus tautan footer itu selama
+foto-fotonya masih dipakai.
+
+Tiga kandidat ditolak saat pemilihan, dicatat supaya tidak dicoba ulang:
+foto Scoopy di Jimbaran (berdesakan dan plat nomor aslinya terbaca), Vespa
+Sprint 150 (model klasik 1960-an, bukan Sprint modern), dan Vespa Primavera
+(model berbeda). Pada foto Beat, plat nomor asli dikaburkan karena terbaca
+jelas dan bertentangan dengan plat fiktif di data unit.
+
+Contoh entri lama sebelum penggantian, disimpan sebagai rujukan:
 
 | Berkas | Sumber | Lisensi | Kewajiban |
 | --- | --- | --- | --- |

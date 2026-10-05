@@ -1,6 +1,8 @@
 // README section 11 — footer #062A1F.
 // Responsive: 640-1023px jadi 2 kolom, <640px jadi 1 kolom.
 
+import Link from "next/link";
+
 const kolomLink = [
   {
     judul: "Penyewa",
@@ -50,29 +52,18 @@ export default function Footer() {
 
         <div className="mt-22 border-t border-white/14 pt-14">
           <p className="text-micro text-footer-bottom">© 2026 rentalaja</p>
-          {/* Wajib ada: foto Honda Vario 160 berlisensi CC BY-SA 4.0, yang
-              mensyaratkan nama pembuat dan tautan lisensi dicantumkan di
-              tempat yang wajar. Jangan dihapus selama fotonya dipakai. */}
+          {/* Wajib ada: foto unit berlisensi CC BY-SA mensyaratkan atribusi
+              tampil di tempat fotonya dipakai. Daftarnya terlalu panjang untuk
+              footer, jadi isinya di /kredit. Jangan hapus tautan ini selama
+              foto-foto itu masih dipakai. */}
           <p className="mt-6 text-micro text-footer-bottom">
-            Foto Honda Vario 160 oleh オーバードライブ83 via{" "}
-            <a
-              href="https://commons.wikimedia.org/wiki/File:2022_Honda_Vario_160_ABS_(20221229).jpg"
-              target="_blank"
-              rel="noreferrer"
+            Foto kendaraan berlisensi bebas dari Wikimedia Commons —{" "}
+            <Link
+              href="/kredit"
               className="underline transition-colors duration-160 ease-base hover:text-green-300"
             >
-              Wikimedia Commons
-            </a>
-            , lisensi{" "}
-            <a
-              href="https://creativecommons.org/licenses/by-sa/4.0/"
-              target="_blank"
-              rel="noreferrer"
-              className="underline transition-colors duration-160 ease-base hover:text-green-300"
-            >
-              CC BY-SA 4.0
-            </a>
-            , dipotong ke rasio 3:2.
+              kredit dan lisensi
+            </Link>
           </p>
         </div>
       </div>

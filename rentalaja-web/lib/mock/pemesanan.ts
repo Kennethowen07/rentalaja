@@ -17,7 +17,7 @@ export const pesanan = {
     nama: "Honda Scoopy 2023",
     penyedia: "Bali Motor Rent",
     rating: "4,9",
-    foto: "/units/honda-scoopy-2023.jpeg",
+    foto: "/units/honda-scoopy-2023.webp",
   },
   rincian: [
     { label: "3 hari sewa", nilai: "Rp 210.000" },

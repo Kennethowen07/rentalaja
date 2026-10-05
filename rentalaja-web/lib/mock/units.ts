@@ -23,7 +23,7 @@ export const unitPopuler: Unit[] = [
     spesifikasi: "skutik 110cc",
     hargaPerHari: 75000,
     fotoLabel: "foto unit",
-    foto: "/units/honda-scoopy-2023.jpeg",
+    foto: "/units/honda-scoopy-2023.webp",
   },
   {
     id: "yamaha-nmax-2022",

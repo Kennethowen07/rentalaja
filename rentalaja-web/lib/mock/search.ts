@@ -49,7 +49,7 @@ export const unitHasil: UnitHasil[] = [
     penyedia: "Bali Motor Rent",
     hargaPerHari: 70000,
     kosongPada: [true, true, false],
-    foto: "/units/honda-scoopy-2023.jpeg",
+    foto: "/units/honda-scoopy-2023.webp",
   },
   {
     id: "honda-beat-2022",

@@ -83,7 +83,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       id: "RA-284102",
       unit: "Honda Scoopy 2023",
       plat: "DK 4821 XY",
-      foto: "/units/honda-scoopy-2023.jpeg",
+      foto: "/units/honda-scoopy-2023.webp",
       penyewa: "Adi Prasetyo",
       telepon: "+62 812-0000-0103",
       mulai: pukulWita(sekarang, 0, 9),
@@ -175,7 +175,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       id: "RA-283812",
       unit: "Honda Scoopy 2023",
       plat: "DK 4821 XY",
-      foto: "/units/honda-scoopy-2023.jpeg",
+      foto: "/units/honda-scoopy-2023.webp",
       penyewa: "Rina Wijaya",
       telepon: "+62 812-0000-0109",
       mulai: pukulWita(sekarang, -9, 9),
@@ -250,7 +250,7 @@ function semuaUnit(sekarang: number): Unit[] {
 
   return [
     // Enam unit di bawah platnya cocok dengan pesanan berstatus active.
-    motor("u-01", "Honda Scoopy 2023", "DK 4821 XY", "/units/honda-scoopy-2023.jpeg", "matic 110cc · 2 helm", 70_000),
+    motor("u-01", "Honda Scoopy 2023", "DK 4821 XY", "/units/honda-scoopy-2023.webp", "matic 110cc · 2 helm", 70_000),
     motor("u-02", "Yamaha NMAX 155", "DK 1902 CD", "/units/yamaha-nmax-2022.webp", "matic 155cc · 2 helm", 110_000),
     motor("u-03", "Honda PCX 160", "DK 5127 AB", "/units/honda-pcx-160-2023.webp", "matic 160cc · 2 helm", 120_000),
     motor("u-04", "Honda Beat 2022", "DK 7734 EF", "/units/honda-beat-2022.webp", "matic 110cc · 1 helm", 65_000),
@@ -259,8 +259,8 @@ function semuaUnit(sekarang: number): Unit[] {
 
     motor("u-07", "Toyota Avanza 2021", "DK 8890 GH", "/units/toyota-avanza-2021.webp", "MPV 7 kursi · bensin", 285_000),
     motor("u-08", "Toyota Avanza 2021", "DK 8912 GH", "/units/toyota-avanza-2021.webp", "MPV 7 kursi · bensin", 285_000),
-    motor("u-09", "Honda Scoopy 2023", "DK 4835 XY", "/units/honda-scoopy-2023.jpeg", "matic 110cc · 2 helm", 70_000),
-    motor("u-10", "Honda Scoopy 2022", "DK 4102 TR", "/units/honda-scoopy-2023.jpeg", "matic 110cc · 2 helm", 65_000),
+    motor("u-09", "Honda Scoopy 2023", "DK 4835 XY", "/units/honda-scoopy-2023.webp", "matic 110cc · 2 helm", 70_000),
+    motor("u-10", "Honda Scoopy 2022", "DK 4102 TR", "/units/honda-scoopy-2023.webp", "matic 110cc · 2 helm", 65_000),
     motor("u-11", "Honda Beat 2022", "DK 7740 EF", "/units/honda-beat-2022.webp", "matic 110cc · 1 helm", 65_000),
     motor("u-12", "Honda Beat 2021", "DK 7128 LM", "/units/honda-beat-2022.webp", "matic 110cc · 1 helm", 60_000),
     motor("u-13", "Yamaha NMAX 155", "DK 1955 CD", "/units/yamaha-nmax-2022.webp", "matic 155cc · 2 helm", 110_000),

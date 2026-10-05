@@ -28,7 +28,7 @@ export const pesananAktif = {
     nama: "Honda Scoopy 2023",
     plat: "Plat DK 4821 XY · skutik 110cc",
     periode: "12 Sep 09.00 → 14 Sep 09.00 · 3 hari",
-    foto: "/units/honda-scoopy-2023.jpeg",
+    foto: "/units/honda-scoopy-2023.webp",
   },
 
   tahap: [
