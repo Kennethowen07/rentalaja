@@ -50,7 +50,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       id: "RA-284207",
       unit: "Honda Vario 160",
       plat: "DK 3390 GH",
-      foto: null,
+      foto: "/units/honda-vario-160-2022.webp",
       penyewa: "Dewi Anggraini",
       telepon: "+62 812-0000-0101",
       mulai: pukulWita(sekarang, 0, 13),
@@ -268,9 +268,9 @@ function semuaUnit(sekarang: number): Unit[] {
     motor("u-15", "Vespa Sprint 2021", "DK 2260 MN", "/units/vespa-sprint-2021.webp", "matic 150cc · 2 helm", 150_000),
     motor("u-16", "Honda PCX 160", "DK 5130 AB", "/units/honda-pcx-160-2023.webp", "matic 160cc · 2 helm", 120_000),
     // Plat ini dipakai pesanan yang masih menunggu konfirmasi.
-    motor("u-17", "Honda Vario 160", "DK 3390 GH", null, "matic 160cc · 2 helm", 95_000),
+    motor("u-17", "Honda Vario 160", "DK 3390 GH", "/units/honda-vario-160-2022.webp", "matic 160cc · 2 helm", 95_000),
 
-    motor("u-18", "Honda Vario 160", "DK 3312 JK", null, "matic 160cc · 2 helm", 95_000, "service", pukulWita(sekarang, 2, 17)),
+    motor("u-18", "Honda Vario 160", "DK 3312 JK", "/units/honda-vario-160-2022.webp", "matic 160cc · 2 helm", 95_000, "service", pukulWita(sekarang, 2, 17)),
   ];
 }
 

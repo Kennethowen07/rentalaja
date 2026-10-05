@@ -142,6 +142,17 @@ atau foto resmi yang memang boleh dipakai ulang. Hal yang sama berlaku untuk
 33 aset di atas — terutama avatar, yang sebaiknya **bukan wajah orang sungguhan**
 tanpa izin, karena testimoninya fiktif.
 
+**Status 5 Okt 2026.** Empat foto sisa (Beat, PCX, Vespa, Fino) asalnya juga
+belum dipastikan. Hanya satu foto yang sumbernya bersih:
+
+| Berkas | Sumber | Lisensi | Kewajiban |
+| --- | --- | --- | --- |
+| `units/honda-vario-160-2022.webp` | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:2022_Honda_Vario_160_ABS_(20221229).jpg), oleh オーバードライブ83 | CC BY-SA 4.0 | Nama pembuat dan tautan lisensi **wajib** tercantum. Sudah dipasang di `components/Footer.tsx`; jangan dihapus selama fotonya dipakai. Foto aslinya 3149×3089, dipotong ke 3:2 dan dikecilkan ke 900×600 — perubahan ini disebut di kredit karena CC BY-SA mensyaratkannya. |
+
+Catatan soal share-alike: klausa SA mengikat karya turunan dari *fotonya*,
+bukan seluruh situs. Jadi memakainya tidak memaksa kode proyek ini jadi
+CC BY-SA. Yang wajib hanyalah atribusi dan penyebutan bahwa foto dimodifikasi.
+
 ## Panel mitra
 
-- **Foto Honda Vario 160.** Dipakai di layar Pesanan, baris pesanan menunggu pertama. Sekarang masih kotak abu.
+- ~~**Foto Honda Vario 160.** Dipakai di layar Pesanan, baris pesanan menunggu pertama. Sekarang masih kotak abu.~~ **Selesai 5 Okt 2026.** `public/units/honda-vario-160-2022.webp`, dipasang di unit u-17, u-18, dan pesanan RA-284207. Sumber dan lisensinya lihat bagian hak cipta di atas.
