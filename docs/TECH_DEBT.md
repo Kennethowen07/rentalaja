@@ -275,3 +275,44 @@ Sumber: `UI/penyedia kendaraan/Form screening wireframe.zip` →
 - Tidak ada polling/websocket untuk pesanan baru (README State Management).
 - Angka metrik (7 pesanan, Rp 24,8jt, 18%) dan grafik mingguan statis.
 - Ikon belum ada di mana pun; repo belum punya icon set.
+
+---
+
+## K1. Google Maps belum punya API key, peta masih gambar statis
+
+**Prioritas: sedang.** Ditunda 5 Okt 2026 karena pembuatan key butuh kartu untuk
+menautkan billing account. Bukan pekerjaan kode, hanya konfigurasi.
+
+**Kodenya sudah selesai.** `components/ui/PetaLokasi.tsx` sudah memakai Google
+Maps Embed API dan otomatis jatuh ke `/peta-titik-antar.webp` plus keterangan
+"Peta ilustrasi, bukan lokasi sebenarnya" kalau key kosong. Dipakai di dua
+tempat: titik antar di Layar 4 (`BookingForm`) dan titik kembali di Layar 5
+(`ReturnPointButton`). Jadi tanpa key pun aplikasi tidak rusak, cuma petanya
+bukan lokasi sungguhan.
+
+**Yang belum ada, keduanya kosong per 5 Okt 2026:**
+
+- `rentalaja-web/.env.local` sudah dibuat dari `.env.example`, tapi
+  `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY=` masih kosong. File ini diabaikan git.
+- Environment variable di project Vercel `rentalaja` kosong sama sekali
+  (dicek lewat API Vercel), jadi produksi juga memakai gambar cadangan.
+
+**Langkahnya saat dompetnya sudah ada**, urutan lengkap ada di `.env.example`:
+aktifkan Maps Embed API di Google Cloud Console, buat API key, isi `.env.local`,
+restart `npm run dev` (nilai `NEXT_PUBLIC_*` di-inline saat start, tidak ikut
+hot reload), lalu tambahkan variabel yang sama di Vercel dan redeploy.
+
+**Dua hal yang jangan dilewati:**
+
+- **Key ini publik.** Awalan `NEXT_PUBLIC_` berarti nilainya ikut terkirim ke
+  browser dan terbaca di source halaman. Itu memang cara kerja Embed API.
+  Satu-satunya pengaman adalah membatasi key: Application restrictions =
+  Websites dengan `http://localhost:3000/*` dan `https://rentalaja.vercel.app/*`,
+  dan API restrictions = Maps Embed API saja. Jangan pakai wildcard
+  `https://*.vercel.app/*` — artinya pemilik proyek Vercel mana pun bisa
+  memakai kuota key ini. Konsekuensi yang diterima: URL preview Vercel tidak
+  cocok dengan pembatasan itu, jadi peta hanya hidup di localhost dan domain
+  produksi.
+- **Klaim "gratis tanpa batas pemakaian" di `.env.example` perlu diperiksa
+  ulang.** Itu benar untuk aturan lama; Google mengubah struktur harga Maps
+  Platform pada 2025. Periksa halaman pricing saat mengaktifkan API.
