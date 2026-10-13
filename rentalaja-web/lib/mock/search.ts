@@ -11,17 +11,76 @@
 // apa adanya sesuai aturan copy verbatim; angkanya memang tidak konsisten
 // di file desain.
 
+// Formatter tanggal WITA dipakai bersama dengan panel mitra. Letaknya di
+// lib/mitra/ karena di sanalah pertama kali dibutuhkan, tapi isinya tidak
+// mitra-spesifik: semua tanggal di produk ini memakai zona Bali.
+import { HARI, JAM, pukulWita, rentangTanggal } from "@/lib/mitra/waktu";
+
 export type RentangTanggal = {
   label: string;
   hari: number;
   catatan: string;
+  /** Epoch ms tengah malam WITA, dipakai saat tanggal diteruskan ke layar lain. */
+  mulai: number;
+  /** Tanggal unit dikembalikan, yaitu mulai + hari. */
+  selesai: number;
 };
 
-export const rentangTanggal: RentangTanggal[] = [
-  { label: "12–14 Sep", hari: 3, catatan: "akhir pekan" },
-  { label: "16–17 Sep", hari: 2, catatan: "hari kerja" },
-  { label: "20–27 Sep", hari: 8, catatan: "sewa panjang" },
-];
+export type PilihanTanggal = {
+  /** "2026-10-15" dari query ?mulai= */
+  mulai: string;
+  hari: number;
+};
+
+/** Tengah malam WITA untuk tanggal "2026-10-15". WITA tetap UTC+8 sepanjang
+ *  tahun, jadi selisihnya boleh dianggap konstan. */
+function dariIso(iso: string): number | null {
+  const [y, b, t] = iso.split("-").map(Number);
+  if (!y || !b || !t) return null;
+  const ms = Date.UTC(y, b - 1, t) - 8 * JAM;
+  return Number.isNaN(ms) ? null : ms;
+}
+
+/**
+ * Tiga rentang tanggal untuk chip filter.
+ *
+ * Dulu ini konstanta "12–14 Sep" dan kawan-kawan, disalin dari file desain.
+ * Masalahnya dua: tanggalnya ikut basi begitu bulannya lewat, dan tanggal yang
+ * baru saja diisi penyewa di landing page diabaikan begitu saja.
+ *
+ * Sekarang chip pertama memakai tanggal pilihan penyewa, dua chip lain
+ * diturunkan darinya. Ketiganya selalu di masa depan. Yang dipertahankan dari
+ * desain adalah idenya: mengganti chip mengubah daftar unit, lewat
+ * `kosongPada` yang indeksnya sejajar dengan array ini.
+ */
+export function bangunRentang(
+  sekarang: number,
+  pilihan: PilihanTanggal | null,
+): RentangTanggal[] {
+  const besok = pukulWita(sekarang, 1, 0);
+  const diminta = pilihan ? dariIso(pilihan.mulai) : null;
+  // Tanggal yang sudah lewat didorong ke besok: menawarkan unit untuk tanggal
+  // kemarin lebih membingungkan daripada menggeser sehari.
+  const mulai0 = diminta && diminta >= besok ? diminta : besok;
+  const hari0 = pilihan && pilihan.hari >= 1 ? pilihan.hari : 3;
+
+  const mulai1 = mulai0 + (hari0 + 2) * HARI;
+  const mulai2 = mulai1 + 4 * HARI;
+
+  const buat = (mulai: number, hari: number, catatan: string): RentangTanggal => ({
+    mulai,
+    selesai: mulai + hari * HARI,
+    hari,
+    catatan,
+    label: rentangTanggal(mulai, mulai + hari * HARI),
+  });
+
+  return [
+    buat(mulai0, hari0, pilihan ? "pilihanmu" : "akhir pekan"),
+    buat(mulai1, 2, "hari kerja"),
+    buat(mulai2, 8, "sewa panjang"),
+  ];
+}
 
 export type UnitHasil = {
   id: string;
@@ -48,7 +107,7 @@ export const unitHasil: UnitHasil[] = [
     area: "Canggu",
     penyedia: "Bali Motor Rent",
     hargaPerHari: 70000,
-    kosongPada: [true, true, false],
+    kosongPada: [true, true, false],  
     foto: "/units/honda-scoopy-2023.webp",
   },
   {

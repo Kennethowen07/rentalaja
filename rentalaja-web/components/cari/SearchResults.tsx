@@ -12,19 +12,22 @@ import ResultCard from "@/components/cari/ResultCard";
 import {
   filterPasif,
   jumlahKosong,
-  rentangTanggal,
+  type RentangTanggal,
   unitHasil,
   urutkanHasil,
 } from "@/lib/mock/search";
 
 export default function SearchResults({
   ringkasanFilter,
+  daftarRentang,
 }: {
   ringkasanFilter: string;
+  /** Dihitung di server dari tanggal pilihan penyewa, lihat app/cari/page.tsx. */
+  daftarRentang: RentangTanggal[];
 }) {
   const [rentangIndex, setRentangIndex] = useState(0);
 
-  const rentang = rentangTanggal[rentangIndex];
+  const rentang = daftarRentang[rentangIndex];
   const hasil = urutkanHasil(rentangIndex);
   const kosong = jumlahKosong(rentangIndex);
 
@@ -43,7 +46,7 @@ export default function SearchResults({
             className="flex items-center gap-6 rounded-input border border-green-700 bg-green-100 px-10 py-7"
           >
             <span className="text-chip-label text-green-700">Tanggal</span>
-            {rentangTanggal.map((r, i) => (
+            {daftarRentang.map((r, i) => (
               <button
                 key={r.label}
                 type="button"
