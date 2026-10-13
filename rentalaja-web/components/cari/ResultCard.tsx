@@ -7,15 +7,19 @@ import Link from "next/link";
 import ImagePlaceholder from "@/components/ui/ImagePlaceholder";
 import { formatRupiah } from "@/lib/mock/units";
 import { tagPaket, type HasilUrut } from "@/lib/mock/search";
+import { paramSewa, type Sewa } from "@/lib/sewa";
 
 export default function ResultCard({
   hasil,
-  hari,
+  sewa,
 }: {
   hasil: HasilUrut;
-  hari: number;
+  /** Rentang yang sedang dilihat. Ikut dibawa ke halaman detail lewat query,
+   *  supaya harga dan kalender di sana memakai tanggal yang sama. */
+  sewa: Sewa;
 }) {
   const { unit, kosong } = hasil;
+  const hari = sewa.hari;
   const total = unit.hargaPerHari * hari;
 
   const isi = (
@@ -90,7 +94,7 @@ export default function ResultCard({
 
   return (
     <Link
-      href={`/unit/${unit.id}`}
+      href={`/unit/${unit.id}?${paramSewa(sewa)}`}
       className={`block ${kelasKartu} transition duration-160 ease-base hover:-translate-y-2 hover:shadow-card-hover`}
     >
       {isi}

@@ -12,7 +12,15 @@
 // titik antar) di sini turun jadi PLACEHOLDER. Formnya mulai kosong supaya
 // bisa diisi sungguhan, dan stepper baru menghijau setelah terisi.
 
-export const pesanan = {
+export type RingkasanPesanan = {
+  unit: { nama: string; penyedia: string; rating: string; foto: string };
+  rincian: { label: string; nilai: string }[];
+  total: string;
+};
+
+/** Dipakai kalau /pemesanan dibuka tanpa ?unit=, misalnya dari bookmark.
+ *  Alur normalnya ringkasan dibangun dari unit yang benar-benar diklik. */
+export const pesanan: RingkasanPesanan = {
   unit: {
     nama: "Honda Scoopy 2023",
     penyedia: "Bali Motor Rent",

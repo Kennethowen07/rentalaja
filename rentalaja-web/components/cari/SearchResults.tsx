@@ -89,7 +89,7 @@ export default function SearchResults({
         <ul className="grid gap-16 sm:grid-cols-2 lg:grid-cols-3">
           {hasil.map((h) => (
             <li key={h.unit.id}>
-              <ResultCard hasil={h} hari={rentang.hari} />
+              <ResultCard hasil={h} sewa={{ mulai: rentang.mulai, hari: rentang.hari }} />
             </li>
           ))}
         </ul>

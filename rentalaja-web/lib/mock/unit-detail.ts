@@ -6,6 +6,8 @@
 // dipakai bersama karena desain hanya menggambarkannya sekali.
 
 import { unitHasil, type UnitHasil } from "@/lib/mock/search";
+import { HARI, hariSingkat, rentangTanggal, tanggalSingkat } from "@/lib/mitra/waktu";
+import type { Sewa } from "@/lib/sewa";
 
 export type HariKalender = {
   dow: string;
@@ -15,9 +17,11 @@ export type HariKalender = {
 
 export type DetailUnit = {
   unit: UnitHasil;
-  /** Rentang yang sedang ditampilkan, mengikuti rentang pertama desain. */
+  /** Rentang yang sedang ditampilkan, berasal dari pilihan penyewa di /cari. */
   rentangLabel: string;
   hari: number;
+  /** Rentang mentahnya, supaya halaman ini bisa meneruskannya ke pemesanan. */
+  sewa: Sewa;
   meta: string;
   kalender: HariKalender[];
   paket: string[];
@@ -32,16 +36,23 @@ export type DetailUnit = {
   };
 };
 
-/** Strip 7 hari dari desain — Sel 15 dan Jum 18 sudah tersewa. */
-const KALENDER: HariKalender[] = [
-  { dow: "Sab", tanggal: "12", kosong: true },
-  { dow: "Min", tanggal: "13", kosong: true },
-  { dow: "Sen", tanggal: "14", kosong: true },
-  { dow: "Sel", tanggal: "15", kosong: false },
-  { dow: "Rab", tanggal: "16", kosong: true },
-  { dow: "Kam", tanggal: "17", kosong: true },
-  { dow: "Jum", tanggal: "18", kosong: false },
-];
+/** Hari ke berapa dalam strip yang sudah tersewa. Desain menandai dua hari
+ *  (Sel 15 dan Jum 18 dari tanggal mulai 12), dan posisi itulah yang
+ *  dipertahankan, bukan tanggalnya. */
+const INDEKS_TERSEWA = [3, 6];
+
+/** Strip 7 hari mulai dari tanggal ambil. Dulu tanggalnya tertulis mati
+ *  "12" sampai "18", sehingga ikut basi bersama sisa halaman. */
+function bangunKalender(mulai: number): HariKalender[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const t = mulai + i * HARI;
+    return {
+      dow: hariSingkat(t),
+      tanggal: String(Number(tanggalSingkat(t).split(" ")[0])),
+      kosong: !INDEKS_TERSEWA.includes(i),
+    };
+  });
+}
 
 const TIDAK_TERMASUK = [
   "Bensin, unit diserahkan dengan tangki setengah dan dikembalikan setengah.",
@@ -55,23 +66,27 @@ const JAMINAN = [
   "Batas usia penyewa 18 tahun.",
 ];
 
-const HARI = 3;
 // Biaya layanan rentalaja, sudah termasuk di angka yang dibayar penyewa.
 const LAYANAN = 5000;
 
-/** Satu-satunya sumber detail. Mengembalikan null kalau slug tidak dikenal. */
-export function detailUnit(slug: string): DetailUnit | null {
+/** Satu-satunya sumber detail. Mengembalikan null kalau slug tidak dikenal.
+ *
+ *  `sewa` wajib diisi pemanggil: halaman ini dulu memakai "12–14 Sep" dan
+ *  durasi 3 hari yang tertulis mati, sehingga harga dan kalendernya tidak
+ *  pernah cocok dengan tanggal yang dipilih penyewa di layar sebelumnya. */
+export function detailUnit(slug: string, sewa: Sewa): DetailUnit | null {
   const unit = unitHasil.find((u) => u.id === slug);
   if (!unit) return null;
 
-  const subtotal = unit.hargaPerHari * HARI;
+  const subtotal = unit.hargaPerHari * sewa.hari;
 
   return {
     unit,
-    rentangLabel: "12–14 Sep",
-    hari: HARI,
+    rentangLabel: rentangTanggal(sewa.mulai, sewa.mulai + sewa.hari * HARI),
+    hari: sewa.hari,
+    sewa,
     meta: `${unit.jenis} · matic · ★ ${unit.rating} (128 ulasan) · ${unit.area}, Badung`,
-    kalender: KALENDER,
+    kalender: bangunKalender(sewa.mulai),
     paket: [
       "2 helm SNI",
       "Jas hujan",

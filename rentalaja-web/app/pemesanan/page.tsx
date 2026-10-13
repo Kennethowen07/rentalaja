@@ -4,17 +4,22 @@
 // rentangnya sebelum sampai ke halaman ini, jadi yang tampil hanya tanggal
 // tetapnya.
 //
-// Keterbatasan prototype: rentang itu belum benar-benar dibawa dari form
-// pencarian, karena /cari dan detail unit belum meneruskan tanggal. Sebagai
-// gantinya dipakai rentang yang cocok dengan rincian harga ("3 hari sewa"):
-// ambil besok pukul 09.00 WITA, kembali tiga hari kemudian di jam yang sama.
-// Dihitung per permintaan supaya tidak pernah menampilkan tanggal yang sudah
-// lewat.
+// Unit dan rentangnya dibawa lewat query: ?unit=<slug>&mulai=&durasi=,
+// diisi oleh tombol "Pesan unit ini" di layar detail. Rincian harganya
+// dihitung dari unit itu, bukan lagi angka tetap Honda Scoopy 3 hari.
+//
+// Dibuka tanpa query, misalnya dari bookmark, halaman ini tetap hidup:
+// tanggalnya jatuh ke besok selama 3 hari dan ringkasannya memakai contoh
+// di lib/mock/pemesanan.ts.
 
 import { connection } from "next/server";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BookingForm, { type PeriodeSewa } from "@/components/pemesanan/BookingForm";
+import { pesanan, type RingkasanPesanan } from "@/lib/mock/pemesanan";
+import { detailUnit, type DetailUnit } from "@/lib/mock/unit-detail";
+import { formatRupiah } from "@/lib/mock/units";
+import { sewaDariParams, tanggalKembali, type Sewa } from "@/lib/sewa";
 
 export const metadata = {
   title: "Pemesanan — rentalaja",
@@ -22,7 +27,6 @@ export const metadata = {
 
 const ZONA = "Asia/Makassar"; // WITA, UTC+8
 const JAM_AMBIL = 9;
-const LAMA_SEWA_HARI = 3;
 
 function formatWaktu(t: number) {
   const tanggal = new Intl.DateTimeFormat("id-ID", {
@@ -43,33 +47,53 @@ function formatWaktu(t: number) {
   return `${tanggal} · ${jam}`;
 }
 
-function periodeSewa(sekarang: number): PeriodeSewa {
-  // Tanggal hari ini menurut WITA, bukan menurut zona server (Vercel UTC).
-  const [y, m, d] = new Intl.DateTimeFormat("en-CA", {
-    timeZone: ZONA,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
-    .format(sekarang)
-    .split("-")
-    .map(Number);
-  // 09.00 WITA = 01.00 UTC. WITA tidak punya jam musim panas, jadi selisih
-  // 8 jam ini selalu tetap.
-  const ambil = Date.UTC(y, m - 1, d + 1, JAM_AMBIL - 8);
-  const kembali = Date.UTC(y, m - 1, d + 1 + LAMA_SEWA_HARI, JAM_AMBIL - 8);
-  return { ambil: formatWaktu(ambil), kembali: formatWaktu(kembali) };
+/** Rentang sewa jadi teks siap tampil. Jam ambil 09.00 WITA, jam kembali
+ *  mengikutinya, sama seperti helper text di form pencarian. */
+function periodeSewa(sewa: Sewa): PeriodeSewa {
+  const jam = JAM_AMBIL * 60 * 60 * 1000;
+  return {
+    ambil: formatWaktu(sewa.mulai + jam),
+    kembali: formatWaktu(tanggalKembali(sewa) + jam),
+  };
 }
 
-export default async function PemesananPage() {
+/** Ringkasan harga dari unit yang benar-benar diklik. Sebelumnya layar ini
+ *  selalu menampilkan Honda Scoopy 3 hari, unit apa pun yang dipesan. */
+function ringkasanDari(detail: DetailUnit): RingkasanPesanan {
+  const { unit, hari, harga } = detail;
+  return {
+    unit: {
+      nama: unit.nama,
+      penyedia: unit.penyedia,
+      rating: unit.rating,
+      foto: unit.foto ?? "",
+    },
+    rincian: [
+      { label: `${hari} hari sewa`, nilai: formatRupiah(harga.subtotal) },
+      { label: "Biaya layanan", nilai: formatRupiah(harga.layanan) },
+    ],
+    total: formatRupiah(harga.total),
+  };
+}
+
+export default async function PemesananPage({
+  searchParams,
+}: PageProps<"/pemesanan">) {
+  const params = await searchParams;
   await connection();
-  const periode = periodeSewa(Date.now());
+
+  const sewa = sewaDariParams(params, Date.now());
+  const slug = typeof params.unit === "string" ? params.unit : "";
+  const detail = slug ? detailUnit(slug, sewa) : null;
 
   return (
     <>
       <Navbar />
       <main>
-        <BookingForm periode={periode} />
+        <BookingForm
+          periode={periodeSewa(sewa)}
+          ringkasan={detail ? ringkasanDari(detail) : pesanan}
+        />
       </main>
       <Footer />
     </>

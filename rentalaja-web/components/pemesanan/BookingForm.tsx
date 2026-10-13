@@ -27,7 +27,7 @@ import {
   langkah,
   metodePembayaran,
   opsiPengambilan,
-  pesanan,
+  type RingkasanPesanan,
   petunjukBerkas,
   simulasi,
 } from "@/lib/mock/pemesanan";
@@ -156,10 +156,14 @@ type Tahap = "form" | "qr" | "proses";
  *  terlihat samar. Pembayarannya tidak nyata — hanya simulasi alur. */
 function ModalPembayaran({
   tahap,
+  total,
   onBayar,
   onTutup,
 }: {
   tahap: Exclude<Tahap, "form">;
+  /** Nominal yang dibayar, sudah diformat. Harus sama persis dengan angka di
+   *  ringkasan supaya tidak ada dua total berbeda di satu layar. */
+  total: string;
   onBayar: () => void;
   onTutup: () => void;
 }) {
@@ -203,7 +207,7 @@ function ModalPembayaran({
         <div className="relative mx-auto mt-16 size-200">
           <Image
             src="/qr-midtrans.png"
-            alt={`Kode QR pembayaran simulasi MidTrans sebesar ${pesanan.total}`}
+            alt={`Kode QR pembayaran simulasi MidTrans sebesar ${total}`}
             fill
             sizes="200px"
             className="object-contain"
@@ -214,7 +218,7 @@ function ModalPembayaran({
             angka di aplikasi pembayaran tanpa menggulir ke mana pun. */}
         <div className="mt-14 rounded-input bg-green-100 px-12 py-10">
           <p className="text-meta text-green-800">Total bayar</p>
-          <p className="mt-2 text-price-lg text-green-700">{pesanan.total}</p>
+          <p className="mt-2 text-price-lg text-green-700">{total}</p>
         </div>
 
         <button
@@ -255,7 +259,14 @@ function ModalPembayaran({
  *  bentuk teks siap tampil. Tidak bisa diubah di sini. */
 export type PeriodeSewa = { ambil: string; kembali: string };
 
-export default function BookingForm({ periode }: { periode: PeriodeSewa }) {
+export default function BookingForm({
+  periode,
+  ringkasan,
+}: {
+  periode: PeriodeSewa;
+  /** Unit dan rincian harga, dibangun dari unit yang diklik di layar detail. */
+  ringkasan: RingkasanPesanan;
+}) {
   const [titikAntar, setTitikAntar] = useState("");
   const [pengambilan, setPengambilan] = useState<number | null>(null);
 
@@ -499,23 +510,23 @@ export default function BookingForm({ periode }: { periode: PeriodeSewa }) {
           <div className="flex gap-11">
             <div className="relative h-50 w-66 shrink-0 overflow-hidden rounded-input">
               <Image
-                src={pesanan.unit.foto}
-                alt={`Foto ${pesanan.unit.nama}`}
+                src={ringkasan.unit.foto}
+                alt={`Foto ${ringkasan.unit.nama}`}
                 fill
                 sizes="66px"
                 className="object-cover"
               />
             </div>
             <div>
-              <p className="text-btn-sm text-ink">{pesanan.unit.nama}</p>
+              <p className="text-btn-sm text-ink">{ringkasan.unit.nama}</p>
               <p className="mt-2 text-micro text-muted">
-                {pesanan.unit.penyedia} · ★ {pesanan.unit.rating}
+                {ringkasan.unit.penyedia} · ★ {ringkasan.unit.rating}
               </p>
             </div>
           </div>
 
           <dl className="mt-14 grid gap-8 border-t border-line pt-12">
-            {pesanan.rincian.map((r) => (
+            {ringkasan.rincian.map((r) => (
               <div key={r.label} className="flex justify-between gap-12">
                 <dt className="text-row text-muted">{r.label}</dt>
                 <dd className="text-row-value text-ink">{r.nilai}</dd>
@@ -526,11 +537,11 @@ export default function BookingForm({ periode }: { periode: PeriodeSewa }) {
           <div className="mt-12 border-t border-line pt-12">
             <div className="flex items-baseline justify-between gap-12">
               <p className="text-total-label text-ink">Dibayar penuh sekarang</p>
-              <p className="text-total text-ink">{pesanan.total}</p>
+              <p className="text-total text-ink">{ringkasan.total}</p>
             </div>
             <div className="mt-6 flex justify-between gap-12 text-body-sm text-muted">
               <span>Ditahan rentalaja sampai unit kembali</span>
-              <span>{pesanan.total}</span>
+              <span>{ringkasan.total}</span>
             </div>
             <div className="mt-4 flex justify-between gap-12 text-body-sm text-muted">
               <span>Deposit tunai ke pemilik</span>
@@ -548,7 +559,7 @@ export default function BookingForm({ periode }: { periode: PeriodeSewa }) {
                 : "bg-surface-2 text-placeholder"
             }`}
           >
-            Bayar {pesanan.total}
+            Bayar {ringkasan.total}
           </button>
 
           <p aria-live="polite" className="mt-10 text-micro text-muted">
@@ -565,6 +576,7 @@ export default function BookingForm({ periode }: { periode: PeriodeSewa }) {
 
       {tahap !== "form" && (
         <ModalPembayaran
+          total={ringkasan.total}
           tahap={tahap}
           onBayar={() => setTahap("proses")}
           onTutup={tutupModal}

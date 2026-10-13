@@ -14,7 +14,8 @@
 // Formatter tanggal WITA dipakai bersama dengan panel mitra. Letaknya di
 // lib/mitra/ karena di sanalah pertama kali dibutuhkan, tapi isinya tidak
 // mitra-spesifik: semua tanggal di produk ini memakai zona Bali.
-import { HARI, JAM, pukulWita, rentangTanggal } from "@/lib/mitra/waktu";
+import { HARI, rentangTanggal } from "@/lib/mitra/waktu";
+import type { Sewa } from "@/lib/sewa";
 
 export type RentangTanggal = {
   label: string;
@@ -25,21 +26,6 @@ export type RentangTanggal = {
   /** Tanggal unit dikembalikan, yaitu mulai + hari. */
   selesai: number;
 };
-
-export type PilihanTanggal = {
-  /** "2026-10-15" dari query ?mulai= */
-  mulai: string;
-  hari: number;
-};
-
-/** Tengah malam WITA untuk tanggal "2026-10-15". WITA tetap UTC+8 sepanjang
- *  tahun, jadi selisihnya boleh dianggap konstan. */
-function dariIso(iso: string): number | null {
-  const [y, b, t] = iso.split("-").map(Number);
-  if (!y || !b || !t) return null;
-  const ms = Date.UTC(y, b - 1, t) - 8 * JAM;
-  return Number.isNaN(ms) ? null : ms;
-}
 
 /**
  * Tiga rentang tanggal untuk chip filter.
@@ -53,16 +39,8 @@ function dariIso(iso: string): number | null {
  * desain adalah idenya: mengganti chip mengubah daftar unit, lewat
  * `kosongPada` yang indeksnya sejajar dengan array ini.
  */
-export function bangunRentang(
-  sekarang: number,
-  pilihan: PilihanTanggal | null,
-): RentangTanggal[] {
-  const besok = pukulWita(sekarang, 1, 0);
-  const diminta = pilihan ? dariIso(pilihan.mulai) : null;
-  // Tanggal yang sudah lewat didorong ke besok: menawarkan unit untuk tanggal
-  // kemarin lebih membingungkan daripada menggeser sehari.
-  const mulai0 = diminta && diminta >= besok ? diminta : besok;
-  const hari0 = pilihan && pilihan.hari >= 1 ? pilihan.hari : 3;
+export function bangunRentang(sewa: Sewa, dipilihPenyewa: boolean): RentangTanggal[] {
+  const { mulai: mulai0, hari: hari0 } = sewa;
 
   const mulai1 = mulai0 + (hari0 + 2) * HARI;
   const mulai2 = mulai1 + 4 * HARI;
@@ -76,7 +54,7 @@ export function bangunRentang(
   });
 
   return [
-    buat(mulai0, hari0, pilihan ? "pilihanmu" : "akhir pekan"),
+    buat(mulai0, hari0, dipilihPenyewa ? "pilihanmu" : "akhir pekan"),
     buat(mulai1, 2, "hari kerja"),
     buat(mulai2, 8, "sewa panjang"),
   ];

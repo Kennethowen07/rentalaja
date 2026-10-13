@@ -7,13 +7,18 @@
 // dulu. Kontrak lengkapnya nanti ada di Langkah 4 handoff.
 
 import { detailUnit } from "@/lib/mock/unit-detail";
+import { sewaDariQuery } from "@/lib/sewa";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: RouteContext<"/api/units/[slug]">,
 ) {
   const { slug } = await params;
-  const detail = detailUnit(slug);
+  // Harga dan kalender bergantung pada rentang sewa, jadi endpoint ini
+  // menerima ?mulai=2026-10-28&durasi=5. Tanpa keduanya dipakai besok
+  // selama 3 hari, supaya memanggil endpoint tanpa query tetap sah.
+  const sewa = sewaDariQuery(new URL(request.url).searchParams, Date.now());
+  const detail = detailUnit(slug, sewa);
 
   if (!detail) {
     return Response.json(

@@ -6,6 +6,7 @@ import Link from "next/link";
 import ImagePlaceholder from "@/components/ui/ImagePlaceholder";
 import { formatRupiah } from "@/lib/mock/units";
 import type { DetailUnit } from "@/lib/mock/unit-detail";
+import { paramSewa } from "@/lib/sewa";
 
 function Seksi({
   judul,
@@ -168,14 +169,16 @@ export default function UnitDetail({ data }: { data: DetailUnit }) {
             <p className="text-total text-ink">{formatRupiah(harga.total)}</p>
           </div>
 
+          {/* Unit dan tanggal ikut dibawa, supaya halaman pemesanan memesan
+              unit yang benar-benar diklik dengan rentang yang sama. */}
           <Link
-            href="/pemesanan"
+            href={`/pemesanan?unit=${unit.id}&${paramSewa(data.sewa)}`}
             className="mt-14 block rounded-input bg-green-700 py-13 text-center text-btn text-white transition-colors duration-160 ease-base hover:bg-green-800"
           >
             Pesan unit ini
           </Link>
           <Link
-            href="/cari"
+            href={`/cari?${paramSewa(data.sewa)}`}
             className="mt-8 block rounded-input border border-line py-11 text-center text-nav-strong text-ink transition-colors duration-160 ease-base hover:border-green-700 hover:text-green-700"
           >
             Ganti tanggal
