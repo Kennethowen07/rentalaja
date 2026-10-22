@@ -1,0 +1,38 @@
+# Postgres khusus RentalAja.
+#
+# Port 5433 di host, bukan 5432, supaya tidak bentrok dengan Postgres lain
+# yang mungkin sudah jalan di mesin pengembang. Kata sandinya dibaca dari
+# .env (variabel DB_PASSWORD), sama dengan yang dipakai DATABASE_URL.
+#
+#   docker compose up -d     nyalakan
+#   docker compose down      matikan, data tetap ada di volume
+#   docker compose down -v   matikan dan HAPUS seluruh data
+
+services:
+  db:
+    image: postgres:18
+    container_name: rentalaja-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rentalaja
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Isi DB_PASSWORD di rentalaja-api/.env}
+      POSTGRES_DB: rentalaja
+      # Zona server tetap UTC. Logika hari WITA dikerjakan di aplikasi,
+      # sesuai aturan waktu di backend.md bagian 4.
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "5433:5432"
+    volumes:
+      # Image postgres 18 menyimpan data di /var/lib/postgresql/18/docker,
+      # jadi yang di-mount induknya, bukan /var/lib/postgresql/data seperti
+      # versi lama. Mount ke path lama membuat container gagal start.
+      - rentalaja-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rentalaja -d rentalaja"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  rentalaja-db:

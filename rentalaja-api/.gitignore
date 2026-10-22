@@ -1,0 +1,22 @@
+# Dependensi dan hasil build
+/node_modules
+/dist
+/coverage
+*.tsbuildinfo
+
+# Rahasia. .env berisi kata sandi database dan JWT_SECRET.
+# Hanya .env.example yang boleh masuk repo.
+.env
+.env.*
+!.env.example
+
+# Prisma Client hasil generate, dibuat ulang lewat `npx prisma generate`
+/src/generated
+
+# Log dan sisa editor
+npm-debug.log*
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea

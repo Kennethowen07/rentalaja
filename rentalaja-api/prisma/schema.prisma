@@ -1,0 +1,345 @@
+// Schema database RentalAja.
+//
+// Penamaan: field Prisma camelCase bahasa Indonesia (hargaPerHari), sama
+// dengan frontend. Di database semuanya snake_case lewat @map/@@map
+// (harga_per_hari, tabel pesanan), karena migrasi berisi SQL mentah untuk
+// constraint dan trigger yang tidak bisa ditulis di file ini, dan SQL itu jauh
+// lebih aman dibaca tanpa tanda kutip di setiap nama.
+//
+// Uang selalu Int dalam rupiah. Tidak ada desimal untuk uang.
+// Waktu selalu timestamptz (UTC). Logika "hari" mengikuti WITA di aplikasi.
+//
+// Aturan yang TIDAK terlihat di file ini, karena Prisma tidak bisa
+// mengekspresikannya, ada di prisma/migrations/*/migration.sql:
+//   - EXCLUDE anti double booking pada pesanan
+//   - trigger yang mencegah pesanan menimpa blokir, dan sebaliknya
+//   - CHECK harga (subtotal = hargaPerHari x jumlahHari, dst.)
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  // Proyek NestJS 12 ini ESM dengan moduleResolution nodenext, jadi import
+  // di client hasil generate wajib berekstensi .js seperti kode lainnya.
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Pengguna dan mitra
+// ---------------------------------------------------------------------------
+
+enum Peran {
+  PENYEWA
+  MITRA
+
+  @@map("peran")
+}
+
+model Pengguna {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  kataSandiHash String   @map("kata_sandi_hash")
+  nama          String
+  telepon       String
+  peran         Peran
+  dibuatPada    DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  mitra   Mitra?
+  pesanan Pesanan[]
+  ulasan  Ulasan[]
+
+  @@map("pengguna")
+}
+
+/// Usaha rental milik satu pengguna berperan MITRA.
+model Mitra {
+  id         String   @id @default(cuid())
+  pemilikId  String   @unique @map("pemilik_id")
+  pemilik    Pengguna @relation(fields: [pemilikId], references: [id])
+  nama       String
+  area       String
+  dibuatPada DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  unit Unit[]
+
+  @@map("mitra")
+}
+
+// ---------------------------------------------------------------------------
+// Unit dan ketersediaannya
+// ---------------------------------------------------------------------------
+
+enum Kategori {
+  MOTOR
+  MOBIL
+
+  @@map("kategori")
+}
+
+model Unit {
+  id           String   @id @default(cuid())
+  /// Dipakai di URL sisi penyewa, mis. "honda-scoopy-2023".
+  slug         String   @unique
+  mitraId      String   @map("mitra_id")
+  mitra        Mitra    @relation(fields: [mitraId], references: [id])
+  nama         String
+  /// Disimpan dan unik, tapi BUKAN kunci relasi. Semua relasi lewat id.
+  plat         String   @unique
+  kategori     Kategori
+  /// "Skutik 110cc"
+  jenis        String
+  /// "matic 110cc · 2 helm"
+  spesifikasi  String
+  tahun        Int
+  /// Rupiah per hari, ditentukan penyedia. Platform tidak mengubahnya.
+  hargaPerHari Int      @map("harga_per_hari")
+  foto         String?
+  area         String
+  dibuatPada   DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  pesanan Pesanan[]
+  blokir  BlokirUnit[]
+  ulasan  Ulasan[]
+
+  @@index([mitraId])
+  @@map("unit")
+}
+
+enum JenisBlokir {
+  MANUAL
+  SERVIS
+
+  @@map("jenis_blokir")
+}
+
+/// Rentang ketika unit tidak boleh dipesan atas kehendak penyedia.
+/// Status "kosong" tidak disimpan di mana pun: ia diturunkan dari tidak
+/// adanya pesanan aktif dan blokir yang tumpang tindih.
+model BlokirUnit {
+  id         String                    @id @default(cuid())
+  unitId     String                    @map("unit_id")
+  unit       Unit                      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  jenis      JenisBlokir
+  mulai      DateTime                  @db.Timestamptz(3)
+  selesai    DateTime                  @db.Timestamptz(3)
+  /// Dibuat dari (mulai, selesai) oleh database. Lihat migration.sql.
+  rentang    Unsupported("tstzrange")?
+  catatan    String?
+  dibuatPada DateTime                  @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+
+  @@index([unitId])
+  @@map("blokir_unit")
+}
+
+// ---------------------------------------------------------------------------
+// Pesanan
+// ---------------------------------------------------------------------------
+
+/// Hanya status yang benar-benar terjadi lewat aksi. "Kedaluwarsa" (tidak
+/// dibalas dalam 1 jam) TIDAK punya status sendiri: ia diturunkan dari
+/// status MENUNGGU + dibuatPada saat data dibaca. Baris yang kedaluwarsa baru
+/// ditulis jadi DIBATALKAN ketika slotnya dibutuhkan pesanan lain, karena
+/// constraint EXCLUDE tidak bisa membaca jam sekarang.
+enum StatusPesanan {
+  MENUNGGU
+  BERJALAN
+  SELESAI
+  DITOLAK
+  DIBATALKAN
+
+  @@map("status_pesanan")
+}
+
+enum AlasanBatal {
+  /// Penyedia tidak membalas dalam 1 jam.
+  KEDALUWARSA
+  DIBATALKAN_PENYEWA
+
+  @@map("alasan_batal")
+}
+
+model Pesanan {
+  id          String                    @id @default(cuid())
+  /// "RA-284207", yang dilihat manusia.
+  kode        String                    @unique
+  unitId      String                    @map("unit_id")
+  unit        Unit                      @relation(fields: [unitId], references: [id])
+  penyewaId   String                    @map("penyewa_id")
+  penyewa     Pengguna                  @relation(fields: [penyewaId], references: [id])
+  mulai       DateTime                  @db.Timestamptz(3)
+  selesai     DateTime                  @db.Timestamptz(3)
+  /// Dibuat dari (mulai, selesai) oleh database. Dasar constraint EXCLUDE.
+  rentang     Unsupported("tstzrange")?
+  status      StatusPesanan             @default(MENUNGGU)
+  alasanBatal AlasanBatal?              @map("alasan_batal")
+
+  // Harga DIBEKUKAN saat pesan. Kalau penyedia mengubah hargaPerHari unit
+  // besok, pesanan lama tidak ikut berubah: yang ditagih harus sama persis
+  // dengan yang ditunjukkan ke penyewa sebelum bayar.
+  hargaPerHari Int @map("harga_per_hari")
+  jumlahHari   Int @map("jumlah_hari")
+  subtotal     Int
+  /// Besarannya BELUM diputuskan pemilik proyek (backend.md bagian 4).
+  /// Kolom ini hanya menyimpan angka yang ditagih; rumusnya diisi di Fase 3.
+  biayaLayanan Int @map("biaya_layanan")
+  total        Int
+
+  /// true = unit diantar ke penyewa, false = penyewa ambil sendiri.
+  diantar Boolean
+  /// Titik temu, tempatnya saja.
+  titik   String
+
+  dibuatPada     DateTime  @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+  diterimaPada   DateTime? @map("diterima_pada") @db.Timestamptz(3)
+  ditolakPada    DateTime? @map("ditolak_pada") @db.Timestamptz(3)
+  dibatalkanPada DateTime? @map("dibatalkan_pada") @db.Timestamptz(3)
+  /// Unit tercatat kembali. Dasar hitungan pelepasan dana 1x24 jam.
+  kembaliPada    DateTime? @map("kembali_pada") @db.Timestamptz(3)
+
+  pembayaran  Pembayaran?
+  dokumen     DokumenPenyewa[]
+  serahTerima SerahTerima[]
+  klaim       KlaimKerusakan?
+  ulasan      Ulasan?
+
+  @@index([unitId])
+  @@index([penyewaId])
+  @@map("pesanan")
+}
+
+// ---------------------------------------------------------------------------
+// Pembayaran dan escrow
+// ---------------------------------------------------------------------------
+
+enum MetodeBayar {
+  BCA_VA
+  QRIS
+  EWALLET
+
+  @@map("metode_bayar")
+}
+
+/// Bayar penuh saat memesan. Status dana (ditahan, dilepas, dikembalikan)
+/// TIDAK disimpan: diturunkan dari status pesanan, kembaliPada, dan klaim.
+model Pembayaran {
+  id          String      @id @default(cuid())
+  pesananId   String      @unique @map("pesanan_id")
+  pesanan     Pesanan     @relation(fields: [pesananId], references: [id])
+  jumlah      Int
+  metode      MetodeBayar
+  dibayarPada DateTime    @map("dibayar_pada") @db.Timestamptz(3)
+
+  @@map("pembayaran")
+}
+
+enum JenisDokumen {
+  IDENTITAS
+  SIM
+
+  @@map("jenis_dokumen")
+}
+
+/// Jaminan pengganti deposit tunai: dokumen identitas yang diunggah.
+model DokumenPenyewa {
+  id           String       @id @default(cuid())
+  pesananId    String       @map("pesanan_id")
+  pesanan      Pesanan      @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  jenis        JenisDokumen
+  url          String
+  diunggahPada DateTime     @default(now()) @map("diunggah_pada") @db.Timestamptz(3)
+
+  @@unique([pesananId, jenis])
+  @@map("dokumen_penyewa")
+}
+
+// ---------------------------------------------------------------------------
+// Serah terima dan klaim
+// ---------------------------------------------------------------------------
+
+enum JenisSerah {
+  ANTAR
+  AMBIL
+
+  @@map("jenis_serah")
+}
+
+model SerahTerima {
+  id          String     @id @default(cuid())
+  pesananId   String     @map("pesanan_id")
+  pesanan     Pesanan    @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  jenis       JenisSerah
+  /// [{ label: "Bensin", nilai: "Setengah" }, ...]
+  kondisi     Json       @default("[]")
+  catatan     String?
+  dicatatPada DateTime   @default(now()) @map("dicatat_pada") @db.Timestamptz(3)
+
+  foto FotoSerah[]
+
+  @@unique([pesananId, jenis])
+  @@map("serah_terima")
+}
+
+enum SisiFoto {
+  DEPAN
+  BELAKANG
+  KIRI
+  KANAN
+
+  @@map("sisi_foto")
+}
+
+model FotoSerah {
+  id            String      @id @default(cuid())
+  serahTerimaId String      @map("serah_terima_id")
+  serahTerima   SerahTerima @relation(fields: [serahTerimaId], references: [id], onDelete: Cascade)
+  sisi          SisiFoto
+  url           String
+
+  @@unique([serahTerimaId, sisi])
+  @@map("foto_serah")
+}
+
+/// Klaim kerusakan saat unit kembali. Selama diselesaikanPada kosong, dana
+/// penyewa tetap ditahan. Alur penyewa melihat dan membantah klaim BELUM
+/// diputuskan (backend.md bagian 4), jadi belum ada kolom untuk sengketa.
+model KlaimKerusakan {
+  id               String    @id @default(cuid())
+  pesananId        String    @unique @map("pesanan_id")
+  pesanan          Pesanan   @relation(fields: [pesananId], references: [id])
+  nominal          Int
+  keterangan       String
+  diajukanPada     DateTime  @default(now()) @map("diajukan_pada") @db.Timestamptz(3)
+  diselesaikanPada DateTime? @map("diselesaikan_pada") @db.Timestamptz(3)
+
+  @@map("klaim_kerusakan")
+}
+
+// ---------------------------------------------------------------------------
+// Ulasan
+// ---------------------------------------------------------------------------
+
+model Ulasan {
+  id          String    @id @default(cuid())
+  /// Satu ulasan per pesanan, jadi hanya penyewa yang benar-benar menyewa.
+  pesananId   String    @unique @map("pesanan_id")
+  pesanan     Pesanan   @relation(fields: [pesananId], references: [id])
+  unitId      String    @map("unit_id")
+  unit        Unit      @relation(fields: [unitId], references: [id])
+  penyewaId   String    @map("penyewa_id")
+  penyewa     Pengguna  @relation(fields: [penyewaId], references: [id])
+  /// 1 sampai 5 dengan langkah 0,5. Dijaga CHECK di migration.sql.
+  skor        Decimal   @db.Decimal(2, 1)
+  isi         String
+  dibuatPada  DateTime  @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
+  /// Balasan penyedia. Kosong berarti belum dibalas.
+  balasan     String?
+  dibalasPada DateTime? @map("dibalas_pada") @db.Timestamptz(3)
+
+  @@index([unitId])
+  @@map("ulasan")
+}
