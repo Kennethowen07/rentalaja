@@ -127,8 +127,11 @@ model BlokirUnit {
   jenis      JenisBlokir
   mulai      DateTime                  @db.Timestamptz(3)
   selesai    DateTime                  @db.Timestamptz(3)
-  /// Dibuat dari (mulai, selesai) oleh database. Lihat migration.sql.
-  rentang    Unsupported("tstzrange")?
+  /// Kolom GENERATED dari (mulai, selesai), lihat migration.sql. Prisma tidak
+  /// mengenal kolom generated dan membacanya sebagai default; @default di sini
+  /// harus SAMA PERSIS dengan hasil `prisma db pull`, kalau tidak setiap
+  /// `migrate dev` akan mencoba membuang ekspresinya.
+  rentang    Unsupported("tstzrange")? @default(dbgenerated("tstzrange(mulai, selesai, '[)'::text)"))
   catatan    String?
   dibuatPada DateTime                  @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
 
@@ -173,8 +176,8 @@ model Pesanan {
   penyewa     Pengguna                  @relation(fields: [penyewaId], references: [id])
   mulai       DateTime                  @db.Timestamptz(3)
   selesai     DateTime                  @db.Timestamptz(3)
-  /// Dibuat dari (mulai, selesai) oleh database. Dasar constraint EXCLUDE.
-  rentang     Unsupported("tstzrange")?
+  /// Kolom GENERATED, dasar constraint EXCLUDE. Lihat catatan di BlokirUnit.
+  rentang     Unsupported("tstzrange")? @default(dbgenerated("tstzrange(mulai, selesai, '[)'::text)"))
   status      StatusPesanan             @default(MENUNGGU)
   alasanBatal AlasanBatal?              @map("alasan_batal")
 
