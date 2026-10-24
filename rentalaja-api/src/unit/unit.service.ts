@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Unit } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { RentangSewaDto } from '../umum/dto/rentang-sewa.dto.js';
+import { rincianHarga } from '../umum/harga.js';
 import { okupansi, ratingUnit, unitTerisi } from '../umum/ketersediaan.js';
 import { bacaRentangSewa } from '../umum/rentang-sewa.js';
 import { awalHariWita, HARI, keIsoWita } from '../umum/waktu-wita.js';
@@ -27,17 +28,6 @@ export function bentukUnitPublik(u: UnitDenganMitra, rating?: { rata: number; ju
     rating: rating?.rata ?? null,
     jumlahUlasan: rating?.jumlah ?? 0,
   };
-}
-
-/**
- * Harga sewa saja: harga per hari x jumlah hari.
- *
- * Biaya layanan penyewa dan total SENGAJA belum ada. Besarannya belum
- * diputuskan pemilik proyek (backend.md bagian 4), jadi endpoint baca tidak
- * boleh menampilkan angka yang nanti ternyata berbeda dengan yang ditagih.
- */
-export function hargaSewa(perHari: number, jumlahHari: number) {
-  return { perHari, jumlahHari, subtotal: perHari * jumlahHari };
 }
 
 @Injectable()
@@ -76,7 +66,7 @@ export class UnitService {
       unit: bentukUnitPublik(unit, rating.get(unit.id)),
       sewa,
       kosong: !terisi.has(unit.id),
-      harga: hargaSewa(unit.hargaPerHari, sewa.jumlahHari),
+      harga: rincianHarga(unit.hargaPerHari, sewa.jumlahHari),
       kalender,
       penyedia: { nama: unit.mitra.nama, area: unit.mitra.area, jumlahUnit: unit.mitra._count.unit },
     };

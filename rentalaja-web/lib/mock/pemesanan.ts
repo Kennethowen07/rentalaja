@@ -1,9 +1,12 @@
 // Data Layar 4 "Pemesanan" — dari .dc.html turn 1a.
 //
-// Angka di desain konsisten dan dipertahankan apa adanya:
+// Angka contoh untuk fallback di bawah:
 //   3 hari x Rp 70.000     = Rp 210.000
-//   biaya layanan          = Rp 5.000
-//   dibayar penuh sekarang = Rp 215.000, ditahan rentalaja sampai unit kembali
+//   biaya layanan 3%       = Rp 6.300
+//   dibayar penuh sekarang = Rp 216.300, ditahan rentalaja sampai unit kembali
+//
+// Desain aslinya menulis biaya layanan Rp 5.000 flat (total Rp 215.000).
+// Diganti 3% dari harga sewa, keputusan pemilik proyek 25 Okt 2026.
 //
 // Mekanismenya bayar penuh di muka, bukan DP. Tidak ada sisa tunai saat
 // serah terima dan tidak ada deposit tunai ke pemilik.
@@ -29,9 +32,9 @@ export const pesanan: RingkasanPesanan = {
   },
   rincian: [
     { label: "3 hari sewa", nilai: "Rp 210.000" },
-    { label: "Biaya layanan", nilai: "Rp 5.000" },
+    { label: "Biaya layanan", nilai: "Rp 6.300" },
   ],
-  total: "Rp 215.000",
+  total: "Rp 216.300",
 } as const;
 
 export const langkah = [

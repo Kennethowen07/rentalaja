@@ -200,10 +200,12 @@ describe('Pencarian', () => {
     expect(bebas.kosong).toBe(false);
   });
 
-  it('harga adalah harga per hari x durasi, tanpa biaya layanan', async () => {
+  it('harga adalah harga per hari x durasi, ditambah biaya layanan 3%', async () => {
     const r = await minta().get(`/pencarian?mulai=${tanggal(10)}&durasi=3`);
     const bebas = r.body.unit.find((u: { slug: string }) => u.slug === 'unit-bebas');
-    expect(bebas.harga).toEqual({ perHari: 60_000, jumlahHari: 3, subtotal: 180_000 });
+    expect(bebas.harga).toEqual({
+      perHari: 60_000, jumlahHari: 3, subtotal: 180_000, biayaLayanan: 5_400, total: 185_400,
+    });
     expect(bebas.plat).toBeUndefined();
   });
 

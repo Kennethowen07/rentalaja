@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { KalenderModule } from './kalender/kalender.module.js';
 import { MitraModule } from './mitra/mitra.module.js';
 import { PencarianModule } from './pencarian/pencarian.module.js';
+import { PesananModule } from './pesanan/pesanan.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { UnitModule } from './unit/unit.module.js';
 
@@ -19,6 +20,7 @@ import { UnitModule } from './unit/unit.module.js';
     UnitModule,
     MitraModule,
     KalenderModule,
+    PesananModule,
   ],
   controllers: [AppController],
   providers: [AppService],

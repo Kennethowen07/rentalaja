@@ -1,3 +1,4 @@
+import { biayaLayanan, rincianHarga } from './harga.js';
 import {
   bersihPenyedia,
   statusDana,
@@ -90,5 +91,19 @@ describe('status yang diturunkan', () => {
 
   it('penyedia menerima nilai sewa dipotong 5%', () => {
     expect(bersihPenyedia(140_000)).toBe(133_000);
+  });
+});
+
+describe('harga', () => {
+  it('biaya layanan penyewa 3% dari harga sewa, total = sewa + biaya', () => {
+    expect(rincianHarga(70_000, 2)).toEqual({
+      perHari: 70_000, jumlahHari: 2, subtotal: 140_000, biayaLayanan: 4_200, total: 144_200,
+    });
+  });
+
+  it('dibulatkan ke rupiah terdekat, setengah ke atas', () => {
+    expect(biayaLayanan(1_050)).toBe(32); // 31,5
+    expect(biayaLayanan(55_000)).toBe(1_650);
+    expect(biayaLayanan(1_016)).toBe(30);
   });
 });

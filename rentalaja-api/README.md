@@ -56,6 +56,29 @@ tidak bisa merusak data. Letaknya di
 Buktinya `test/aturan-database.e2e-spec.ts`. `src/prisma/kesalahan-db.ts`
 membaca kode SQLSTATE dari error yang dibungkus Prisma.
 
+## Endpoint
+
+| Endpoint | Siapa | Isi |
+|---|---|---|
+| `POST /auth/masuk`, `GET /auth/saya` | semua | login, profil |
+| `GET /pencarian?mulai=&durasi=` | publik | semua unit + kosong/terisi + harga final |
+| `GET /unit/:slug?mulai=&durasi=` | publik | detail unit + kalender 7 hari |
+| `POST /pesanan` | penyewa | pesan + bayar penuh dalam satu langkah |
+| `GET /pesanan`, `GET /pesanan/:kode` | penyewa / mitra pemilik | daftar dan detail |
+| `POST /pesanan/:kode/batal` | penyewa | hanya selama masih menunggu |
+| `POST /mitra/pesanan/:kode/terima`, `/tolak` | mitra pemilik unit | dalam 1 jam |
+| `GET /mitra/saya`, `/beranda`, `/unit`, `/pesanan`, `/kalender` | mitra | panel mitra |
+
+**Harga.** Biaya layanan penyewa 3% dari harga sewa, dibulatkan ke rupiah
+terdekat (`src/umum/harga.ts`, satu-satunya rumus). `POST /pesanan` wajib
+mengirim `totalDisetujui`, yaitu total yang dilihat penyewa. Server tetap
+menghitung sendiri dan menjawab 409 beserta harga baru kalau angkanya beda.
+
+**Pembayaran masih simulasi.** Belum ada payment gateway: baris pembayaran
+dicatat langsung saat pesan. Yang dijaga sungguhan hanya jumlahnya (trigger
+`pembayaran_sesuai_total`). Status dana (ditahan, dilepas, dikembalikan)
+diturunkan dari status pesanan, tidak disimpan.
+
 ## Hal yang perlu diketahui
 
 - **Prisma dikunci di 7.10.1.** Tag `latest` di npm menunjuk release

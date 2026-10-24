@@ -187,8 +187,9 @@ model Pesanan {
   hargaPerHari Int @map("harga_per_hari")
   jumlahHari   Int @map("jumlah_hari")
   subtotal     Int
-  /// Besarannya BELUM diputuskan pemilik proyek (backend.md bagian 4).
-  /// Kolom ini hanya menyimpan angka yang ditagih; rumusnya diisi di Fase 3.
+  /// Dibayar penyewa: 3% dari subtotal, rumusnya di src/umum/harga.ts.
+  /// Rumusnya sengaja tidak dijaga CHECK: kalau persennya berubah, pesanan
+  /// lama harus tetap sah dengan angka yang dulu ditagih.
   biayaLayanan Int @map("biaya_layanan")
   total        Int
 

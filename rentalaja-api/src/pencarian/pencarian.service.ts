@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { rincianHarga } from '../umum/harga.js';
 import { ratingUnit, unitTerisi } from '../umum/ketersediaan.js';
 import { bacaRentangSewa } from '../umum/rentang-sewa.js';
-import { bentukUnitPublik, hargaSewa } from '../unit/unit.service.js';
+import { bentukUnitPublik } from '../unit/unit.service.js';
 import type { CariDto } from './dto/cari.dto.js';
 
 @Injectable()
@@ -31,7 +32,7 @@ export class PencarianService {
       .map((u) => ({
         ...bentukUnitPublik(u, rating.get(u.id)),
         kosong: !terisi.has(u.id),
-        harga: hargaSewa(u.hargaPerHari, sewa.jumlahHari),
+        harga: rincianHarga(u.hargaPerHari, sewa.jumlahHari),
       }))
       // Kosong dulu, lalu harga terendah, sama dengan layar pencarian.
       .sort(

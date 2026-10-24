@@ -30,11 +30,12 @@
  *    form pencarian penyewa menghitung 2 hari. Constraint database mengikuti
  *    sisi penyewa, karena itu angka yang ditunjukkan dan dibayar pelanggan.
  *    Akibatnya total pesanan di sini sehari lebih murah dari mock mitra.
- *    Contoh: RA-284102 di mock Rp 215.000, di sini Rp 145.000.
+ *    Contoh: RA-284102 di mock Rp 215.000, di sini Rp 144.200.
  *
- * 3. Biaya layanan penyewa Rp 5.000 HANYA di seed, menyalin angka yang
- *    sudah tampil di frontend. Besarannya belum diputuskan pemilik proyek
- *    (backend.md bagian 4) dan tidak boleh dianggap keputusan.
+ * 3. Biaya layanan penyewa 3% dari harga sewa, rumusnya dari
+ *    src/umum/harga.ts, sama dengan yang ditagih API.
+ *    Mock pesanan aktif dan panel mitra di frontend masih memakai angka
+ *    desain lama (Rp 5.000 flat, total Rp 215.000) sampai Fase 5.
  *
  * 4. Penyewa demo adalah Adi Prasetyo, karena dialah persona penyewa di
  *    frontend (contoh isian form pemesanan) dan pemilik pesanan Scoopy yang
@@ -52,6 +53,7 @@ import bcrypt from 'bcryptjs';
 import { config } from 'dotenv';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import type { MetodeBayar, StatusPesanan } from '../src/generated/prisma/enums.js';
+import { rincianHarga } from '../src/umum/harga.js';
 
 config({ quiet: true });
 
@@ -89,8 +91,6 @@ function pukulWita(geser: number, jam: number): Date {
     Date.UTC(wita.getUTCFullYear(), wita.getUTCMonth(), wita.getUTCDate()) - OFFSET_WITA;
   return new Date(tengahMalam + geser * HARI + jam * JAM);
 }
-
-const BIAYA_LAYANAN_SEMENTARA = 5_000;
 
 // ---------------------------------------------------------------------------
 // Data
@@ -363,8 +363,7 @@ async function main() {
       const buatPesanan = async (p: PesananSeed) => {
         const hargaPerHari = hargaUnit.get(p.plat)!;
         const jumlahHari = Math.ceil((p.selesai.getTime() - p.mulai.getTime()) / HARI);
-        const subtotal = hargaPerHari * jumlahHari;
-        const total = subtotal + BIAYA_LAYANAN_SEMENTARA;
+        const { subtotal, biayaLayanan, total } = rincianHarga(hargaPerHari, jumlahHari);
         // Pesanan yang sudah berjalan atau lewat dipesan sehari sebelum mulai.
         const dibuatPada = p.dibuatPada ?? new Date(p.mulai.getTime() - HARI);
         const dibalas = new Date(dibuatPada.getTime() + 20 * MENIT);
@@ -378,7 +377,7 @@ async function main() {
             selesai: p.selesai,
             status: p.status,
             hargaPerHari, jumlahHari, subtotal,
-            biayaLayanan: BIAYA_LAYANAN_SEMENTARA, total,
+            biayaLayanan, total,
             titik: p.titik,
             diantar: p.titik !== KANTOR,
             dibuatPada,

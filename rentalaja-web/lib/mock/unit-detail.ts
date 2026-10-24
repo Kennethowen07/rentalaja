@@ -66,8 +66,10 @@ const JAMINAN = [
   "Batas usia penyewa 18 tahun.",
 ];
 
-// Biaya layanan rentalaja, sudah termasuk di angka yang dibayar penyewa.
-const LAYANAN = 5000;
+// Biaya layanan rentalaja yang dibayar penyewa: 3% dari harga sewa, dibulatkan
+// ke rupiah terdekat. Rumusnya sama persis dengan rentalaja-api/src/umum/harga.ts;
+// kalau salah satu diubah, yang lain wajib ikut.
+const PERSEN_LAYANAN = 3;
 
 /** Satu-satunya sumber detail. Mengembalikan null kalau slug tidak dikenal.
  *
@@ -79,6 +81,7 @@ export function detailUnit(slug: string, sewa: Sewa): DetailUnit | null {
   if (!unit) return null;
 
   const subtotal = unit.hargaPerHari * sewa.hari;
+  const layanan = Math.round((subtotal * PERSEN_LAYANAN) / 100);
 
   return {
     unit,
@@ -102,8 +105,8 @@ export function detailUnit(slug: string, sewa: Sewa): DetailUnit | null {
     harga: {
       perHari: unit.hargaPerHari,
       subtotal,
-      layanan: LAYANAN,
-      total: subtotal + LAYANAN,
+      layanan,
+      total: subtotal + layanan,
     },
   };
 }
