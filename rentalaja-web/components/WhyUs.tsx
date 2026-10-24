@@ -1,17 +1,21 @@
-// README section 6 — split 2 kolom. Di bawah 1024px jadi 1 kolom, teks dulu.
+// Beranda v3, Kenapa rentalaja (design-lab/approved/round-1.html).
+//
+// Grid kanan: tiga foto kendaraan. Kartu angka "98% dikonfirmasi di bawah
+// 10 menit" dan "0 biaya tersembunyi" dihapus (25 Okt 2026) karena angkanya
+// tidak punya data di baliknya; atas permintaan pemilik diganti foto.
+//
+// Poin 1 dan 2 ditulis ulang pemilik proyek 25 Okt 2026.
 
 import Image from "next/image";
-import ImagePlaceholder from "@/components/ui/ImagePlaceholder";
-import { whyUsStats } from "@/lib/mock/stats";
 
 const checklist = [
   {
-    judul: "Kalender terhubung ke unit asli",
-    body: "Unit yang sudah dipesan hilang dari hasil pencarian secara otomatis.",
+    judul: "Bandingkan harga rental tanpa ribet",
+    body: "Masukkan tanggal dan tempat, semua kendaraan yang dapat disewa langsung muncul.",
   },
   {
-    judul: "Serah terima berfoto dua arah",
-    body: "Kondisi unit tercatat saat diantar dan saat dikembalikan.",
+    judul: "Sistem peminjamannya aman",
+    body: "Kondisi unit didokumentasikan saat diantar dan dikembalikan melalui foto serah terima.",
   },
   {
     judul: "Tanpa deposit tunai ke pemilik",
@@ -21,67 +25,72 @@ const checklist = [
 
 export default function WhyUs() {
   return (
-    <section className="bg-white py-38">
-      <div className="container-page grid items-center gap-34 lg:grid-cols-2">
+    <section aria-labelledby="judul-kenapa" className="py-64 md:py-96">
+      <div className="container-beranda grid items-center gap-32 md:gap-48 min-[75rem]:grid-cols-[minmax(0,1fr)_576px]">
         <div>
-          <p className="text-eyebrow text-green-700 uppercase">
+          <p className="text-b6-sm font-bold tracking-[0.08em] text-green-700 uppercase md:text-b6">
             Kenapa rentalaja
           </p>
-          <h2 className="mt-10 text-h2 text-ink">
+          <h2 id="judul-kenapa" className="mt-12 max-w-560 text-b2-sm text-balance md:text-b2">
             Ketersediaan yang jujur, harga yang tidak berubah di tengah jalan.
           </h2>
-
-          <ul className="mt-18 flex flex-col gap-13">
+          <ul className="mt-24 grid gap-24 md:mt-40">
             {checklist.map((c) => (
-              <li key={c.judul} className="flex gap-11">
+              <li key={c.judul} className="grid grid-cols-[28px_1fr] gap-16">
                 <span
                   aria-hidden
-                  className="mt-2 grid size-20 shrink-0 place-items-center rounded-pill bg-green-700 text-check text-white"
+                  className="mt-1 grid size-28 place-items-center rounded-full bg-green-700 text-white"
                 >
-                  ✓
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="size-16"
+                  >
+                    <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  </svg>
                 </span>
                 <div>
-                  <h3 className="text-btn-sm text-ink">{c.judul}</h3>
-                  <p className="mt-2 text-body-xs text-muted">{c.body}</p>
+                  <h3 className="text-b4-sm leading-[1.4] font-bold md:text-b4">{c.judul}</h3>
+                  <p className="mt-4 max-w-[64ch] text-b5-sm text-muted-kuat md:text-b5">{c.body}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2">
-          <div className="relative h-148 overflow-hidden rounded-card bg-surface">
+        <div className="grid gap-16 md:grid-cols-[280px_280px] md:grid-rows-[232px_232px]">
+          <div className="bingkai-foto relative h-300 overflow-hidden rounded-b-lg md:row-span-2 md:h-auto md:rounded-b-xl">
             <Image
               src="/landing/serah-terima.webp"
               alt="Honda Scoopy putih siap diserahkan ke penyewa"
               fill
-              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-              className="object-cover"
+              sizes="(min-width: 768px) 280px, 100vw"
+              className="foto-unit object-cover object-[45%_55%]"
             />
           </div>
 
-          <div className="flex h-148 flex-col justify-end rounded-card bg-green-900 p-16">
-            <p className="text-metric text-white">
-              {whyUsStats.konfirmasi.angka}
-            </p>
-            <p className="mt-4 text-stat-label text-green-400">
-              {whyUsStats.konfirmasi.label}
-            </p>
+          <div className="bingkai-foto relative h-200 overflow-hidden rounded-b-lg md:h-auto md:rounded-b-xl">
+            <Image
+              src="/units/yamaha-nmax-2022.webp"
+              alt="Yamaha NMAX 2022"
+              fill
+              sizes="(min-width: 768px) 280px, 100vw"
+              className="foto-unit object-cover object-[50%_60%]"
+            />
           </div>
-
-          <div className="flex h-148 flex-col justify-end rounded-card bg-green-100 p-16">
-            <p className="text-metric text-green-700">
-              {whyUsStats.biayaTersembunyi.angka}
-            </p>
-            <p className="mt-4 text-stat-label text-green-600">
-              {whyUsStats.biayaTersembunyi.label}
-            </p>
+          <div className="bingkai-foto relative h-200 overflow-hidden rounded-b-lg md:h-auto md:rounded-b-xl">
+            <Image
+              src="/units/toyota-avanza-2021.webp"
+              alt="Toyota Avanza 2021"
+              fill
+              sizes="(min-width: 768px) 280px, 100vw"
+              className="foto-unit object-cover object-[60%_55%]"
+            />
           </div>
-
-          <ImagePlaceholder
-            label="foto unit di parkiran"
-            className="h-148 rounded-card"
-          />
         </div>
       </div>
     </section>

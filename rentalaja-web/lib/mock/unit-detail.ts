@@ -5,6 +5,7 @@
 // angka. Bagian naratif (isi paket, pengecualian, deposit, strip kalender)
 // dipakai bersama karena desain hanya menggambarkannya sekali.
 
+import { biayaLayanan } from "@/lib/harga";
 import { unitHasil, type UnitHasil } from "@/lib/mock/search";
 import { HARI, hariSingkat, rentangTanggal, tanggalSingkat } from "@/lib/mitra/waktu";
 import type { Sewa } from "@/lib/sewa";
@@ -66,10 +67,6 @@ const JAMINAN = [
   "Batas usia penyewa 18 tahun.",
 ];
 
-// Biaya layanan rentalaja yang dibayar penyewa: 3% dari harga sewa, dibulatkan
-// ke rupiah terdekat. Rumusnya sama persis dengan rentalaja-api/src/umum/harga.ts;
-// kalau salah satu diubah, yang lain wajib ikut.
-const PERSEN_LAYANAN = 3;
 
 /** Satu-satunya sumber detail. Mengembalikan null kalau slug tidak dikenal.
  *
@@ -81,7 +78,7 @@ export function detailUnit(slug: string, sewa: Sewa): DetailUnit | null {
   if (!unit) return null;
 
   const subtotal = unit.hargaPerHari * sewa.hari;
-  const layanan = Math.round((subtotal * PERSEN_LAYANAN) / 100);
+  const layanan = biayaLayanan(subtotal);
 
   return {
     unit,

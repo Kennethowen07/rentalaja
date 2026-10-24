@@ -1,5 +1,5 @@
-// Landing page v2. Urutan section mengikuti README
-// "SCREEN UTAMA — Landing Page v2" dari atas ke bawah.
+// Beranda v3 (design-lab/approved/round-1.html, dipilih 25 Okt 2026).
+// Unit populer dinaikkan ke tepat di bawah pencarian, sebelum tiga langkah.
 
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
@@ -20,8 +20,8 @@ export default function LandingPage() {
       <main>
         <Hero />
         <SearchCard />
-        <HowItWorks />
         <PopularUnits />
+        <HowItWorks />
         <WhyUs />
         <Testimonials />
         <ServiceAreas />

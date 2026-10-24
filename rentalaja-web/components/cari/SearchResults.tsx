@@ -33,8 +33,8 @@ export default function SearchResults({
 
   return (
     <>
-      {/* Filter bar sticky, menempel tepat di bawah navbar 60px */}
-      <div className="sticky top-60 z-4 border-b border-line bg-white">
+      {/* Filter bar sticky, menempel tepat di bawah navbar 64px / 72px */}
+      <div className="sticky top-64 z-4 border-b border-line bg-white md:top-72">
         <div className="container-page flex flex-wrap items-center gap-12 py-12">
           <p className="rounded-input border border-line px-12 py-9 text-filter text-ink">
             {ringkasanFilter}

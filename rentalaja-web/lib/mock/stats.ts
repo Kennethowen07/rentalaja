@@ -4,25 +4,14 @@
 
 export type HeroStat = {
   angka: string;
+  /** Satuan kecil di belakang angka, mis. "/hari". */
+  akhiran?: string;
   label: string;
 };
 
-export const heroEyebrow = "Kalender real-time · 62 rental di Bali";
-
 export const heroStats: HeroStat[] = [
-  { angka: "340", label: "unit terdaftar" },
-  { angka: "4,8", label: "rating penyedia" },
-  { angka: "Rp 55rb", label: "motor termurah / hari" },
+  { angka: "340", label: "Unit Kendaraan" },
+  // Angka mock, belum ada data pesanan sungguhan di baliknya.
+  { angka: "1000+", label: "Unit Telah Disewa" },
+  { angka: "Rp 55rb", akhiran: "/hari", label: "Harga Sewa Mulai Dari" },
 ];
-
-/** Angka besar pada grid statistik di section "Kenapa rentalaja". */
-export const whyUsStats = {
-  konfirmasi: {
-    angka: "98%",
-    label: "pesanan dikonfirmasi di bawah 10 menit",
-  },
-  biayaTersembunyi: {
-    angka: "0",
-    label: "biaya tersembunyi saat pengambilan unit",
-  },
-};

@@ -13,7 +13,7 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "rentalaja — Sewa motor dan mobil di Bali",
   description:
-    "Lihat unit yang benar-benar kosong di tanggalmu. Harga tetap, tanpa chat dulu.",
+    "Sewa kendaraan tanpa ribet. Pilih tanggal, lihat unit yang kosong, langsung pesan. Motor dan mobil di Bali, diantar ke tempatmu.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

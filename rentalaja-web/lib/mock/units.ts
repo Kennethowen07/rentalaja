@@ -52,7 +52,3 @@ export function formatRupiah(nilai: number): string {
   return `Rp ${new Intl.NumberFormat("id-ID").format(nilai)}`;
 }
 
-/** Baris meta kartu: "★ 4,9 · Canggu · skutik 110cc" */
-export function metaUnit(unit: Unit): string {
-  return `★ ${unit.rating} · ${unit.area} · ${unit.spesifikasi}`;
-}

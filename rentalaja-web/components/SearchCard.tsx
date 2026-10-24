@@ -1,23 +1,20 @@
 "use client";
 
-// README section 3 + Interactions/State Management.
+// Beranda v3, kotak pencarian (design-lab/approved/round-1.html).
 //
-// Urutan field: Area antar, Tanggal ambil, Tanggal kembali, Jam ambil.
-// Field "Durasi" dari desain awal diganti "Tanggal kembali" atas permintaan
-// pemilik proyek: orang lebih mudah menyebut tanggal pulangnya daripada
-// menghitung jumlah hari.
+// Atas permintaan pemilik proyek (25 Okt 2026) semua field mulai KOSONG dan
+// hanya menampilkan placeholder ("Area antar", "Tanggal ambil", ...), dan
+// kalimat "Sewa 3 hari, kembali ..." di bawah form dihapus karena
+// mengganggu. Akibatnya jam ambil tidak lagi punya nilai bawaan, jadi ikut
+// divalidasi seperti field lain.
 //
 // /cari masih membaca ?durasi= (lihat app/cari/page.tsx), jadi durasi tetap
-// dikirim, dihitung dari selisih kedua tanggal. Jam kembali mengikuti jam
-// ambil, sama seperti sebelumnya.
-//
-// Penyimpangan sadar dari desain: desain menampilkan "12 Sep 2026" sebagai
-// tanggal ambil, padahal README juga menetapkan "Tanggal tidak boleh di masa
-// lalu". Default diisi hari ini, tanggal kembali tiga hari setelahnya.
+// dikirim, dihitung dari selisih kedua tanggal.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { areaAntarOptions, jamAmbilOptions } from "@/lib/mock/areas";
+import { heroStats } from "@/lib/mock/stats";
 
 type Jenis = "motor" | "mobil";
 
@@ -29,17 +26,15 @@ type SearchForm = {
   jamAmbil: string; // "09.00"
 };
 
-type FieldTervalidasi = "area" | "tanggalAmbil" | "tanggalKembali";
+type FieldTervalidasi = "area" | "tanggalAmbil" | "tanggalKembali" | "jamAmbil";
 type Errors = Partial<Record<FieldTervalidasi, string>>;
 
 /** Urutan fokus saat submit gagal, mengikuti urutan visual field. */
-const URUTAN_FIELD: FieldTervalidasi[] = ["area", "tanggalAmbil", "tanggalKembali"];
+const URUTAN_FIELD: FieldTervalidasi[] = ["area", "tanggalAmbil", "tanggalKembali", "jamAmbil"];
 
-const DURASI_AWAL = 3;
 const HARI_MS = 24 * 60 * 60 * 1000;
 
-const formatTanggalPanjang = new Intl.DateTimeFormat("id-ID", {
-  weekday: "long",
+const formatTanggal = new Intl.DateTimeFormat("id-ID", {
   day: "numeric",
   month: "short",
   year: "numeric",
@@ -76,6 +71,12 @@ function selisihHari(ambil: string, kembali: string): number | null {
   return Math.round((b.getTime() - a.getTime()) / HARI_MS);
 }
 
+/** "25 Okt 2026". Intl menulis "Okt." dengan titik; titiknya dibuang. */
+function tampilTanggal(iso: string): string | null {
+  const d = parseIso(iso);
+  return d ? formatTanggal.format(d).replace(".", "") : null;
+}
+
 /** Fungsi murni, dipanggil saat render supaya pesan error selalu
  *  mencerminkan isi form saat ini. */
 function hitungErrors(form: SearchForm, minTanggal: string): Errors {
@@ -89,49 +90,139 @@ function hitungErrors(form: SearchForm, minTanggal: string): Errors {
   if (!form.tanggalKembali) {
     next.tanggalKembali = "Pilih tanggal kembali.";
   } else if (form.tanggalAmbil && form.tanggalKembali <= form.tanggalAmbil) {
-    next.tanggalKembali = "Tanggal kembali harus setelah tanggal ambil.";
+    next.tanggalKembali = "Harus setelah tanggal ambil.";
   }
+  if (!form.jamAmbil) next.jamAmbil = "Pilih jam ambil.";
   return next;
 }
 
-const KELAS_FIELD =
-  "w-full rounded-input border bg-white px-12 py-11 text-nav-strong text-ink";
+const IKON = {
+  lokasi: (
+    <>
+      <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </>
+  ),
+  kalender: (
+    <>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+    </>
+  ),
+  kalenderCek: (
+    <>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+      <path d="M3.5 10h17M8 3v4M16 3v4M9.5 15l2 2 3.5-3.5" />
+    </>
+  ),
+  jam: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
+};
+
+function Svg({ children, className }: { children: ReactNode; className: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={className}
+    >
+      {children}
+    </svg>
+  );
+}
+
+/** Bingkai satu field: ikon di kiri, kontrol di dalam, pesan error di bawah. */
+function Field({
+  ikon,
+  error,
+  errorId,
+  dropdown = false,
+  className = "",
+  children,
+}: {
+  ikon: ReactNode;
+  error?: string;
+  errorId: string;
+  dropdown?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={className}>
+      <div
+        className={`relative flex h-64 items-center rounded-b-sm border-[1.5px] bg-white transition-colors duration-160 ease-beranda focus-within:border-green-700 focus-within:ring-3 focus-within:ring-green-700/20 ${
+          error ? "border-error" : "border-garis-field hover:border-garis-field-hover"
+        }`}
+      >
+        <Svg className="pointer-events-none absolute top-1/2 left-12 size-20 -translate-y-1/2 text-green-700 md:left-16">
+          {ikon}
+        </Svg>
+        {children}
+        {dropdown && (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 right-12 size-16 -translate-y-1/2 text-muted-kuat md:right-16"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        )}
+      </div>
+      {error && (
+        <p id={errorId} role="alert" className="mt-6 text-b6-sm text-error">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Teks di dalam field: abu saat masih placeholder, hitam saat terisi.
+ *  Di HP kedua field tanggal selebar penuh, karena "Tanggal kembali" tidak
+ *  muat di field selebar setengah layar 390px. */
+const kelasIsi = (terisi: boolean) =>
+  `truncate text-b5-sm font-semibold whitespace-nowrap md:text-b5 ${terisi ? "text-ink" : "text-muted-kuat"}`;
+
+const kelasSelect =
+  "absolute inset-0 size-full appearance-none rounded-b-sm bg-transparent pr-36 pl-40 focus-visible:shadow-none md:pr-40 md:pl-48";
 
 export default function SearchCard() {
   const router = useRouter();
 
-  // Kedua tanggal sengaja kosong pada render pertama. Mengisinya dengan
-  // new Date() saat inisialisasi state akan menghasilkan nilai berbeda di
-  // server dan di browser, yaitu hydration mismatch.
   const [form, setForm] = useState<SearchForm>({
     jenis: "motor",
-    area: areaAntarOptions[0],
+    area: "",
     tanggalAmbil: "",
     tanggalKembali: "",
-    jamAmbil: "09.00",
+    jamAmbil: "",
   });
+  // Diisi setelah mount: new Date() saat render pertama akan berbeda antara
+  // server dan browser (hydration mismatch).
   const [minTanggal, setMinTanggal] = useState("");
   const [sudahSubmit, setSudahSubmit] = useState(false);
 
   const areaRef = useRef<HTMLSelectElement>(null);
   const tanggalAmbilRef = useRef<HTMLInputElement>(null);
   const tanggalKembaliRef = useRef<HTMLInputElement>(null);
+  const jamAmbilRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
-    const hariIni = isoTanggalLokal(new Date());
-    setMinTanggal(hariIni);
-    setForm((f) =>
-      f.tanggalAmbil
-        ? f
-        : { ...f, tanggalAmbil: hariIni, tanggalKembali: geserHari(hariIni, DURASI_AWAL) },
-    );
+    setMinTanggal(isoTanggalLokal(new Date()));
   }, []);
-
-  const durasi = selisihHari(form.tanggalAmbil, form.tanggalKembali);
-  const kembaliSah = durasi !== null && durasi >= 1;
-  const kembaliTeks = kembaliSah
-    ? formatTanggalPanjang.format(parseIso(form.tanggalKembali)!)
-    : null;
 
   const errors = hitungErrors(form, minTanggal);
   // Jangan tampilkan error sebelum user pernah menekan "Cari unit".
@@ -140,8 +231,7 @@ export default function SearchCard() {
   function ubahTanggalAmbil(nilai: string) {
     setForm((f) => {
       // Kalau tanggal ambil dimajukan sampai melewati tanggal kembali,
-      // tanggal kembali ikut digeser supaya lama sewanya tetap sama, alih-alih
-      // meninggalkan form dalam keadaan tidak sah.
+      // tanggal kembali ikut digeser supaya lama sewanya tetap sama.
       if (nilai && f.tanggalKembali && f.tanggalKembali <= nilai) {
         const lama = selisihHari(f.tanggalAmbil, f.tanggalKembali);
         const geser = lama && lama >= 1 ? lama : 1;
@@ -159,12 +249,12 @@ export default function SearchCard() {
     if (fieldGagal) {
       // WCAG 3.3.1: pindahkan fokus ke field invalid pertama supaya
       // pengguna screen reader tahu submit gagal dan di mana letaknya.
-      const ref =
-        fieldGagal === "area"
-          ? areaRef
-          : fieldGagal === "tanggalAmbil"
-            ? tanggalAmbilRef
-            : tanggalKembaliRef;
+      const ref = {
+        area: areaRef,
+        tanggalAmbil: tanggalAmbilRef,
+        tanggalKembali: tanggalKembaliRef,
+        jamAmbil: jamAmbilRef,
+      }[fieldGagal];
       ref.current?.focus();
       return;
     }
@@ -174,29 +264,41 @@ export default function SearchCard() {
       area: form.area,
       mulai: form.tanggalAmbil,
       jam: form.jamAmbil,
-      durasi: String(durasi),
+      durasi: String(selisihHari(form.tanggalAmbil, form.tanggalKembali)),
     });
     router.push(`/cari?${query.toString()}`);
   }
 
-  const tabAktif =
-    "rounded-pill bg-green-100 px-16 py-8 text-tab text-green-700";
-  const tabNonaktif =
-    "rounded-pill border border-line px-16 py-8 text-nav-strong text-muted";
+  const atributError = (f: FieldTervalidasi) => ({
+    "aria-invalid": Boolean(errorTampil[f]),
+    "aria-describedby": errorTampil[f] ? `${f}-error` : undefined,
+  });
+
+  /** Klik di mana pun pada field membuka pemilih tanggal (Chrome, Edge,
+   *  Safari 16+). Browser lain tetap bisa lewat keyboard. */
+  function bukaPemilih(e: React.MouseEvent<HTMLInputElement>) {
+    try {
+      e.currentTarget.showPicker?.();
+    } catch {
+      // showPicker melempar kalau dipanggil tanpa gestur pengguna.
+    }
+  }
+
+  const tampilAmbil = tampilTanggal(form.tanggalAmbil);
+  const tampilKembali = tampilTanggal(form.tanggalKembali);
 
   return (
-    <div className="container-page relative z-1">
+    <div className="container-beranda relative z-2 -mt-130 md:-mt-76">
       <form
         onSubmit={onSubmit}
         noValidate
         aria-label="Cari unit"
-        className="-mt-32 rounded-search border border-green-200 bg-white p-16 shadow-search sm:-mt-46"
+        className="rounded-b-lg bg-white p-16 shadow-b-cari md:rounded-b-xl md:p-24"
       >
-        {/* Tab jenis kendaraan */}
         <div
-          className="mb-14 flex gap-8"
           role="group"
           aria-label="Jenis kendaraan"
+          className="flex h-44 w-full rounded-b-sm bg-green-100 p-4 md:inline-flex md:w-auto"
         >
           {(["motor", "mobil"] as const).map((jenis) => (
             <button
@@ -204,17 +306,26 @@ export default function SearchCard() {
               type="button"
               aria-pressed={form.jenis === jenis}
               onClick={() => setForm((f) => ({ ...f, jenis }))}
-              className={form.jenis === jenis ? tabAktif : tabNonaktif}
+              className={`flex-1 rounded-[10px] text-b5-sm font-semibold transition-colors duration-160 ease-beranda md:w-120 md:flex-none md:text-b5 ${
+                form.jenis === jenis
+                  ? "bg-green-700 text-white shadow-b-1"
+                  : "text-ink hover:text-green-700"
+              }`}
             >
               {jenis === "motor" ? "Motor" : "Mobil"}
             </button>
           ))}
         </div>
 
-        <div className="grid items-end gap-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_.9fr_auto]">
-          {/* Area antar */}
-          <div>
-            <label htmlFor="area" className="mb-6 block text-label text-muted">
+        <div className="mt-12 grid grid-cols-2 items-start gap-12 md:mt-16 min-[75rem]:grid-cols-[minmax(0,1fr)_210px_210px_185px_165px]">
+          <Field
+            ikon={IKON.lokasi}
+            dropdown
+            error={errorTampil.area}
+            errorId="area-error"
+            className="col-span-2 min-[75rem]:col-span-1"
+          >
+            <label htmlFor="area" className="sr-only">
               Area antar
             </label>
             <select
@@ -222,36 +333,31 @@ export default function SearchCard() {
               ref={areaRef}
               required
               value={form.area}
-              aria-invalid={Boolean(errorTampil.area)}
-              aria-describedby={errorTampil.area ? "area-error" : undefined}
+              {...atributError("area")}
               onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))}
-              className={`${KELAS_FIELD} ${
-                errorTampil.area ? "border-error" : "border-line"
-              }`}
+              className={`${kelasSelect} ${kelasIsi(Boolean(form.area))}`}
             >
+              <option value="" disabled>
+                Area antar
+              </option>
               {areaAntarOptions.map((a) => (
                 <option key={a} value={a}>
                   {a}
                 </option>
               ))}
             </select>
-            {errorTampil.area && (
-              <p
-                id="area-error"
-                role="alert"
-                className="mt-6 text-body-sm text-error"
-              >
-                {errorTampil.area}
-              </p>
-            )}
-          </div>
+          </Field>
 
-          {/* Tanggal ambil */}
-          <div>
-            <label
-              htmlFor="tanggal-ambil"
-              className="mb-6 block text-label text-muted"
-            >
+          <Field
+            ikon={IKON.kalender}
+            error={errorTampil.tanggalAmbil}
+            errorId="tanggalAmbil-error"
+            className="col-span-2 md:col-span-1"
+          >
+            <span aria-hidden className={`min-w-0 pr-8 pl-40 md:pl-48 ${kelasIsi(Boolean(tampilAmbil))}`}>
+              {tampilAmbil ?? "Tanggal ambil"}
+            </span>
+            <label htmlFor="tanggal-ambil" className="sr-only">
               Tanggal ambil
             </label>
             <input
@@ -261,32 +367,23 @@ export default function SearchCard() {
               required
               value={form.tanggalAmbil}
               min={minTanggal || undefined}
-              aria-invalid={Boolean(errorTampil.tanggalAmbil)}
-              aria-describedby={
-                errorTampil.tanggalAmbil ? "tanggal-ambil-error" : undefined
-              }
+              {...atributError("tanggalAmbil")}
+              onClick={bukaPemilih}
               onChange={(e) => ubahTanggalAmbil(e.target.value)}
-              className={`${KELAS_FIELD} ${
-                errorTampil.tanggalAmbil ? "border-error" : "border-line"
-              }`}
+              className="input-tanggal-tersembunyi"
             />
-            {errorTampil.tanggalAmbil && (
-              <p
-                id="tanggal-ambil-error"
-                role="alert"
-                className="mt-6 text-body-sm text-error"
-              >
-                {errorTampil.tanggalAmbil}
-              </p>
-            )}
-          </div>
+          </Field>
 
-          {/* Tanggal kembali */}
-          <div>
-            <label
-              htmlFor="tanggal-kembali"
-              className="mb-6 block text-label text-muted"
-            >
+          <Field
+            ikon={IKON.kalenderCek}
+            error={errorTampil.tanggalKembali}
+            errorId="tanggalKembali-error"
+            className="col-span-2 md:col-span-1"
+          >
+            <span aria-hidden className={`min-w-0 pr-8 pl-40 md:pl-48 ${kelasIsi(Boolean(tampilKembali))}`}>
+              {tampilKembali ?? "Tanggal kembali"}
+            </span>
+            <label htmlFor="tanggal-kembali" className="sr-only">
               Tanggal kembali
             </label>
             <input
@@ -297,80 +394,67 @@ export default function SearchCard() {
               value={form.tanggalKembali}
               // Paling cepat sehari setelah tanggal ambil.
               min={geserHari(form.tanggalAmbil, 1) || minTanggal || undefined}
-              aria-invalid={Boolean(errorTampil.tanggalKembali)}
-              aria-describedby={
-                errorTampil.tanggalKembali ? "tanggal-kembali-error" : undefined
-              }
-              onChange={(e) =>
-                setForm((f) => ({ ...f, tanggalKembali: e.target.value }))
-              }
-              className={`${KELAS_FIELD} ${
-                errorTampil.tanggalKembali ? "border-error" : "border-line"
-              }`}
+              {...atributError("tanggalKembali")}
+              onClick={bukaPemilih}
+              onChange={(e) => setForm((f) => ({ ...f, tanggalKembali: e.target.value }))}
+              className="input-tanggal-tersembunyi"
             />
-            {errorTampil.tanggalKembali && (
-              <p
-                id="tanggal-kembali-error"
-                role="alert"
-                className="mt-6 text-body-sm text-error"
-              >
-                {errorTampil.tanggalKembali}
-              </p>
-            )}
-          </div>
+          </Field>
 
-          {/* Jam ambil */}
-          <div>
-            <label
-              htmlFor="jam-ambil"
-              className="mb-6 block text-label text-muted"
-            >
+          <Field ikon={IKON.jam} dropdown error={errorTampil.jamAmbil} errorId="jamAmbil-error">
+            <label htmlFor="jam-ambil" className="sr-only">
               Jam ambil
             </label>
             <select
               id="jam-ambil"
+              ref={jamAmbilRef}
+              required
               value={form.jamAmbil}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, jamAmbil: e.target.value }))
-              }
-              className={`${KELAS_FIELD} border-line`}
+              {...atributError("jamAmbil")}
+              onChange={(e) => setForm((f) => ({ ...f, jamAmbil: e.target.value }))}
+              className={`${kelasSelect} ${kelasIsi(Boolean(form.jamAmbil))}`}
             >
+              <option value="" disabled>
+                Jam ambil
+              </option>
               {jamAmbilOptions.map((j) => (
                 <option key={j} value={j}>
                   {j}
                 </option>
               ))}
             </select>
-          </div>
+          </Field>
 
-          {/* <1024px tombol jatuh ke baris terakhir, full width */}
           <button
             type="submit"
-            className="col-span-full w-full rounded-input bg-green-700 px-30 py-13 text-btn text-white transition-colors duration-160 ease-base hover:bg-green-800 lg:col-span-1 lg:w-auto"
+            className="flex h-64 items-center justify-center gap-10 rounded-b-sm bg-green-700 px-16 text-b5-sm font-bold text-white transition-colors duration-160 ease-beranda hover:bg-green-800 active:bg-green-900 md:px-20 md:text-b5"
           >
+            <Svg className="size-20">
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="M16 16l4 4" />
+            </Svg>
             Cari unit
           </button>
         </div>
-
-        {/* Durasi tidak lagi diisi, tapi tetap disebut di sini supaya orang
-            tahu berapa hari yang akan dibayar. */}
-        <p aria-live="polite" className="mt-11 text-body-sm text-muted">
-          {kembaliTeks ? (
-            <>
-              Sewa{" "}
-              <strong className="text-body-strong text-ink">{durasi} hari</strong>,
-              kembali{" "}
-              <strong className="text-body-strong text-ink">
-                {kembaliTeks} pukul {form.jamAmbil}
-              </strong>
-              . Hasil pencarian hanya menampilkan unit yang kosong di rentang
-              itu.
-            </>
-          ) : (
-            "Pilih tanggal ambil dan tanggal kembali untuk melihat lama sewa."
-          )}
-        </p>
       </form>
+
+      {/* Di desktop angka ini ada di hero; di HP hero terlalu sempit. */}
+      <dl className="mt-20 grid grid-cols-[1fr_1.1fr_1.4fr] md:hidden">
+        {heroStats.map((s) => (
+          <div
+            key={s.label}
+            className="flex flex-col-reverse border-l border-green-200 pr-8 pl-10 first:border-l-0 first:pl-0"
+          >
+            <dt className="mt-2 text-b6-sm text-muted-kuat">{s.label}</dt>
+            <dd className="text-b3-sm whitespace-nowrap text-green-900 tabular-nums">
+              {s.angka}
+              {s.akhiran && (
+                <span className="ml-2 text-b6-sm font-semibold text-muted-kuat">{s.akhiran}</span>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }

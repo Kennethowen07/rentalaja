@@ -1,7 +1,8 @@
 "use client";
 
-// README section 1 + Responsive: sticky sejak scroll 0, tinggi 60px.
-// Di bawah 640px nav diganti hamburger + drawer.
+// Beranda v3 (design-lab/approved/round-1.html): sticky sejak scroll 0,
+// tinggi 64px di HP dan 72px mulai 768px. Di bawah 768px nav diganti
+// hamburger + drawer.
 //
 // Struktur: HANYA DUA anak langsung yang terlihat di tiap breakpoint —
 // wordmark di kiri, satu grup di kanan. Versi sebelumnya punya tiga anak
@@ -52,33 +53,30 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-5 border-b border-green-200 bg-white/94 backdrop-blur-[8px]">
-      <div className="container-page flex h-60 items-stretch justify-between">
-        {/* Wordmark aslinya teks 19px. Sekarang gambar: logonya dua baris,
-            jadi tingginya dinaikkan ke 42px supaya kedua baris masih terbaca
-            di dalam navbar 60px. alt jadi nama tautan ini bagi pembaca layar,
-            jangan dikosongkan. */}
+      <div className="container-beranda flex h-64 items-stretch justify-between md:h-72">
+        {/* alt jadi nama tautan ini bagi pembaca layar, jangan dikosongkan. */}
         <Link href="/" className="flex items-center">
           <Image
             src="/logo-rentalaja.png"
             alt="rentalaja"
             width={402}
             height={240}
-            priority
-            className="h-42 w-auto"
+            preload
+            className="h-34 w-auto md:h-40"
           />
         </Link>
 
-        <div className="hidden items-stretch gap-26 sm:flex">
+        <div className="hidden items-stretch gap-32 md:flex">
           <nav
             aria-label="Navigasi utama"
-            className="flex items-stretch gap-26"
+            className="flex items-stretch gap-32"
           >
             {/* Link aktif ditandai underline 2px #0F6B4F */}
             <Link
               href="/"
               aria-current={diBeranda ? "page" : undefined}
-              className={`flex items-center text-nav-strong text-ink transition-colors duration-160 ease-base hover:text-green-700 ${
-                diBeranda ? "border-b-2 border-green-700" : ""
+              className={`flex items-center text-b5 font-semibold transition-colors duration-160 ease-beranda hover:text-green-700 ${
+                diBeranda ? "border-b-2 border-green-700 text-green-700" : "text-ink"
               }`}
             >
               Sewa
@@ -87,21 +85,21 @@ export default function Navbar() {
               <a
                 key={l.href}
                 href={l.href}
-                className="flex items-center text-nav text-ink transition-colors duration-160 ease-base hover:text-green-700"
+                className="flex items-center text-b5 font-medium text-ink transition-colors duration-160 ease-beranda hover:text-green-700"
               >
                 {l.label}
               </a>
             ))}
           </nav>
 
-          <div className="ml-10 flex items-center gap-10">
+          <div className="ml-16 flex items-center gap-20">
             {akun ? (
               <>
-                <span className="max-w-160 truncate text-nav text-muted">{akun}</span>
+                <span className="max-w-160 truncate text-b6 text-muted-kuat">{akun}</span>
                 <button
                   type="button"
                   onClick={() => setAkun(null)}
-                  className="rounded-input border border-line px-16 py-9 text-nav-strong text-ink transition-colors duration-160 ease-base hover:border-green-700 hover:text-green-700"
+                  className="min-h-44 rounded-b-sm border border-green-200 px-20 text-b5 font-semibold text-ink transition-colors duration-160 ease-beranda hover:border-green-700 hover:text-green-700"
                 >
                   Keluar
                 </button>
@@ -111,14 +109,14 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setModeAuth("masuk")}
-                  className="text-nav-strong text-ink transition-colors duration-160 ease-base hover:text-green-700"
+                  className="min-h-44 text-b5 font-semibold text-ink transition-colors duration-160 ease-beranda hover:text-green-700"
                 >
                   Masuk
                 </button>
                 <button
                   type="button"
                   onClick={() => setModeAuth("daftar")}
-                  className="rounded-input bg-green-700 px-16 py-9 text-nav-strong text-white transition-colors duration-160 ease-base hover:bg-green-800"
+                  className="min-h-44 rounded-b-sm bg-green-700 px-20 text-b5 font-bold text-white transition-colors duration-160 ease-beranda hover:bg-green-800"
                 >
                   Daftar
                 </button>
@@ -135,7 +133,7 @@ export default function Navbar() {
           aria-expanded={drawerTerbuka}
           aria-controls="menu-mobile"
           aria-label={drawerTerbuka ? "Tutup menu" : "Buka menu"}
-          className="my-auto grid size-44 place-items-center rounded-input sm:hidden"
+          className="my-auto grid size-44 place-items-center rounded-xl border border-green-200 md:hidden"
         >
           <span aria-hidden className="flex flex-col gap-5">
             <span className="h-2 w-20 rounded-pill bg-ink" />
@@ -149,13 +147,13 @@ export default function Navbar() {
         <nav
           id="menu-mobile"
           aria-label="Navigasi utama"
-          className="container-page flex flex-col border-t border-green-200 pt-8 pb-16 sm:hidden"
+          className="container-beranda flex flex-col border-t border-green-200 pt-8 pb-16 md:hidden"
         >
           <Link
             href="/"
             aria-current={diBeranda ? "page" : undefined}
             onClick={tutupDrawer}
-            className={`flex min-h-44 items-center text-nav-strong ${
+            className={`flex min-h-56 items-center border-b border-green-200 text-b4-sm font-semibold ${
               diBeranda ? "text-green-700" : "text-ink"
             }`}
           >
@@ -166,21 +164,21 @@ export default function Navbar() {
               key={l.href}
               href={l.href}
               onClick={tutupDrawer}
-              className="flex min-h-44 items-center text-nav text-ink"
+              className="flex min-h-56 items-center border-b border-green-200 text-b4-sm font-semibold text-ink"
             >
               {l.label}
             </a>
           ))}
           {akun ? (
             <>
-              <span className="flex min-h-44 items-center text-nav text-muted">{akun}</span>
+              <span className="flex min-h-56 items-center text-b5-sm text-muted-kuat">{akun}</span>
               <button
                 type="button"
                 onClick={() => {
                   setAkun(null);
                   tutupDrawer();
                 }}
-                className="mt-8 grid min-h-44 place-items-center rounded-input border border-line text-nav-strong text-ink"
+                className="mt-16 grid min-h-52 place-items-center rounded-b-sm border-[1.5px] border-green-700 text-b5-sm font-bold text-green-700"
               >
                 Keluar
               </button>
@@ -193,7 +191,7 @@ export default function Navbar() {
                   setDrawerTerbuka(false);
                   setModeAuth("masuk");
                 }}
-                className="flex min-h-44 items-center text-nav-strong text-ink"
+                className="mt-16 grid min-h-52 place-items-center rounded-b-sm border-[1.5px] border-green-700 text-b5-sm font-bold text-green-700"
               >
                 Masuk
               </button>
@@ -203,7 +201,7 @@ export default function Navbar() {
                   setDrawerTerbuka(false);
                   setModeAuth("daftar");
                 }}
-                className="mt-8 grid min-h-44 place-items-center rounded-input bg-green-700 text-nav-strong text-white"
+                className="mt-12 grid min-h-52 place-items-center rounded-b-sm bg-green-700 text-b5-sm font-bold text-white"
               >
                 Daftar
               </button>
