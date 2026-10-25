@@ -16,12 +16,12 @@ const jakarta = Plus_Jakarta_Sans({
 
 const TEKS = kamus({
   id: {
-    judul: "rentalaja — Sewa motor dan mobil di Bali",
+    judul: "RentalAja : Sewa Motor dan Mobil di Bali",
     deskripsi:
       "Sewa kendaraan tanpa ribet. Pilih tanggal, lihat unit yang kosong, langsung pesan. Motor dan mobil di Bali, diantar ke tempatmu.",
   },
   en: {
-    judul: "rentalaja — Scooter and car rental in Bali",
+    judul: "RentalAja : Scooter and Car Rental in Bali",
     deskripsi:
       "Rent a vehicle without the hassle. Pick your dates, see what's available, book right away. Scooters and cars in Bali, delivered to you.",
   },
