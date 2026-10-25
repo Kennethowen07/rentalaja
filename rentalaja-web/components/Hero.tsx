@@ -11,30 +11,45 @@
 // supaya ketiganya terasa satu set.
 
 import Image from "next/image";
+import { kamus } from "@/lib/i18n";
+import { bahasaAktif } from "@/lib/i18n-server";
 import { heroStats } from "@/lib/mock/stats";
 
-export default function Hero() {
+const TEKS = kamus({
+  id: {
+    judul: "Sewa Kendaraan Tanpa Ribet",
+    sub: "Pilih tanggal, lihat unit yang kosong, langsung pesan. Motor dan mobil, diantar ke tempatmu.",
+  },
+  en: {
+    judul: "Rent a Vehicle Without the Hassle",
+    sub: "Pick your dates, see what's available, book right away. Scooters and cars, delivered to you.",
+  },
+});
+
+export default async function Hero() {
+  const bahasa = await bahasaAktif();
+  const t = TEKS[bahasa];
+
   return (
     <section
       aria-labelledby="judul-hero"
       className="bg-hero-beranda pt-16 pb-150 text-white md:pt-40 md:pb-116"
     >
-      <div className="container-beranda grid gap-24 md:gap-40 min-[75rem]:grid-cols-[620px_540px] min-[75rem]:items-center min-[75rem]:justify-between min-[75rem]:gap-0">
+      <div className="container-beranda grid gap-24 md:gap-40 min-[75rem]:grid-cols-[--spacing(620)_--spacing(540)] min-[75rem]:items-center min-[75rem]:justify-between min-[75rem]:gap-0">
         <div className="order-2 md:order-none">
           <h1
             id="judul-hero"
             className="text-b1-sm text-balance md:text-b1"
           >
-            Sewa Kendaraan Tanpa Ribet
+            {t.judul}
           </h1>
           <p className="mt-12 max-w-560 text-b4-sm text-di-gelap md:mt-20 md:text-b4">
-            Pilih tanggal, lihat unit yang kosong, langsung pesan. Motor dan
-            mobil, diantar ke tempatmu.
+            {t.sub}
           </p>
 
           {/* Di HP angka ini pindah ke bawah kotak pencarian (SearchCard). */}
           <dl className="mt-28 hidden md:flex">
-            {heroStats.map((s) => (
+            {heroStats[bahasa].map((s) => (
               <div
                 key={s.label}
                 className="flex flex-col-reverse border-l border-white/20 px-28 first:border-l-0 first:pl-0"

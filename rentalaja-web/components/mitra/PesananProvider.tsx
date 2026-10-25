@@ -13,6 +13,8 @@
 // produk sungguhan pembatalan itu harus terjadi di server.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useBahasa } from "@/components/BahasaProvider";
+import { teksStatusBayar } from "@/lib/mitra/data-teks";
 import { BATAS_BALAS_MS, type Pesanan } from "@/lib/mitra/tipe";
 
 type Nilai = {
@@ -41,6 +43,9 @@ export function PesananProvider({
 }) {
   // Render pertama memakai waktu server supaya HTML server dan hasil hidrasi
   // identik.
+  const { bahasa } = useBahasa();
+  const en = bahasa === "en";
+  const dikembalikan = teksStatusBayar(bahasa).dikembalikan;
   const [sekarang, setSekarang] = useState(sekarangServer);
   const [daftar, setDaftar] = useState(pesanan);
 
@@ -70,13 +75,13 @@ export function PesananProvider({
               ...p,
               status: "cancelled" as const,
               masukPada: undefined,
-              statusBayar: "Dana dikembalikan",
-              alasan: "Ditolak penyedia",
+              statusBayar: dikembalikan,
+              alasan: en ? "Declined by the provider" : "Ditolak penyedia",
             }
           : p,
       ),
     );
-  }, []);
+  }, [dikembalikan, en]);
 
   const nilai = useMemo<Nilai>(() => {
     const sesudahBatas = daftar.map((p) =>
@@ -84,8 +89,8 @@ export function PesananProvider({
         ? {
             ...p,
             status: "cancelled" as const,
-            statusBayar: "Dana dikembalikan",
-            alasan: "Batal otomatis, lewat batas 1 jam",
+            statusBayar: dikembalikan,
+            alasan: en ? "Cancelled automatically, past the 1-hour limit" : "Batal otomatis, lewat batas 1 jam",
           }
         : p,
     );
@@ -104,7 +109,7 @@ export function PesananProvider({
       terima,
       tolak,
     };
-  }, [daftar, pesanan, sekarang, terima, tolak]);
+  }, [daftar, pesanan, sekarang, terima, tolak, dikembalikan, en]);
 
   return <Konteks.Provider value={nilai}>{children}</Konteks.Provider>;
 }

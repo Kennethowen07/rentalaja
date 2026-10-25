@@ -6,21 +6,31 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { jalur, kamus } from "@/lib/i18n";
+import { bahasaAktif } from "@/lib/i18n-server";
 import { areaChips, areaChipSisa } from "@/lib/mock/areas";
 
-export default function ServiceAreas() {
+const TEKS = kamus({
+  id: { judul: "Area yang dilayani", alt: "Honda Beat 2022 di jalan berliku" },
+  en: { judul: "Areas we serve", alt: "Honda Beat 2022 on a winding road" },
+});
+
+export default async function ServiceAreas() {
+  const bahasa = await bahasaAktif();
+  const t = TEKS[bahasa];
+
   return (
     <section aria-labelledby="judul-area" className="bg-green-50 py-56 md:py-80">
-      <div className="container-beranda grid items-center gap-48 md:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="container-beranda grid items-center gap-48 md:grid-cols-[minmax(0,1fr)_--spacing(400)]">
         <div>
           <h2 id="judul-area" className="text-b2-sm md:text-b2">
-            Area yang dilayani
+            {t.judul}
           </h2>
           <ul className="mt-24 flex flex-wrap gap-8 md:mt-32 md:gap-12">
             {areaChips.map((area) => (
               <li key={area}>
                 <Link
-                  href={`/cari?area=${encodeURIComponent(area)}`}
+                  href={jalur(bahasa, `/cari?area=${encodeURIComponent(area)}`)}
                   className="inline-flex h-44 items-center gap-8 rounded-pill border border-green-200 bg-white px-16 text-b5-sm font-semibold text-green-700 transition-colors duration-160 ease-beranda hover:border-green-700 hover:bg-green-50 md:h-48 md:gap-12 md:px-20 md:text-b5"
                 >
                   <svg
@@ -42,10 +52,10 @@ export default function ServiceAreas() {
             ))}
             <li>
               <Link
-                href="/cari"
+                href={jalur(bahasa, "/cari")}
                 className="inline-flex h-44 items-center rounded-pill bg-green-700 px-16 text-b5-sm font-bold text-white transition-colors duration-160 ease-beranda hover:bg-green-800 md:h-48 md:px-20 md:text-b5"
               >
-                {areaChipSisa}
+                {areaChipSisa[bahasa]}
               </Link>
             </li>
           </ul>
@@ -53,7 +63,7 @@ export default function ServiceAreas() {
         <div className="bingkai-foto relative hidden aspect-[4/3] overflow-hidden rounded-b-xl md:block">
           <Image
             src="/units/honda-beat-2022.webp"
-            alt="Honda Beat 2022 di jalan berliku"
+            alt={t.alt}
             fill
             sizes="400px"
             className="foto-unit object-cover"

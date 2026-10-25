@@ -6,14 +6,15 @@
 // dipakai bersama karena desain hanya menggambarkannya sekali.
 
 import { biayaLayanan } from "@/lib/harga";
+import { desimal, lokal, type Bahasa } from "@/lib/i18n";
 import { type Kategori, unitHasil, type UnitHasil } from "@/lib/mock/search";
-import { HARI, hariSingkat, rentangTanggal, tanggalSingkat } from "@/lib/mitra/waktu";
+import { HARI, rentangTanggal, tanggalSingkat } from "@/lib/mitra/waktu";
 import type { Sewa } from "@/lib/sewa";
 
-export type HariKalender = {
-  dow: string;
+/** Satu hari dalam rentang sewa, mis. { hari: "Senin", tanggal: "26" }. */
+export type HariSewa = {
+  hari: string;
   tanggal: string;
-  kosong: boolean;
 };
 
 export type DetailUnit = {
@@ -23,8 +24,11 @@ export type DetailUnit = {
   hari: number;
   /** Rentang mentahnya, supaya halaman ini bisa meneruskannya ke pemesanan. */
   sewa: Sewa;
-  meta: string;
-  kalender: HariKalender[];
+  /** Dua foto tambahan untuk galeri, berkas {unit}-2.webp dan {unit}-3.webp
+   *  di public/units/ (kreditnya di lib/mock/kredit-foto.ts). */
+  fotoLain: string[];
+  /** Hari ambil sampai hari kembali, termasuk keduanya. */
+  hariSewa: HariSewa[];
   paket: string[];
   tidakTermasuk: string[];
   jaminan: string[];
@@ -37,51 +41,55 @@ export type DetailUnit = {
   };
 };
 
-/** Hari ke berapa dalam strip yang sudah tersewa. Desain menandai dua hari
- *  (Sel 15 dan Jum 18 dari tanggal mulai 12), dan posisi itulah yang
- *  dipertahankan, bukan tanggalnya. */
-const INDEKS_TERSEWA = [3, 6];
 
-/** Strip 7 hari mulai dari tanggal ambil. Dulu tanggalnya tertulis mati
- *  "12" sampai "18", sehingga ikut basi bersama sisa halaman. */
-function bangunKalender(mulai: number): HariKalender[] {
-  return Array.from({ length: 7 }, (_, i) => {
-    const t = mulai + i * HARI;
-    return {
-      dow: hariSingkat(t),
-      tanggal: String(Number(tanggalSingkat(t).split(" ")[0])),
-      kosong: !INDEKS_TERSEWA.includes(i),
-    };
+/** Hari-hari yang disewa, dari tanggal ambil sampai tanggal kembali.
+ *  Menggantikan strip "Ketersediaan 7 hari" (25 Okt 2026): unit yang
+ *  dibuka dari pencarian sudah pasti kosong di rentang ini, jadi status
+ *  kosong/tersewa per hari tidak perlu ditampilkan. */
+function bangunHariSewa(sewa: Sewa, bahasa: Bahasa): HariSewa[] {
+  const namaHari = new Intl.DateTimeFormat(lokal(bahasa), { weekday: "long", timeZone: "Asia/Makassar" });
+  return Array.from({ length: sewa.hari + 1 }, (_, i) => {
+    const t = sewa.mulai + i * HARI;
+    return { hari: namaHari.format(t), tanggal: String(Number(tanggalSingkat(t).split(" ")[0])) };
   });
 }
 
-const TIDAK_TERMASUK = [
-  "Bensin, unit diserahkan dengan tangki setengah dan dikembalikan setengah.",
-  "Parkir dan tilang.",
-  "Kerusakan di luar pemakaian normal, tarif perbaikan tertulis di lampiran perjanjian.",
-];
-
-/** Semua area unit mock ada di Badung, kecuali Ubud (Gianyar). */
-function kabupaten(area: string): string {
-  return area === "Ubud" ? "Gianyar" : "Badung";
-}
+const TIDAK_TERMASUK: Record<Bahasa, string[]> = {
+  id: [
+    "Bensin, unit diserahkan dengan tangki setengah dan dikembalikan setengah.",
+    "Parkir dan tilang.",
+    "Kerusakan di luar pemakaian normal, tarif perbaikan tertulis di lampiran perjanjian.",
+  ],
+  en: [
+    "Fuel. The vehicle is handed over with half a tank and returned with half a tank.",
+    "Parking and traffic fines.",
+    "Damage beyond normal use. Repair rates are listed in the agreement appendix.",
+  ],
+};
 
 /** SIM yang diminta mengikuti kategori: SIM C untuk motor, SIM A untuk mobil. */
-function jaminan(kategori: Kategori): string[] {
+function jaminan(kategori: Kategori, bahasa: Bahasa): string[] {
   const sim = kategori === "mobil" ? "SIM A" : "SIM C";
+  if (bahasa === "en") {
+    const izin = kategori === "mobil" ? "a car licence (SIM A)" : "a motorcycle licence (SIM C)";
+    return [
+      "Pay the rental up front, no deposit.",
+      "Required documents: ID card or passport, plus " + izin + " or an international driving permit. Uploaded during booking and verified by the provider before delivery.",
+      "Renters must be at least 18 years old.",
+    ];
+  }
   return [
-    "Tanpa deposit tunai. Pembayaranmu ditahan rentalaja sampai unit kembali, lalu diteruskan ke penyedia.",
+    "Bayar sewa langsung tanpa deposit.",
     "Dokumen wajib, KTP atau paspor dan " + sim + " atau SIM internasional. Diunggah di langkah pemesanan, diverifikasi penyedia sebelum unit diantar.",
     "Batas usia penyewa 18 tahun.",
   ];
 }
 
-/** Isi paket per kategori. Mobil disewa tanpa sopir (backend.md bagian 1). */
-function paket(unit: UnitHasil): string[] {
-  const antar = "Antar jemput area " + unit.area + ", gratis";
-  return unit.kategori === "mobil"
-    ? ["Tanpa sopir, lepas kunci", antar, "STNK asli di unit"]
-    : ["2 helm SNI", "Jas hujan", antar, "STNK asli di unit"];
+/** Isi paket per kategori, sengaja ringkas atas permintaan pemilik proyek. */
+function paket(unit: UnitHasil, bahasa: Bahasa): string[] {
+  const stnk = bahasa === "en" ? "Registration papers (STNK)" : "STNK";
+  if (unit.kategori === "mobil") return [stnk];
+  return [bahasa === "en" ? "2 helmets" : "2 helm", stnk];
 }
 
 
@@ -90,7 +98,7 @@ function paket(unit: UnitHasil): string[] {
  *  `sewa` wajib diisi pemanggil: halaman ini dulu memakai "12–14 Sep" dan
  *  durasi 3 hari yang tertulis mati, sehingga harga dan kalendernya tidak
  *  pernah cocok dengan tanggal yang dipilih penyewa di layar sebelumnya. */
-export function detailUnit(slug: string, sewa: Sewa): DetailUnit | null {
+export function detailUnit(slug: string, sewa: Sewa, bahasa: Bahasa = "id"): DetailUnit | null {
   const unit = unitHasil.find((u) => u.id === slug);
   if (!unit) return null;
 
@@ -99,19 +107,20 @@ export function detailUnit(slug: string, sewa: Sewa): DetailUnit | null {
 
   return {
     unit,
-    rentangLabel: rentangTanggal(sewa.mulai, sewa.mulai + sewa.hari * HARI),
+    rentangLabel: rentangTanggal(sewa.mulai, sewa.mulai + sewa.hari * HARI, bahasa),
     hari: sewa.hari,
     sewa,
-    meta: [unit.jenis, unit.kategori === "motor" ? "matic" : null, "★ " + unit.rating + " (128 ulasan)", unit.area + ", " + kabupaten(unit.area)]
-      .filter(Boolean)
-      .join(" · "),
-    kalender: bangunKalender(sewa.mulai),
-    paket: paket(unit),
-    tidakTermasuk: TIDAK_TERMASUK,
-    jaminan: jaminan(unit.kategori),
+    fotoLain: unit.foto ? [2, 3].map((n) => unit.foto!.replace(".webp", "-" + n + ".webp")) : [],
+    hariSewa: bangunHariSewa(sewa, bahasa),
+    paket: paket(unit, bahasa),
+    tidakTermasuk: TIDAK_TERMASUK[bahasa],
+    jaminan: jaminan(unit.kategori, bahasa),
     penyedia: {
       nama: unit.penyedia,
-      meta: `★ ${unit.rating} · 18 unit · bergabung 2023 · balas dalam 1 jam`,
+      meta:
+        bahasa === "en"
+          ? `★ ${desimal(unit.rating, bahasa)} · 18 Vehicles · Joined in 2023 (Average Reply Time: 1 Hour)`
+          : `★ ${unit.rating} · 18 Unit · Bergabung Sejak 2023 (Rata-Rata Waktu Balas: 1 Jam)`,
     },
     harga: {
       perHari: unit.hargaPerHari,

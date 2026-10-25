@@ -5,41 +5,61 @@
 // Copy langkah ditulis ulang pemilik proyek 25 Okt 2026.
 
 import type { ReactNode } from "react";
+import { kamus } from "@/lib/i18n";
+import { bahasaAktif } from "@/lib/i18n-server";
 
-const langkah: { judul: string; body: string; ikon: ReactNode }[] = [
-  {
-    judul: "Isi tanggal",
-    body: "Isi tanggal dan tempat sesuai dengan rentang sewamu.",
-    ikon: (
+const TEKS = kamus({
+  id: {
+    judul: "Tiga langkah, tanpa chat",
+    sub: "Semua konfirmasi dilakukan hanya di website ini.",
+    langkah: [
+      { judul: "Isi tanggal", body: "Isi tanggal dan tempat sesuai dengan rentang sewamu." },
+      { judul: "Bayar Sekali", body: "Bayar menggunakan metode pembayaran pilihanmu di awal." },
+      {
+        judul: "Unit diantar",
+        body: "Kendaraan langsung diantar atau dapat kamu ambil sesuai dengan ketentuan.",
+      },
+    ],
+  },
+  en: {
+    judul: "Three steps, no back-and-forth chat",
+    sub: "Everything is confirmed right here on this website.",
+    langkah: [
+      { judul: "Pick your dates", body: "Enter the dates and place that match your rental." },
+      { judul: "Pay Once", body: "Pay up front with the payment method you prefer." },
+      {
+        judul: "Vehicle delivered",
+        body: "The vehicle is delivered straight to you, or you can pick it up as arranged.",
+      },
+    ],
+  },
+});
+
+const ikonLangkah: ReactNode[] = [
+  (
       <>
         <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
         <path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2" />
       </>
-    ),
-  },
-  {
-    judul: "Bayar Sekali",
-    body: "Bayar menggunakan metode pembayaran pilihanmu di awal.",
-    ikon: (
+  ),
+  (
       <>
         <path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.3-7.5 9.5-4.3-1.2-7.5-4.9-7.5-9.5V6L12 3z" />
         <path d="M8.5 12l2.5 2.5 4.5-4.5" />
       </>
-    ),
-  },
-  {
-    judul: "Unit diantar",
-    body: "Kendaraan langsung diantar atau dapat kamu ambil sesuai dengan ketentuan.",
-    ikon: (
+  ),
+  (
       <>
         <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
         <circle cx="12" cy="9.5" r="2.5" />
       </>
-    ),
-  },
+  ),
 ];
 
-export default function HowItWorks() {
+export default async function HowItWorks() {
+  const bahasa = await bahasaAktif();
+  const t = TEKS[bahasa];
+
   return (
     <section
       id="cara-kerja"
@@ -48,17 +68,15 @@ export default function HowItWorks() {
     >
       <div className="container-beranda">
         <h2 id="judul-langkah" className="text-b2-sm md:text-b2">
-          Tiga langkah, tanpa chat
+          {t.judul}
         </h2>
-        <p className="mt-12 text-b4-sm text-muted-kuat md:text-b4">
-          Semua konfirmasi dilakukan hanya di website ini.
-        </p>
+        <p className="mt-12 text-b4-sm text-muted-kuat md:text-b4">{t.sub}</p>
 
         <ol className="garis-langkah relative mt-24 grid gap-24 md:mt-40 md:grid-cols-3">
-          {langkah.map((l, i) => (
+          {t.langkah.map((l, i) => (
             <li
               key={l.judul}
-              className="group relative grid grid-cols-[48px_1fr] gap-x-12 overflow-hidden rounded-b-lg bg-white p-20 shadow-b-1 transition duration-200 ease-beranda hover:z-3 hover:shadow-b-langkah motion-safe:hover:scale-[1.03] md:block md:rounded-b-xl md:p-32"
+              className="group relative grid grid-cols-[--spacing(48)_1fr] gap-x-12 overflow-hidden rounded-b-lg bg-white p-20 shadow-b-1 transition duration-200 ease-beranda hover:z-3 hover:shadow-b-langkah motion-safe:hover:scale-[1.03] md:block md:rounded-b-xl md:p-32"
             >
               {/* Lapisan hijau saat hover, dipudarkan lewat opacity karena
                   gradient tidak bisa ditransisikan langsung. hover:z-3 di kartu
@@ -85,7 +103,7 @@ export default function HowItWorks() {
                     strokeLinejoin="round"
                     className="size-24 md:size-28"
                   >
-                    {l.ikon}
+                    {ikonLangkah[i]}
                   </svg>
                 </span>
               </div>

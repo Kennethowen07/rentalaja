@@ -14,6 +14,8 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
+import { useBahasa } from "@/components/BahasaProvider";
+import { kamus, type Bahasa } from "@/lib/i18n";
 import { rupiah } from "@/lib/mitra/format";
 import type { Pesanan, Unit } from "@/lib/mitra/tipe";
 import {
@@ -31,12 +33,82 @@ import { HeaderHalaman, ThumbnailUnit, kelasTombol, kelasTombolBaris } from "./u
 
 type Keadaan = "disewa" | "telat" | "dipesan" | "diblokir" | "servis" | "kosong";
 
-const legenda: { keadaan: Keadaan; label: string; kelas: string }[] = [
-  { keadaan: "disewa", label: "Disewa", kelas: "bg-mitra-primer" },
-  { keadaan: "dipesan", label: "Sudah dipesan", kelas: "bg-mitra-bar-muda" },
-  { keadaan: "kosong", label: "Kosong", kelas: "bg-mitra-panel" },
-  { keadaan: "diblokir", label: "Diblokir / servis", kelas: "bg-mitra-blocked sel-diblokir" },
-  { keadaan: "telat", label: "Lewat jadwal", kelas: "bg-mitra-plum" },
+const TEKS = kamus({
+  id: {
+    legenda: {
+      disewa: "Disewa",
+      dipesan: "Sudah dipesan",
+      kosong: "Kosong",
+      diblokir: "Diblokir / servis",
+      telat: "Lewat jadwal",
+    },
+    disewaOleh: (nama: string, kembali: string) => `disewa ${nama}, kembali ${kembali}`,
+    telatOleh: (nama: string) => `lewat jadwal, ${nama} belum mengembalikan`,
+    dipesanOleh: (nama: string) => `sudah dipesan ${nama}, menunggu konfirmasi`,
+    blokirManual: "diblokir manual",
+    servisSampai: (t: string) => `servis sampai ${t}`,
+    kosong: "kosong, klik untuk blokir tanggal",
+    diubah: (unit: string, tanggal: string, blokir: boolean) =>
+      `${unit} ${tanggal} ${blokir ? "diblokir" : "dibuka kembali"}.`,
+    judul: "Kalender unit",
+    mingguLalu: "Minggu lalu",
+    mingguDepan: "Minggu depan",
+    blokir: "Blokir tanggal",
+    mingguIni: "Kembali ke minggu ini",
+    catatan:
+      "Kalender ini yang dibaca penyewa. Klik sel kosong untuk blokir tanggal, misalnya saat unit masuk servis. Sel yang sudah ada pesanan tidak bisa diblokir.",
+    diblokirBanyak: (n: number, unit: string, mulai: string) =>
+      `${n} tanggal diblokir untuk ${unit}, mulai ${mulai}.`,
+    unit: "Unit",
+    mulai: "Mulai",
+    sampai: "Sampai",
+    validCatatan: "Sel yang sudah ada pesanannya tetap tampil sebagai pesanan, bukan blokir.",
+    tidakValid: "Tanggal mulai harus sebelum tanggal selesai.",
+    batal: "Batal",
+    tombolBlokir: "Blokir",
+  },
+  en: {
+    legenda: {
+      disewa: "Rented",
+      dipesan: "Booked",
+      kosong: "Available",
+      diblokir: "Blocked / servicing",
+      telat: "Overdue",
+    },
+    disewaOleh: (nama: string, kembali: string) => `rented by ${nama}, returns ${kembali}`,
+    telatOleh: (nama: string) => `overdue, ${nama} hasn't returned it yet`,
+    dipesanOleh: (nama: string) => `booked by ${nama}, awaiting confirmation`,
+    blokirManual: "blocked manually",
+    servisSampai: (t: string) => `servicing until ${t}`,
+    kosong: "available, click to block the date",
+    diubah: (unit: string, tanggal: string, blokir: boolean) =>
+      `${unit} ${tanggal} ${blokir ? "blocked" : "unblocked"}.`,
+    judul: "Vehicle calendar",
+    mingguLalu: "Previous week",
+    mingguDepan: "Next week",
+    blokir: "Block dates",
+    mingguIni: "Back to this week",
+    catatan:
+      "This is the calendar renters see. Click an available cell to block the date, for example when a vehicle goes in for servicing. Cells that already have a booking can't be blocked.",
+    diblokirBanyak: (n: number, unit: string, mulai: string) =>
+      `${n} ${n === 1 ? "date" : "dates"} blocked for ${unit}, starting ${mulai}.`,
+    unit: "Vehicle",
+    mulai: "From",
+    sampai: "To",
+    validCatatan: "Cells that already have a booking still show as booked, not blocked.",
+    tidakValid: "The start date must be before the end date.",
+    batal: "Cancel",
+    tombolBlokir: "Block",
+  },
+});
+type Teks = (typeof TEKS)["id"];
+
+const legenda: { keadaan: Exclude<Keadaan, "servis">; kelas: string }[] = [
+  { keadaan: "disewa", kelas: "bg-mitra-primer" },
+  { keadaan: "dipesan", kelas: "bg-mitra-bar-muda" },
+  { keadaan: "kosong", kelas: "bg-mitra-panel" },
+  { keadaan: "diblokir", kelas: "bg-mitra-blocked sel-diblokir" },
+  { keadaan: "telat", kelas: "bg-mitra-plum" },
 ];
 
 const warna: Record<Keadaan, string> = {
@@ -62,6 +134,8 @@ function isiSel(
   pesanan: Pesanan[],
   blokir: Set<string>,
   sekarang: number,
+  bahasa: Bahasa,
+  t: Teks,
 ): IsiSel {
   const berjalan = pesanan.find(
     (p) => p.status === "active" && p.plat === u.plat && menutupi(p, hari),
@@ -70,7 +144,7 @@ function isiSel(
     const kembali = berjalan.kembaliPada ?? berjalan.selesai;
     return {
       keadaan: "disewa",
-      keterangan: `disewa ${berjalan.penyewa}, kembali ${tanggalSingkat(kembali)} ${jamSaja(kembali)}`,
+      keterangan: t.disewaOleh(berjalan.penyewa, `${tanggalSingkat(kembali, bahasa)} ${jamSaja(kembali, bahasa)}`),
     };
   }
 
@@ -84,7 +158,7 @@ function isiSel(
   if (telat) {
     return {
       keadaan: "telat",
-      keterangan: `lewat jadwal, ${telat.penyewa} belum mengembalikan`,
+      keterangan: t.telatOleh(telat.penyewa),
     };
   }
 
@@ -94,26 +168,28 @@ function isiSel(
   if (menunggu) {
     return {
       keadaan: "dipesan",
-      keterangan: `sudah dipesan ${menunggu.penyewa}, menunggu konfirmasi`,
+      keterangan: t.dipesanOleh(menunggu.penyewa),
     };
   }
 
   if (blokir.has(`${u.id}|${kunciTanggal(hari)}`)) {
-    return { keadaan: "diblokir", keterangan: "diblokir manual" };
+    return { keadaan: "diblokir", keterangan: t.blokirManual };
   }
 
   if (u.status === "service" && u.servisSampai && hari <= awalHari(u.servisSampai)) {
     return {
       keadaan: "servis",
-      keterangan: `servis sampai ${tanggalSingkat(u.servisSampai)}`,
+      keterangan: t.servisSampai(tanggalSingkat(u.servisSampai, bahasa)),
     };
   }
 
-  return { keadaan: "kosong", keterangan: "kosong, klik untuk blokir tanggal" };
+  return { keadaan: "kosong", keterangan: t.kosong };
 }
 
 export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekarang: number }) {
   const { pesanan } = usePesanan();
+  const { bahasa } = useBahasa();
+  const t = TEKS[bahasa];
   const [minggu, setMinggu] = useState(0);
   const [blokir, setBlokir] = useState<Set<string>>(new Set());
   const [formBlokir, setFormBlokir] = useState(false);
@@ -130,16 +206,14 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
       else baru.delete(kunci);
       return baru;
     });
-    setKabar(
-      `${u.nama} ${u.plat} ${tanggalSingkat(tanggal)} ${jadiBlokir ? "diblokir" : "dibuka kembali"}.`,
-    );
+    setKabar(t.diubah(`${u.nama} ${u.plat}`, tanggalSingkat(tanggal, bahasa), jadiBlokir));
   }
 
   return (
     <>
       <HeaderHalaman
-        kicker={rentangMinggu(hari[0], hari[6])}
-        judul="Kalender unit"
+        kicker={rentangMinggu(hari[0], hari[6], bahasa)}
+        judul={t.judul}
         aksi={
           <>
             <button
@@ -147,21 +221,21 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
               onClick={() => setMinggu((m) => m - 1)}
               className={`${kelasTombol.sekunder} px-17 py-11`}
             >
-              Minggu lalu
+              {t.mingguLalu}
             </button>
             <button
               type="button"
               onClick={() => setMinggu((m) => m + 1)}
               className={`${kelasTombol.sekunder} px-17 py-11`}
             >
-              Minggu depan
+              {t.mingguDepan}
             </button>
             <button
               type="button"
               onClick={() => setFormBlokir(true)}
               className={`${kelasTombol.primer} px-19 py-11`}
             >
-              Blokir tanggal
+              {t.blokir}
             </button>
           </>
         }
@@ -173,7 +247,7 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
           onClick={() => setMinggu(0)}
           className="mt-16 text-m-tautan text-mitra-primer hover:underline"
         >
-          Kembali ke minggu ini
+          {t.mingguIni}
         </button>
       )}
 
@@ -181,7 +255,7 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
         {legenda.map((l) => (
           <li key={l.keadaan} className="flex items-center gap-9">
             <span aria-hidden className={`size-14 rounded-[4px] ${l.kelas}`} />
-            <span className="text-m-status text-mitra-muted">{l.label}</span>
+            <span className="text-m-status text-mitra-muted">{t.legenda[l.keadaan]}</span>
           </li>
         ))}
       </ul>
@@ -199,7 +273,7 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
                     ini ? "text-m-nav-aktif text-mitra-ink" : "text-m-status text-mitra-faint"
                   }`}
                 >
-                  {hariSingkat(h)}
+                  {hariSingkat(h, bahasa)}
                 </div>
               );
             })}
@@ -224,9 +298,9 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
 
               {hari.map((h) => {
                 const tanggal = awalHari(h);
-                const sel = isiSel(u, tanggal, pesanan, blokir, sekarang);
+                const sel = isiSel(u, tanggal, pesanan, blokir, sekarang, bahasa, t);
                 const bisaDiklik = sel.keadaan === "kosong" || sel.keadaan === "diblokir";
-                const label = `${u.nama} ${u.plat}, ${hariSingkat(h)}, ${sel.keterangan}`;
+                const label = `${u.nama} ${u.plat}, ${hariSingkat(h, bahasa)}, ${sel.keterangan}`;
 
                 return (
                   <div key={h} className="px-5 py-10">
@@ -256,8 +330,7 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
       </div>
 
       <p className="mt-24 text-m-body text-mitra-muted">
-        Kalender ini yang dibaca penyewa. Klik sel kosong untuk blokir tanggal, misalnya saat
-        unit masuk servis. Sel yang sudah ada pesanan tidak bisa diblokir.
+        {t.catatan}
       </p>
 
       <p aria-live="polite" className="sr-only">
@@ -268,6 +341,7 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
         <FormBlokir
           unit={unit}
           sekarang={sekarang}
+          t={t}
           onTutup={() => setFormBlokir(false)}
           onSimpan={(u, mulai, selesai) => {
             const kunci: string[] = [];
@@ -275,9 +349,7 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
               kunci.push(`${u.id}|${kunciTanggal(t)}`);
             }
             setBlokir((lama) => new Set([...lama, ...kunci]));
-            setKabar(
-              `${kunci.length} tanggal diblokir untuk ${u.nama} ${u.plat}, mulai ${tanggalSingkat(mulai)}.`,
-            );
+            setKabar(t.diblokirBanyak(kunci.length, `${u.nama} ${u.plat}`, tanggalSingkat(mulai, bahasa)));
             setFormBlokir(false);
           }}
         />
@@ -289,9 +361,11 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
 function FormBlokir({
   unit,
   sekarang,
+  t,
   onTutup,
   onSimpan,
 }: {
+  t: Teks;
   unit: Unit[];
   sekarang: number;
   onTutup: () => void;
@@ -307,7 +381,7 @@ function FormBlokir({
     "mt-6 w-full rounded-m-thumb border border-mitra-border px-12 py-9 text-m-status text-mitra-ink";
 
   return (
-    <Modal judul="Blokir tanggal" onTutup={onTutup} lebar="max-w-[440px]">
+    <Modal judul={t.blokir} onTutup={onTutup} lebar="max-w-[440px]">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -322,7 +396,7 @@ function FormBlokir({
         }}
       >
         <label htmlFor="unit-blokir" className="mt-14 block text-m-label text-mitra-muted">
-          Unit
+          {t.unit}
         </label>
         <select
           id="unit-blokir"
@@ -340,7 +414,7 @@ function FormBlokir({
         <div className="mt-14 flex gap-12">
           <div className="flex-1">
             <label htmlFor="mulai-blokir" className="block text-m-label text-mitra-muted">
-              Mulai
+              {t.mulai}
             </label>
             <input
               id="mulai-blokir"
@@ -352,7 +426,7 @@ function FormBlokir({
           </div>
           <div className="flex-1">
             <label htmlFor="selesai-blokir" className="block text-m-label text-mitra-muted">
-              Sampai
+              {t.sampai}
             </label>
             <input
               id="selesai-blokir"
@@ -365,17 +439,15 @@ function FormBlokir({
         </div>
 
         <p className="mt-10 text-m-label text-mitra-muted">
-          {valid
-            ? "Sel yang sudah ada pesanannya tetap tampil sebagai pesanan, bukan blokir."
-            : "Tanggal mulai harus sebelum tanggal selesai."}
+          {valid ? t.validCatatan : t.tidakValid}
         </p>
 
         <div className="mt-20 flex justify-end gap-8">
           <button type="button" onClick={onTutup} className={kelasTombolBaris.sekunder}>
-            Batal
+            {t.batal}
           </button>
           <button type="submit" disabled={!valid} className={kelasTombolBaris.primer}>
-            Blokir
+            {t.tombolBlokir}
           </button>
         </div>
       </form>

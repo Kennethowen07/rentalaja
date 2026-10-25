@@ -1,4 +1,5 @@
-// Data Layar 4 "Pemesanan" — dari .dc.html turn 1a.
+// Data Layar 4 "Pemesanan" — dari .dc.html turn 1a, plus terjemahan Inggris.
+// Teks berlabel diambil per bahasa, mis. langkah[bahasa].
 //
 // Angka contoh untuk fallback di bawah:
 //   3 hari x Rp 70.000     = Rp 210.000
@@ -15,6 +16,7 @@
 // titik antar) di sini turun jadi PLACEHOLDER. Formnya mulai kosong supaya
 // bisa diisi sungguhan, dan stepper baru menghijau setelah terisi.
 
+import { kamus } from "@/lib/i18n";
 import type { Kategori } from "@/lib/mock/search";
 
 export type RingkasanPesanan = {
@@ -23,39 +25,49 @@ export type RingkasanPesanan = {
   total: string;
 };
 
+const unitContoh: RingkasanPesanan["unit"] = {
+  nama: "Honda Scoopy 2023",
+  penyedia: "Bali Motor Rent",
+  rating: "4,9",
+  foto: "/units/honda-scoopy-2023.webp",
+  kategori: "motor",
+};
+
 /** Dipakai kalau /pemesanan dibuka tanpa ?unit=, misalnya dari bookmark.
  *  Alur normalnya ringkasan dibangun dari unit yang benar-benar diklik. */
-export const pesanan: RingkasanPesanan = {
-  unit: {
-    nama: "Honda Scoopy 2023",
-    penyedia: "Bali Motor Rent",
-    rating: "4,9",
-    foto: "/units/honda-scoopy-2023.webp",
-    kategori: "motor",
+export const pesanan = kamus<RingkasanPesanan>({
+  id: {
+    unit: unitContoh,
+    rincian: [
+      { label: "3 hari sewa", nilai: "Rp 210.000" },
+      { label: "Biaya layanan", nilai: "Rp 6.300" },
+    ],
+    total: "Rp 216.300",
   },
-  rincian: [
-    { label: "3 hari sewa", nilai: "Rp 210.000" },
-    { label: "Biaya layanan", nilai: "Rp 6.300" },
-  ],
-  total: "Rp 216.300",
-} as const;
+  en: {
+    unit: { ...unitContoh, rating: "4.9" },
+    rincian: [
+      { label: "3-day rental", nilai: "Rp 210.000" },
+      { label: "Service fee", nilai: "Rp 6.300" },
+    ],
+    total: "Rp 216.300",
+  },
+});
 
-export const langkah = [
-  "1 · Konfirmasi",
-  "2 · Dokumen",
-  "3 · Bayar penuh",
-] as const;
+export const langkah = kamus<string[]>({
+  id: ["1 · Konfirmasi", "2 · Dokumen", "3 · Bayar penuh"],
+  en: ["1 · Confirm", "2 · Documents", "3 · Pay in full"],
+});
 
-export const opsiPengambilan = [
-  "Diantar ke titik ini",
-  "Ambil sendiri di rental",
-] as const;
+export const opsiPengambilan = kamus<string[]>({
+  id: ["Diantar ke titik ini", "Ambil sendiri di rental"],
+  en: ["Deliver to this point", "Pick up at the rental"],
+});
 
-export const metodePembayaran = [
-  "Transfer bank · BCA Virtual Account",
-  "QRIS",
-  "E-wallet",
-] as const;
+export const metodePembayaran = kamus<string[]>({
+  id: ["Transfer bank · BCA Virtual Account", "QRIS", "E-wallet"],
+  en: ["Bank transfer · BCA Virtual Account", "QRIS", "E-wallet"],
+});
 
 /** Nilai desain, dipakai sebagai contoh di placeholder input. */
 export const contohIsian = {
@@ -65,13 +77,22 @@ export const contohIsian = {
   email: "adi@email.com",
 } as const;
 
-export const labelDokumen = {
-  identitas: "KTP / Paspor",
-  /** SIM yang diminta mengikuti kategori unit yang dipesan. */
-  sim: { motor: "SIM C", mobil: "SIM A" } as Record<Kategori, string>,
-} as const;
+export const labelDokumen = kamus<{ identitas: string; sim: Record<Kategori, string> }>({
+  id: {
+    identitas: "KTP / Paspor",
+    /** SIM yang diminta mengikuti kategori unit yang dipesan. */
+    sim: { motor: "SIM C", mobil: "SIM A" },
+  },
+  en: {
+    identitas: "ID card / Passport",
+    sim: { motor: "Motorcycle licence (SIM C)", mobil: "Car licence (SIM A)" },
+  },
+});
 
-export const petunjukBerkas = "Tarik file ke sini atau pilih";
+export const petunjukBerkas = kamus<string>({
+  id: "Tarik file ke sini atau pilih",
+  en: "Drag a file here or browse",
+});
 
 /** Nilai untuk tombol "Simulasikan Langsung" — mengisi seluruh form sekaligus
  *  supaya alur bisa dicoba berulang tanpa mengetik ulang.

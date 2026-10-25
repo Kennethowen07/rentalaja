@@ -12,12 +12,66 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
+import { useBahasa } from "@/components/BahasaProvider";
+import { kamus, type Bahasa } from "@/lib/i18n";
 import { filterUnit, type KunciFilter } from "@/lib/mitra/filter-unit";
 import { rupiah } from "@/lib/mitra/format";
 import type { Pesanan, Unit } from "@/lib/mitra/tipe";
 import { pukulWita, statusKembali, tanggalLengkap, tanggalSingkat } from "@/lib/mitra/waktu";
 import { usePesanan } from "./PesananProvider";
 import { ThumbnailUnit, TitikStatus, kelasTombolBaris } from "./ui";
+
+const TEKS = kamus({
+  id: {
+    lewat: "Lewat jadwal",
+    keluar: "Sedang keluar",
+    servisSampai: (t: string) => `Servis sampai ${t}`,
+    servis: "Servis",
+    kosong: "Kosong",
+    diperbarui: (nama: string, plat: string) => `Unit ${nama} ${plat} diperbarui.`,
+    saring: "Saring unit",
+    kosongSaringan: "Tidak ada unit di saringan ini.",
+    perHari: "per hari",
+    jatuhTempo: "Jatuh tempo",
+    kembali: "Kembali",
+    edit: "Edit",
+    menampilkan: (a: number, b: number) => `Menampilkan ${a} dari ${b} unit.`,
+    editUnit: "Edit unit",
+    hargaPerHari: "Harga per hari",
+    terbaca: (r: string) => `Terbaca ${r} per hari.`,
+    isiAngka: "Isi angka saja, minimal 10.000.",
+    sedangServis: "Sedang servis",
+    tidakBisa: "Tidak bisa diubah selagi unit masih disewa.",
+    hilang: "Unit servis hilang dari hasil pencarian penyewa.",
+    batal: "Batal",
+    simpan: "Simpan",
+  },
+  en: {
+    lewat: "Overdue",
+    keluar: "Out on rent",
+    servisSampai: (t: string) => `Servicing until ${t}`,
+    servis: "Servicing",
+    kosong: "Available",
+    diperbarui: (nama: string, plat: string) => `${nama} ${plat} updated.`,
+    saring: "Filter vehicles",
+    kosongSaringan: "No vehicles match this filter.",
+    perHari: "per day",
+    jatuhTempo: "Was due",
+    kembali: "Returns",
+    edit: "Edit",
+    menampilkan: (a: number, b: number) => `Showing ${a} of ${b} vehicles.`,
+    editUnit: "Edit vehicle",
+    hargaPerHari: "Price per day",
+    terbaca: (r: string) => `Reads as ${r} per day.`,
+    isiAngka: "Numbers only, at least 10,000.",
+    sedangServis: "In servicing",
+    tidakBisa: "Can't be changed while the vehicle is rented out.",
+    hilang: "Vehicles in servicing are hidden from renters' search results.",
+    batal: "Cancel",
+    simpan: "Save",
+  },
+});
+type Teks = (typeof TEKS)["id"];
 
 type StatusTampil = {
   kunci: Exclude<KunciFilter, "semua">;
@@ -28,14 +82,14 @@ type StatusTampil = {
   kembali?: number;
 };
 
-function statusUnit(u: Unit, berjalan: Pesanan[], sekarang: number): StatusTampil {
+function statusUnit(u: Unit, berjalan: Pesanan[], sekarang: number, bahasa: Bahasa, t: Teks): StatusTampil {
   const sewa = berjalan.find((p) => p.plat === u.plat);
   if (sewa) {
     const kembali = sewa.kembaliPada ?? sewa.selesai;
-    const s = statusKembali(kembali, sekarang);
+    const s = statusKembali(kembali, sekarang, bahasa);
     return {
       kunci: "keluar",
-      label: s.telat ? "Lewat jadwal" : "Sedang keluar",
+      label: s.telat ? t.lewat : t.keluar,
       telat: s.telat,
       netral: false,
       kembali,
@@ -44,12 +98,12 @@ function statusUnit(u: Unit, berjalan: Pesanan[], sekarang: number): StatusTampi
   if (u.status === "service") {
     return {
       kunci: "servis",
-      label: u.servisSampai ? `Servis sampai ${tanggalSingkat(u.servisSampai)}` : "Servis",
+      label: u.servisSampai ? t.servisSampai(tanggalSingkat(u.servisSampai, bahasa)) : t.servis,
       telat: false,
       netral: true,
     };
   }
-  return { kunci: "kosong", label: "Kosong", telat: false, netral: true };
+  return { kunci: "kosong", label: t.kosong, telat: false, netral: true };
 }
 
 export default function DaftarUnit({
@@ -60,24 +114,26 @@ export default function DaftarUnit({
   filterAwal: KunciFilter;
 }) {
   const { pesanan, sekarang } = usePesanan();
+  const { bahasa } = useBahasa();
+  const t = TEKS[bahasa];
   const [daftar, setDaftar] = useState(unit);
   const [aktif, setAktif] = useState<KunciFilter>(filterAwal);
   const [edit, setEdit] = useState<Unit | null>(null);
   const [kabar, setKabar] = useState("");
 
   const berjalan = pesanan.filter((p) => p.status === "active");
-  const berstatus = daftar.map((u) => ({ unit: u, status: statusUnit(u, berjalan, sekarang) }));
+  const berstatus = daftar.map((u) => ({ unit: u, status: statusUnit(u, berjalan, sekarang, bahasa, t) }));
   const terlihat = berstatus.filter((b) => aktif === "semua" || b.status.kunci === aktif);
 
   function simpan(ubahan: Unit) {
     setDaftar((d) => d.map((u) => (u.id === ubahan.id ? ubahan : u)));
-    setKabar(`Unit ${ubahan.nama} ${ubahan.plat} diperbarui.`);
+    setKabar(t.diperbarui(ubahan.nama, ubahan.plat));
     setEdit(null);
   }
 
   return (
     <>
-      <div role="group" aria-label="Saring unit" className="mt-30 flex flex-wrap gap-10">
+      <div role="group" aria-label={t.saring} className="mt-30 flex flex-wrap gap-10">
         {filterUnit.map((f) => {
           const jumlah =
             f.kunci === "semua"
@@ -96,7 +152,7 @@ export default function DaftarUnit({
                   : "border border-mitra-border bg-white text-m-status text-mitra-muted hover:border-mitra-border-hover"
               }`}
             >
-              {f.label} · {jumlah}
+              {f.label[bahasa]} · {jumlah}
             </button>
           );
         })}
@@ -104,7 +160,7 @@ export default function DaftarUnit({
 
       <div className="mt-22 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
         {terlihat.length === 0 ? (
-          <p className="text-m-body text-mitra-faint">Tidak ada unit di saringan ini.</p>
+          <p className="text-m-body text-mitra-faint">{t.kosongSaringan}</p>
         ) : (
           <ul>
             {terlihat.map(({ unit: u, status }) => (
@@ -122,7 +178,7 @@ export default function DaftarUnit({
 
                 <div className="shrink-0 min-[900px]:w-190">
                   <p className="text-m-total text-mitra-ink">{rupiah(u.hargaPerHari)}</p>
-                  <p className="mt-4 text-m-label text-mitra-faint">per hari</p>
+                  <p className="mt-4 text-m-label text-mitra-faint">{t.perHari}</p>
                 </div>
 
                 <div className="shrink-0 min-[900px]:w-190">
@@ -131,7 +187,7 @@ export default function DaftarUnit({
                       teks label di atasnya, bukan dengan titiknya. */}
                   {status.kembali !== undefined && (
                     <p className="mt-4 pl-16 text-m-label text-mitra-faint">
-                      {status.telat ? "Jatuh tempo" : "Kembali"} {tanggalLengkap(status.kembali)}
+                      {status.telat ? t.jatuhTempo : t.kembali} {tanggalLengkap(status.kembali, bahasa)}
                     </p>
                   )}
                 </div>
@@ -142,7 +198,7 @@ export default function DaftarUnit({
                     onClick={() => setEdit(u)}
                     className={kelasTombolBaris.sekunder}
                   >
-                    Edit
+                    {t.edit}
                     <span className="sr-only">
                       {" "}
                       {u.nama} {u.plat}
@@ -156,7 +212,7 @@ export default function DaftarUnit({
       </div>
 
       <p className="mt-24 text-m-body text-mitra-muted">
-        Menampilkan {terlihat.length} dari {daftar.length} unit.
+        {t.menampilkan(terlihat.length, daftar.length)}
       </p>
 
       <p aria-live="polite" className="sr-only">
@@ -168,6 +224,7 @@ export default function DaftarUnit({
           unit={edit}
           sedangKeluar={berjalan.some((p) => p.plat === edit.plat)}
           sekarang={sekarang}
+          t={t}
           onSimpan={simpan}
           onTutup={() => setEdit(null)}
         />
@@ -180,9 +237,11 @@ function FormEdit({
   unit,
   sedangKeluar,
   sekarang,
+  t,
   onSimpan,
   onTutup,
 }: {
+  t: Teks;
   unit: Unit;
   sedangKeluar: boolean;
   sekarang: number;
@@ -196,7 +255,7 @@ function FormEdit({
   const hargaValid = angka >= 10_000;
 
   return (
-    <Modal judul="Edit unit" onTutup={onTutup} lebar="max-w-[440px]">
+    <Modal judul={t.editUnit} onTutup={onTutup} lebar="max-w-[440px]">
       <p className="mt-10 text-m-judul-baris text-mitra-ink">{unit.nama}</p>
       <p className="mt-4 text-m-meta text-mitra-muted">
         {unit.plat} · {unit.spesifikasi}
@@ -215,7 +274,7 @@ function FormEdit({
         }}
       >
         <label htmlFor="harga-unit" className="mt-18 block text-m-label text-mitra-muted">
-          Harga per hari
+          {t.hargaPerHari}
         </label>
         <div className="mt-6 flex items-center gap-8">
           <span className="text-m-total text-mitra-ink">Rp</span>
@@ -229,7 +288,7 @@ function FormEdit({
           />
         </div>
         <p id="bantuan-harga" className="mt-6 text-m-label text-mitra-muted">
-          {hargaValid ? `Terbaca ${rupiah(angka)} per hari.` : "Isi angka saja, minimal 10.000."}
+          {hargaValid ? t.terbaca(rupiah(angka)) : t.isiAngka}
         </p>
 
         <label className="mt-18 flex items-start gap-10">
@@ -241,21 +300,19 @@ function FormEdit({
             className="mt-3 size-16"
           />
           <span>
-            <span className="block text-m-status text-mitra-ink">Sedang servis</span>
+            <span className="block text-m-status text-mitra-ink">{t.sedangServis}</span>
             <span className="mt-2 block text-m-label text-mitra-muted">
-              {sedangKeluar
-                ? "Tidak bisa diubah selagi unit masih disewa."
-                : "Unit servis hilang dari hasil pencarian penyewa."}
+              {sedangKeluar ? t.tidakBisa : t.hilang}
             </span>
           </span>
         </label>
 
         <div className="mt-20 flex justify-end gap-8">
           <button type="button" onClick={onTutup} className={kelasTombolBaris.sekunder}>
-            Batal
+            {t.batal}
           </button>
           <button type="submit" disabled={!hargaValid} className={kelasTombolBaris.primer}>
-            Simpan
+            {t.simpan}
           </button>
         </div>
       </form>

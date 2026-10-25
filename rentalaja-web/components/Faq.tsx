@@ -8,16 +8,19 @@
 // atribut inert agar isinya tidak bisa difokus atau dibaca screen reader.
 
 import { useState } from "react";
-import { faqItems } from "@/lib/mock/faq";
+import { useBahasa } from "@/components/BahasaProvider";
+import { faqItems as semuaFaq } from "@/lib/mock/faq";
 
 export default function Faq() {
+  const { bahasa } = useBahasa();
+  const faqItems = semuaFaq[bahasa];
   const [terbuka, setTerbuka] = useState<string | null>(faqItems[0]?.id ?? null);
 
   return (
     <section id="faq" aria-labelledby="judul-faq" className="bg-green-50 py-64 md:py-96">
       <div className="container-beranda grid items-start gap-24 md:grid-cols-[4fr_8fr]">
         <h2 id="judul-faq" className="max-w-360 text-b2-sm text-balance md:text-b2">
-          Pertanyaan yang sering muncul
+          {bahasa === "en" ? "Frequently asked questions" : "Pertanyaan yang sering muncul"}
         </h2>
 
         <ul className="grid gap-12">

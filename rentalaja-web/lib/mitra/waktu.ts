@@ -2,6 +2,11 @@
 // Bali (WITA, UTC+8), bukan tanggal statis 12 Sep 2026 di mock desain.
 // Alasannya sama seperti sisi penyewa: demo yang dibuka bulan depan tidak
 // boleh menampilkan "kembali hari ini" untuk tanggal yang sudah lewat.
+//
+// Setiap formatter menerima `bahasa` (bawaan "id"). Jam ditulis "09.00" di
+// bahasa Indonesia dan "09:00" di bahasa Inggris.
+
+import { lokal, type Bahasa } from "@/lib/i18n";
 
 export const ZONA = "Asia/Makassar";
 export const MENIT = 60_000;
@@ -9,8 +14,14 @@ export const JAM = 60 * MENIT;
 export const HARI = 24 * JAM;
 const OFFSET_WITA = 8 * JAM;
 
-function format(t: number, opsi: Intl.DateTimeFormatOptions) {
-  return new Intl.DateTimeFormat("id-ID", { timeZone: ZONA, ...opsi }).format(t);
+function format(t: number, opsi: Intl.DateTimeFormatOptions, bahasa: Bahasa = "id") {
+  return new Intl.DateTimeFormat(lokal(bahasa), { timeZone: ZONA, ...opsi }).format(t);
+}
+
+/** "09.00" (id) atau "09:00" (en). */
+function jam24(t: number, bahasa: Bahasa) {
+  const jam = format(t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }, bahasa);
+  return bahasa === "id" ? jam.replace(":", ".") : jam;
 }
 
 /** Epoch ms untuk pukul jam:menit WITA, `geserHari` hari dari hari ini. */
@@ -32,71 +43,73 @@ function samaHari(a: number, b: number) {
 }
 
 /** "Senin, 14 September 2026" */
-export function tanggalPanjang(t: number) {
-  return format(t, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+export function tanggalPanjang(t: number, bahasa: Bahasa = "id") {
+  return format(t, { weekday: "long", day: "numeric", month: "long", year: "numeric" }, bahasa);
 }
 
 /** "Sen 14" untuk label hari di grafik mingguan. */
-export function hariSingkat(t: number) {
-  return `${format(t, { weekday: "short" })} ${format(t, { day: "numeric" })}`;
+export function hariSingkat(t: number, bahasa: Bahasa = "id") {
+  return `${format(t, { weekday: "short" }, bahasa)} ${format(t, { day: "numeric" }, bahasa)}`;
 }
 
 /** "Minggu 13 Sep" */
-export function hariTanggal(t: number) {
-  return `${format(t, { weekday: "long" })} ${format(t, { day: "numeric", month: "short" })}`;
+export function hariTanggal(t: number, bahasa: Bahasa = "id") {
+  return `${format(t, { weekday: "long" }, bahasa)} ${format(t, { day: "numeric", month: "short" }, bahasa)}`;
 }
 
 /** "14 Sep 09.00" */
-export function tanggalJam(t: number) {
-  const jam = format(t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  return `${format(t, { day: "numeric", month: "short" })} ${jam.replace(":", ".")}`;
+export function tanggalJam(t: number, bahasa: Bahasa = "id") {
+  return `${format(t, { day: "numeric", month: "short" }, bahasa)} ${jam24(t, bahasa)}`;
 }
 
 /** Nama bulan WITA, `geser` bulan dari bulan `t`. */
-export function namaBulan(t: number, geser = 0) {
+export function namaBulan(t: number, geser = 0, bahasa: Bahasa = "id") {
   const wita = new Date(t + OFFSET_WITA);
   const tengahBulan = Date.UTC(wita.getUTCFullYear(), wita.getUTCMonth() + geser, 15);
-  return new Intl.DateTimeFormat("id-ID", { month: "long", timeZone: "UTC" }).format(
+  return new Intl.DateTimeFormat(lokal(bahasa), { month: "long", timeZone: "UTC" }).format(
     tengahBulan,
   );
 }
 
 /** Label status unit yang sedang disewa, dihitung dari jadwal kembali. */
-export function statusKembali(kembaliPada: number, sekarang: number) {
+export function statusKembali(kembaliPada: number, sekarang: number, bahasa: Bahasa = "id") {
+  const en = bahasa === "en";
   if (kembaliPada < sekarang) {
     const lewat = sekarang - kembaliPada;
+    const hari = Math.floor(lewat / HARI);
+    const jam = Math.max(1, Math.floor(lewat / JAM));
     const label =
       lewat >= HARI
-        ? `Lewat ${Math.floor(lewat / HARI)} hari`
-        : `Lewat ${Math.max(1, Math.floor(lewat / JAM))} jam`;
+        ? en ? `${hari} ${hari === 1 ? "day" : "days"} late` : `Lewat ${hari} hari`
+        : en ? `${jam} ${jam === 1 ? "hour" : "hours"} late` : `Lewat ${jam} jam`;
     return { label, telat: true };
   }
-  if (samaHari(kembaliPada, sekarang)) return { label: "Kembali hari ini", telat: false };
-  return { label: "Tepat waktu", telat: false };
+  if (samaHari(kembaliPada, sekarang)) return { label: en ? "Due back today" : "Kembali hari ini", telat: false };
+  return { label: en ? "On time" : "Tepat waktu", telat: false };
 }
 
 /** "13–15 Sep", atau "30 Sep – 02 Okt" kalau beda bulan. */
-export function rentangTanggal(mulai: number, selesai: number) {
-  const bulan = (t: number) => format(t, { month: "short" });
-  const hari = (t: number) => format(t, { day: "2-digit" });
+export function rentangTanggal(mulai: number, selesai: number, bahasa: Bahasa = "id") {
+  const bulan = (t: number) => format(t, { month: "short" }, bahasa);
+  const hari = (t: number) => format(t, { day: "2-digit" }, bahasa);
   return bulan(mulai) === bulan(selesai)
     ? `${hari(mulai)}–${hari(selesai)} ${bulan(selesai)}`
     : `${hari(mulai)} ${bulan(mulai)} – ${hari(selesai)} ${bulan(selesai)}`;
 }
 
 /** "14 Sep" */
-export function tanggalSingkat(t: number) {
-  return format(t, { day: "numeric", month: "short" });
+export function tanggalSingkat(t: number, bahasa: Bahasa = "id") {
+  return format(t, { day: "numeric", month: "short" }, bahasa);
 }
 
 /** "14 Sep 2026" */
-export function tanggalLengkap(t: number) {
-  return format(t, { day: "numeric", month: "short", year: "numeric" });
+export function tanggalLengkap(t: number, bahasa: Bahasa = "id") {
+  return format(t, { day: "numeric", month: "short", year: "numeric" }, bahasa);
 }
 
 /** "09.00" */
-export function jamSaja(t: number) {
-  return format(t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).replace(":", ".");
+export function jamSaja(t: number, bahasa: Bahasa = "id") {
+  return jam24(t, bahasa);
 }
 
 /** Hari sewa dihitung inklusif, sesuai spec: 13-15 Sep = 3 hari. Sama dengan
@@ -126,10 +139,10 @@ export function kunciTanggal(t: number) {
 }
 
 /** "19 - 25 September 2026", atau "28 September - 4 Oktober 2026". */
-export function rentangMinggu(mulai: number, akhir: number) {
-  const bulan = (t: number) => format(t, { month: "long" });
-  const hari = (t: number) => format(t, { day: "numeric" });
-  const tahun = format(akhir, { year: "numeric" });
+export function rentangMinggu(mulai: number, akhir: number, bahasa: Bahasa = "id") {
+  const bulan = (t: number) => format(t, { month: "long" }, bahasa);
+  const hari = (t: number) => format(t, { day: "numeric" }, bahasa);
+  const tahun = format(akhir, { year: "numeric" }, bahasa);
   return bulan(mulai) === bulan(akhir)
     ? `${hari(mulai)} – ${hari(akhir)} ${bulan(akhir)} ${tahun}`
     : `${hari(mulai)} ${bulan(mulai)} – ${hari(akhir)} ${bulan(akhir)} ${tahun}`;

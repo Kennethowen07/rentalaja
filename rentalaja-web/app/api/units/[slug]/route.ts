@@ -6,6 +6,7 @@
 // data yang diambil lewat HTTP, tanpa perlu merancang seluruh permukaan API
 // dulu. Kontrak lengkapnya nanti ada di Langkah 4 handoff.
 
+import { adaBahasa } from "@/lib/i18n";
 import { detailUnit } from "@/lib/mock/unit-detail";
 import { sewaDariQuery } from "@/lib/sewa";
 
@@ -17,8 +18,11 @@ export async function GET(
   // Harga dan kalender bergantung pada rentang sewa, jadi endpoint ini
   // menerima ?mulai=2026-10-28&durasi=5. Tanpa keduanya dipakai besok
   // selama 3 hari, supaya memanggil endpoint tanpa query tetap sah.
-  const sewa = sewaDariQuery(new URL(request.url).searchParams, Date.now());
-  const detail = detailUnit(slug, sewa);
+  const query = new URL(request.url).searchParams;
+  const sewa = sewaDariQuery(query, Date.now());
+  // ?bahasa=en untuk teks bahasa Inggris; selain itu bahasa Indonesia.
+  const bahasaQuery = query.get("bahasa") ?? "";
+  const detail = detailUnit(slug, sewa, adaBahasa(bahasaQuery) ? bahasaQuery : "id");
 
   if (!detail) {
     return Response.json(

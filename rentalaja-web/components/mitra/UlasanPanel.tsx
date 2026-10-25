@@ -6,6 +6,8 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
+import { useBahasa } from "@/components/BahasaProvider";
+import { kamus, type Bahasa } from "@/lib/i18n";
 import { filterUlasan, type KunciFilterUlasan } from "@/lib/mitra/filter-ulasan";
 import type { RingkasanUlasan, Ulasan } from "@/lib/mitra/tipe";
 import { tanggalSingkat } from "@/lib/mitra/waktu";
@@ -13,8 +15,86 @@ import { HeaderHalaman, kelasTombol, kelasTombolBaris } from "./ui";
 
 type Urutan = "terbaru" | "skor-terendah";
 
-function angka(nilai: number) {
-  return nilai.toFixed(1).replace(".", ",");
+const TEKS = kamus({
+  id: {
+    csv: ["Tanggal", "Penyewa", "Unit", "Skor", "Ulasan", "Balasan"],
+    berkas: "ulasan-rentalaja.csv",
+    terkirim: (nama: string, sisa: number) => `Balasan untuk ${nama} terkirim. Sisa ${sisa} ulasan belum dibalas.`,
+    kicker: (n: number) => `${n} ulasan · 12 bulan terakhir`,
+    judul: "Ulasan",
+    filter: "Filter",
+    diunduh: (n: number) => `${n} ulasan diunduh sebagai CSV.`,
+    unduh: "Unduh",
+    daftar: "Daftar ulasan",
+    saring: "Saring ulasan",
+    kosong: "Tidak ada ulasan di saringan ini.",
+    dari5: " dari 5",
+    balasanKamu: "Balasan kamu · ",
+    balasanUntuk: (nama: string) => `Balasan untuk ${nama}`,
+    tulisBalasan: (nama: string) => `Tulis balasan untuk ${nama}`,
+    kirim: "Kirim balasan",
+    batal: "Batal",
+    balas: "Balas ulasan",
+    srBalas: (nama: string, unit: string) => ` dari ${nama} untuk ${unit}`,
+    ringkasan: "Ringkasan",
+    dariTotal: (total: number, belum: number) => `dari ${total} ulasan · ${belum} belum dibalas`,
+    bintang: " bintang",
+    catatan: "Rental dengan rata-rata di atas 4,8 muncul lebih dulu di hasil pencarian penyewa.",
+    urutkan: "Urutkan ulasan",
+    urutan: "Urutan ulasan",
+    opsi: {
+      terbaru: { label: "Terbaru dulu", ket: "Ulasan paling baru di atas." },
+      "skor-terendah": {
+        label: "Skor terendah dulu",
+        ket: "Berguna saat mengejar ulasan yang perlu ditanggapi.",
+      },
+    },
+    diganti: (label: string) => `Urutan diganti ke ${label.toLowerCase()}.`,
+    tutup: "Tutup",
+  },
+  en: {
+    csv: ["Date", "Renter", "Vehicle", "Score", "Review", "Reply"],
+    berkas: "rentalaja-reviews.csv",
+    terkirim: (nama: string, sisa: number) =>
+      `Reply to ${nama} sent. ${sisa} ${sisa === 1 ? "review" : "reviews"} still without a reply.`,
+    kicker: (n: number) => `${n} reviews · last 12 months`,
+    judul: "Reviews",
+    filter: "Filter",
+    diunduh: (n: number) => `${n} ${n === 1 ? "review" : "reviews"} downloaded as CSV.`,
+    unduh: "Download",
+    daftar: "Review list",
+    saring: "Filter reviews",
+    kosong: "No reviews match this filter.",
+    dari5: " out of 5",
+    balasanKamu: "Your reply · ",
+    balasanUntuk: (nama: string) => `Reply to ${nama}`,
+    tulisBalasan: (nama: string) => `Write a reply to ${nama}`,
+    kirim: "Send reply",
+    batal: "Cancel",
+    balas: "Reply to review",
+    srBalas: (nama: string, unit: string) => ` from ${nama} for ${unit}`,
+    ringkasan: "Summary",
+    dariTotal: (total: number, belum: number) => `from ${total} reviews · ${belum} without a reply`,
+    bintang: " stars",
+    catatan: "Rentals averaging above 4.8 appear first in renters' search results.",
+    urutkan: "Sort reviews",
+    urutan: "Review order",
+    opsi: {
+      terbaru: { label: "Newest first", ket: "The most recent reviews at the top." },
+      "skor-terendah": {
+        label: "Lowest score first",
+        ket: "Handy when you're catching up on reviews that need a response.",
+      },
+    },
+    diganti: (label: string) => `Order changed to ${label.toLowerCase()}.`,
+    tutup: "Close",
+  },
+});
+
+/** "4,5" (id) atau "4.5" (en). */
+function angka(nilai: number, bahasa: Bahasa) {
+  const s = nilai.toFixed(1);
+  return bahasa === "id" ? s.replace(".", ",") : s;
 }
 
 function cocok(u: Ulasan, saring: KunciFilterUlasan) {
@@ -23,14 +103,15 @@ function cocok(u: Ulasan, saring: KunciFilterUlasan) {
   return true;
 }
 
-function unduhCsv(daftar: Ulasan[]) {
+function unduhCsv(daftar: Ulasan[], bahasa: Bahasa) {
+  const t = TEKS[bahasa];
   const baris = [
-    ["Tanggal", "Penyewa", "Unit", "Skor", "Ulasan", "Balasan"],
+    t.csv,
     ...daftar.map((u) => [
-      tanggalSingkat(u.tanggal),
+      tanggalSingkat(u.tanggal, bahasa),
       u.nama,
       u.unit,
-      angka(u.skor),
+      angka(u.skor, bahasa),
       u.isi,
       u.balasan ?? "",
     ]),
@@ -41,7 +122,7 @@ function unduhCsv(daftar: Ulasan[]) {
   const url = URL.createObjectURL(new Blob(["﻿" + isi], { type: "text/csv;charset=utf-8" }));
   const tautan = document.createElement("a");
   tautan.href = url;
-  tautan.download = "ulasan-rentalaja.csv";
+  tautan.download = t.berkas;
   tautan.click();
   URL.revokeObjectURL(url);
 }
@@ -55,6 +136,8 @@ export default function UlasanPanel({
   ringkasan: RingkasanUlasan;
   filterAwal: KunciFilterUlasan;
 }) {
+  const { bahasa } = useBahasa();
+  const t = TEKS[bahasa];
   const [items, setItems] = useState(daftar);
   const [saring, setSaring] = useState<KunciFilterUlasan>(filterAwal);
   const [urutan, setUrutan] = useState<Urutan>("terbaru");
@@ -75,14 +158,14 @@ export default function UlasanPanel({
     setItems((d) => d.map((x) => (x.id === u.id ? { ...x, balasan: teks } : x)));
     setSedangBalas(null);
     setDraf("");
-    setKabar(`Balasan untuk ${u.nama} terkirim. Sisa ${belumDibalas - 1} ulasan belum dibalas.`);
+    setKabar(t.terkirim(u.nama, belumDibalas - 1));
   }
 
   return (
     <>
       <HeaderHalaman
-        kicker={`${ringkasan.total} ulasan · 12 bulan terakhir`}
-        judul="Ulasan"
+        kicker={t.kicker(ringkasan.total)}
+        judul={t.judul}
         aksi={
           <>
             <button
@@ -90,17 +173,17 @@ export default function UlasanPanel({
               onClick={() => setFormFilter(true)}
               className={`${kelasTombol.sekunder} px-17 py-11`}
             >
-              Filter
+              {t.filter}
             </button>
             <button
               type="button"
               onClick={() => {
-                unduhCsv(terlihat);
-                setKabar(`${terlihat.length} ulasan diunduh sebagai CSV.`);
+                unduhCsv(terlihat, bahasa);
+                setKabar(t.diunduh(terlihat.length));
               }}
               className={`${kelasTombol.primer} px-19 py-11`}
             >
-              Unduh
+              {t.unduh}
             </button>
           </>
         }
@@ -109,10 +192,10 @@ export default function UlasanPanel({
       <div className="mt-36 grid items-start gap-44 min-[1100px]:grid-cols-[1.55fr_1fr] min-[1100px]:gap-64">
         <section aria-labelledby="judul-ulasan">
           <h2 id="judul-ulasan" className="sr-only">
-            Daftar ulasan
+            {t.daftar}
           </h2>
 
-          <div role="group" aria-label="Saring ulasan" className="flex flex-wrap gap-10">
+          <div role="group" aria-label={t.saring} className="flex flex-wrap gap-10">
             {filterUlasan.map((f) => {
               const jumlah = items.filter((u) => cocok(u, f.kunci)).length;
               const dipilih = f.kunci === saring;
@@ -128,7 +211,7 @@ export default function UlasanPanel({
                       : "border border-mitra-border bg-white text-m-status text-mitra-muted hover:border-mitra-border-hover"
                   }`}
                 >
-                  {f.label} · {jumlah}
+                  {f.label[bahasa]} · {jumlah}
                 </button>
               );
             })}
@@ -136,7 +219,7 @@ export default function UlasanPanel({
 
           <div className="mt-22 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
             {terlihat.length === 0 ? (
-              <p className="text-m-body text-mitra-faint">Tidak ada ulasan di saringan ini.</p>
+              <p className="text-m-body text-mitra-faint">{t.kosong}</p>
             ) : (
               <ul>
                 {terlihat.map((u) => (
@@ -146,16 +229,16 @@ export default function UlasanPanel({
                         {u.nama} · {u.unit}
                       </p>
                       <p className="shrink-0 text-m-total text-mitra-ink">
-                        {angka(u.skor)}
-                        <span className="sr-only"> dari 5</span>
+                        {angka(u.skor, bahasa)}
+                        <span className="sr-only">{t.dari5}</span>
                       </p>
                     </div>
-                    <p className="mt-4 text-m-label text-mitra-faint">{tanggalSingkat(u.tanggal)}</p>
+                    <p className="mt-4 text-m-label text-mitra-faint">{tanggalSingkat(u.tanggal, bahasa)}</p>
                     <p className="mt-8 max-w-620 text-m-ulasan text-mitra-muted">{u.isi}</p>
 
                     {u.balasan ? (
                       <p className="mt-12 max-w-620 border-l-2 border-mitra-bar-muda pl-18 text-m-ulasan text-mitra-muted">
-                        <span className="text-m-tautan text-mitra-ink">Balasan kamu · </span>
+                        <span className="text-m-tautan text-mitra-ink">{t.balasanKamu}</span>
                         {u.balasan}
                       </p>
                     ) : sedangBalas === u.id ? (
@@ -167,14 +250,14 @@ export default function UlasanPanel({
                         className="mt-12 max-w-620"
                       >
                         <label htmlFor={`balasan-${u.id}`} className="sr-only">
-                          Balasan untuk {u.nama}
+                          {t.balasanUntuk(u.nama)}
                         </label>
                         <textarea
                           id={`balasan-${u.id}`}
                           value={draf}
                           rows={3}
                           onChange={(e) => setDraf(e.target.value)}
-                          placeholder={`Tulis balasan untuk ${u.nama}`}
+                          placeholder={t.tulisBalasan(u.nama)}
                           className="w-full rounded-m-thumb border border-mitra-border px-12 py-10 text-m-ulasan text-mitra-ink"
                         />
                         <div className="mt-10 flex gap-8">
@@ -183,7 +266,7 @@ export default function UlasanPanel({
                             disabled={!draf.trim()}
                             className={kelasTombolBaris.primer}
                           >
-                            Kirim balasan
+                            {t.kirim}
                           </button>
                           <button
                             type="button"
@@ -193,7 +276,7 @@ export default function UlasanPanel({
                             }}
                             className={kelasTombolBaris.sekunder}
                           >
-                            Batal
+                            {t.batal}
                           </button>
                         </div>
                       </form>
@@ -206,11 +289,8 @@ export default function UlasanPanel({
                         }}
                         className="mt-12 text-m-tautan text-mitra-primer hover:underline"
                       >
-                        Balas ulasan
-                        <span className="sr-only">
-                          {" "}
-                          dari {u.nama} untuk {u.unit}
-                        </span>
+                        {t.balas}
+                        <span className="sr-only">{t.srBalas(u.nama, u.unit)}</span>
                       </button>
                     )}
                   </li>
@@ -222,13 +302,11 @@ export default function UlasanPanel({
 
         <section aria-labelledby="judul-ringkasan">
           <h2 id="judul-ringkasan" className="text-m-h2 text-mitra-ink">
-            Ringkasan
+            {t.ringkasan}
           </h2>
           <div className="mt-18 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
-            <p className="text-m-rating text-mitra-ink">{angka(ringkasan.rata)}</p>
-            <p className="mt-4 text-m-body text-mitra-muted">
-              dari {ringkasan.total} ulasan · {belumDibalas} belum dibalas
-            </p>
+            <p className="text-m-rating text-mitra-ink">{angka(ringkasan.rata, bahasa)}</p>
+            <p className="mt-4 text-m-body text-mitra-muted">{t.dariTotal(ringkasan.total, belumDibalas)}</p>
 
             <ul className="mt-22">
               {ringkasan.distribusi.map((d) => {
@@ -240,7 +318,7 @@ export default function UlasanPanel({
                   >
                     <span className="w-52 shrink-0 text-m-status text-mitra-muted">
                       {d.bintang}
-                      <span className="sr-only"> bintang</span>
+                      <span className="sr-only">{t.bintang}</span>
                     </span>
                     <span aria-hidden className="h-10 flex-1 rounded-pill bg-mitra-track">
                       <span
@@ -259,7 +337,7 @@ export default function UlasanPanel({
             </ul>
           </div>
           <p className="mt-20 text-m-body text-mitra-muted">
-            Rental dengan rata-rata di atas 4,8 muncul lebih dulu di hasil pencarian penyewa.
+            {t.catatan}
           </p>
         </section>
       </div>
@@ -269,18 +347,9 @@ export default function UlasanPanel({
       </p>
 
       {formFilter && (
-        <Modal judul="Urutkan ulasan" onTutup={() => setFormFilter(false)} lebar="max-w-[420px]">
-          <div role="radiogroup" aria-label="Urutan ulasan" className="mt-14">
-            {(
-              [
-                { kunci: "terbaru", label: "Terbaru dulu", ket: "Ulasan paling baru di atas." },
-                {
-                  kunci: "skor-terendah",
-                  label: "Skor terendah dulu",
-                  ket: "Berguna saat mengejar ulasan yang perlu ditanggapi.",
-                },
-              ] as const
-            ).map((o) => (
+        <Modal judul={t.urutkan} onTutup={() => setFormFilter(false)} lebar="max-w-[420px]">
+          <div role="radiogroup" aria-label={t.urutan} className="mt-14">
+            {(["terbaru", "skor-terendah"] as const).map((kunci) => ({ kunci, ...t.opsi[kunci] })).map((o) => (
               <label
                 key={o.kunci}
                 className="flex items-start gap-10 border-t border-mitra-hairline py-14 first:border-t-0"
@@ -292,7 +361,7 @@ export default function UlasanPanel({
                   onChange={() => {
                     setUrutan(o.kunci);
                     setFormFilter(false);
-                    setKabar(`Urutan diganti ke ${o.label.toLowerCase()}.`);
+                    setKabar(t.diganti(o.label));
                   }}
                   className="mt-3 size-16"
                 />
@@ -309,7 +378,7 @@ export default function UlasanPanel({
               onClick={() => setFormFilter(false)}
               className={kelasTombolBaris.sekunder}
             >
-              Tutup
+              {t.tutup}
             </button>
           </div>
         </Modal>

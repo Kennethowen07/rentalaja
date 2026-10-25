@@ -12,7 +12,9 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useBahasa } from "@/components/BahasaProvider";
 import { jarakKm, type Koordinat } from "@/lib/geocode";
+import { kamus, lokal } from "@/lib/i18n";
 import { areaAntarOptions, koordinatArea } from "@/lib/mock/areas";
 
 const PetaLeaflet = dynamic(() => import("@/components/ui/PetaLeaflet"), {
@@ -31,7 +33,32 @@ function areaTerdekat(titik: Koordinat): { area: Area; km: number } {
     .reduce((a, b) => (b.km < a.km ? b : a));
 }
 
-const formatKm = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 });
+const TEKS = kamus({
+  id: {
+    dialog: "Pilih area antar",
+    pilihPeta: "Pilih di peta",
+    otomatis: "Area terdekat dipilih otomatis",
+    daftar: "Area antar",
+    kembali: "Kembali ke daftar area",
+    petunjuk: "Klik peta atau geser pin ke titik antar",
+    terdekat: "Area terdekat",
+    jarak: (km: string) => `${km} km dari titikmu`,
+    diLuar: ", di luar area layanan",
+    pakai: "Pakai area ini",
+  },
+  en: {
+    dialog: "Choose a delivery area",
+    pilihPeta: "Pick on the map",
+    otomatis: "The nearest area is chosen for you",
+    daftar: "Delivery area",
+    kembali: "Back to the area list",
+    petunjuk: "Click the map or drag the pin to your delivery point",
+    terdekat: "Nearest area",
+    jarak: (km: string) => `${km} km from your pin`,
+    diLuar: ", outside our service area",
+    pakai: "Use this area",
+  },
+});
 
 function Ikon({ d, className = "size-20" }: { d: string; className?: string }) {
   return (
@@ -63,6 +90,9 @@ export default function PanelArea({
   onPilih: (area: Area) => void;
   onTutup: () => void;
 }) {
+  const { bahasa } = useBahasa();
+  const t = TEKS[bahasa];
+  const formatKm = new Intl.NumberFormat(lokal(bahasa), { maximumFractionDigits: 1 });
   const [tampilan, setTampilan] = useState<"daftar" | "peta">("daftar");
   const [titik, setTitik] = useState<Koordinat>(
     koordinatArea[(nilai as Area) in koordinatArea ? (nilai as Area) : "Canggu, Badung"],
@@ -103,11 +133,11 @@ export default function PanelArea({
     <div
       ref={wadahRef}
       role="dialog"
-      aria-label="Pilih area antar"
+      aria-label={t.dialog}
       onKeyDown={onKeyDown}
       className={
         "absolute top-full right-0 left-0 z-20 mt-8 rounded-b-lg border border-green-200 bg-white shadow-b-cari md:rounded-b-xl " +
-        (tampilan === "peta" ? "p-16 md:right-auto md:w-[520px] md:p-20" : "p-8")
+        (tampilan === "peta" ? "p-16 md:right-auto md:w-520 md:p-20" : "p-8")
       }
     >
       {tampilan === "daftar" ? (
@@ -123,12 +153,12 @@ export default function PanelArea({
               <Ikon d={IKON_PETA} className="size-18" />
             </span>
             <span>
-              <span className="block text-b5-sm font-bold text-green-700 md:text-b5">Pilih di peta</span>
-              <span className="block text-b6-sm text-muted-kuat">Area terdekat dipilih otomatis</span>
+              <span className="block text-b5-sm font-bold text-green-700 md:text-b5">{t.pilihPeta}</span>
+              <span className="block text-b6-sm text-muted-kuat">{t.otomatis}</span>
             </span>
           </button>
           <div aria-hidden className="mx-12 my-6 border-t border-green-200" />
-          <ul role="listbox" aria-label="Area antar">
+          <ul role="listbox" aria-label={t.daftar}>
             {areaAntarOptions.map((area) => {
               const [nama, kabupaten] = area.split(", ");
               const dipilih = area === nilai;
@@ -163,13 +193,13 @@ export default function PanelArea({
               type="button"
               data-kembali
               onClick={() => setTampilan("daftar")}
-              aria-label="Kembali ke daftar area"
+              aria-label={t.kembali}
               className="grid size-36 shrink-0 place-items-center rounded-full border border-green-200 text-ink transition-colors duration-160 ease-beranda hover:border-green-700 hover:text-green-700"
             >
               <Ikon d={IKON_KEMBALI} className="size-18" />
             </button>
             <p className="text-b6-sm font-semibold text-muted-kuat md:text-b6">
-              Klik peta atau geser pin ke titik antar
+              {t.petunjuk}
             </p>
           </div>
 
@@ -180,11 +210,11 @@ export default function PanelArea({
 
           <div className="mt-14 flex flex-col gap-12 sm:flex-row sm:items-center sm:justify-between">
             <p aria-live="polite" className="text-b6-sm text-muted-kuat md:text-b6">
-              Area terdekat
+              {t.terdekat}
               <span className="block text-b5-sm font-bold text-ink md:text-b5">{terdekat.area}</span>
               <span className={diLuar ? "text-error" : undefined}>
-                {formatKm.format(terdekat.km)} km dari titikmu
-                {diLuar && ", di luar area layanan"}
+                {t.jarak(formatKm.format(terdekat.km))}
+                {diLuar && t.diLuar}
               </span>
             </p>
             <button
@@ -192,7 +222,7 @@ export default function PanelArea({
               onClick={() => onPilih(terdekat.area)}
               className="inline-flex min-h-48 shrink-0 items-center justify-center rounded-b-sm bg-green-700 px-20 text-b5-sm font-bold text-white transition-colors duration-160 ease-beranda hover:bg-green-800 md:text-b5"
             >
-              Pakai area ini
+              {t.pakai}
             </button>
           </div>
         </>

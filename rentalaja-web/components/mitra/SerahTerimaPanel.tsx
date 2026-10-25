@@ -14,6 +14,8 @@
 import Image from "next/image";
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
+import { useBahasa } from "@/components/BahasaProvider";
+import { kamus, lokal, type Bahasa } from "@/lib/i18n";
 import { rupiah } from "@/lib/mitra/format";
 import { tabSerah, type KunciTabSerah } from "@/lib/mitra/tab-serah";
 import type { CatatanSerah, JadwalSerah, Pesanan, StatusSerah } from "@/lib/mitra/tipe";
@@ -21,23 +23,142 @@ import { awalHari, hariSama, jamSaja, statusKembali, tanggalSingkat } from "@/li
 import { usePesanan } from "./PesananProvider";
 import { HeaderHalaman, ThumbnailUnit, kelasTombol, kelasTombolBaris } from "./ui";
 
-const SISI = ["depan", "belakang", "kiri", "kanan"];
-const sisiKosong = () => SISI.map((label) => ({ label, foto: null }));
+const TEKS = kamus({
+  id: {
+    sisi: ["depan", "belakang", "kiri", "kanan"],
+    kondisi: { odometer: "Odometer", bensin: "Bensin", helm: "Helm", goresan: "Goresan tercatat" },
+    bensinOpsi: ["Penuh", "Tiga perempat", "Setengah", "Seperempat", "Hampir habis"],
+    helmBawaan: "2 · jas hujan 1",
+    tidakAda: "Tidak ada",
+    antar: "Antar",
+    ambilKembali: "Ambil kembali",
+    kantor: "Kantor rental",
+    belumKonfirmasi: "belum ada konfirmasi",
+    fotoTerunggah: (unit: string) => `Empat foto ${unit} terunggah.`,
+    klaimDiajukan: (nominal: string, unit: string) =>
+      `Klaim ${nominal} diajukan untuk ${unit}. Dana penyewa ditahan sampai klaim selesai.`,
+    selesaiDicatat: (unit: string) => `Serah terima ${unit} selesai dicatat.`,
+    kondisiTercatat: (unit: string) => `Kondisi ${unit} tercatat. Empat foto masih kurang.`,
+    judul: "Serah terima",
+    riwayat: "Riwayat",
+    mulai: "Mulai serah terima",
+    statusSerah: "Status serah terima",
+    jadwalHariIni: "Jadwal hari ini",
+    kosong: "Belum ada serah terima di tab ini.",
+    hubungi: "Hubungi",
+    buka: "Buka",
+    fotoSerah: (unit: string) => `Foto serah terima · ${unit}`,
+    diambil: (waktu: string, nama: string) => `Diambil ${waktu} bersama ${nama}. Jadi acuan saat pengembalian.`,
+    belumFoto: (nama: string) =>
+      `Belum ada foto. Empat sisi wajib difoto bersama ${nama} sebelum unit berpindah tangan.`,
+    tampak: (unit: string, sisi: string) => `${unit} tampak ${sisi}`,
+    simulasikan: "Simulasikan unggah foto",
+    hanyaScoopy: "Foto contoh empat sisi baru tersedia untuk Honda Scoopy.",
+    catatanKondisi: "Catatan kondisi",
+    belumDicatat:
+      "Belum dicatat. Tekan \"Mulai serah terima\" untuk mengisi odometer, bensin, dan kelengkapan.",
+    klaim: (nominal: string) => `Klaim kerusakan ${nominal}`,
+    klaimDitahan:
+      "Dana penyewa ditahan rentalaja sampai klaim ini disepakati kedua pihak. Buktinya foto serah terima di sebelah kiri.",
+    persetujuan:
+      "Kedua pihak menyetujui foto lewat aplikasi. Kondisi saat kembali dibandingkan dengan foto ini, dan jadi bukti kalau ada klaim kerusakan.",
+    hubungiPenyewa: "Hubungi penyewa",
+    nomorContoh: "Nomor contoh untuk prototype, bukan nomor asli.",
+    mengerti: "Mengerti",
+    catatKondisi: "Catat kondisi unit",
+    odometerKm: "Odometer (km)",
+    kelengkapan: "Kelengkapan",
+    adaKerusakan: "Ada kerusakan baru, ajukan klaim",
+    adaKerusakanSub:
+      "Sejak deposit tunai dihapus, inilah cara menagih kerusakan. Dana penyewa ditahan rentalaja sampai klaim selesai.",
+    nilaiKlaim: "Nilai klaim",
+    kerusakanDiklaim: "Kerusakan yang diklaim",
+    contohKerusakan: "Spion kiri retak, tidak ada di foto serah terima awal",
+    errOdometer: "Odometer harus diisi angka.",
+    errKlaim: "Klaim butuh nilai dan keterangan kerusakannya.",
+    klaimBukti: "Klaim dikirim bersama foto serah terima sebagai bukti.",
+    acuan: "Catatan ini jadi acuan saat unit dikembalikan.",
+    batal: "Batal",
+    simpan: "Simpan catatan",
+  },
+  en: {
+    sisi: ["front", "rear", "left", "right"],
+    kondisi: { odometer: "Odometer", bensin: "Fuel", helm: "Helmets", goresan: "Recorded scratches" },
+    bensinOpsi: ["Full", "Three quarters", "Half", "Quarter", "Nearly empty"],
+    helmBawaan: "2 · 1 raincoat",
+    tidakAda: "None",
+    antar: "Delivery",
+    ambilKembali: "Pick-up",
+    kantor: "Rental office",
+    belumKonfirmasi: "no confirmation yet",
+    fotoTerunggah: (unit: string) => `All four photos of ${unit} uploaded.`,
+    klaimDiajukan: (nominal: string, unit: string) =>
+      `A ${nominal} claim was filed for ${unit}. The renter's payment is held until the claim is settled.`,
+    selesaiDicatat: (unit: string) => `Handover for ${unit} recorded.`,
+    kondisiTercatat: (unit: string) => `Condition of ${unit} recorded. The four photos are still missing.`,
+    judul: "Handovers",
+    riwayat: "History",
+    mulai: "Start handover",
+    statusSerah: "Handover status",
+    jadwalHariIni: "Today's schedule",
+    kosong: "No handovers in this tab yet.",
+    hubungi: "Contact",
+    buka: "Open",
+    fotoSerah: (unit: string) => `Handover photos · ${unit}`,
+    diambil: (waktu: string, nama: string) => `Taken ${waktu} with ${nama}. Used as the reference at return.`,
+    belumFoto: (nama: string) =>
+      `No photos yet. All four sides must be photographed with ${nama} before the vehicle changes hands.`,
+    tampak: (unit: string, sisi: string) => `${unit}, ${sisi} view`,
+    simulasikan: "Simulate photo upload",
+    hanyaScoopy: "Sample four-side photos are only available for the Honda Scoopy.",
+    catatanKondisi: "Condition notes",
+    belumDicatat:
+      "Not recorded yet. Press \"Start handover\" to fill in the odometer, fuel, and accessories.",
+    klaim: (nominal: string) => `Damage claim ${nominal}`,
+    klaimDitahan:
+      "The renter's payment is held by rentalaja until both sides agree on this claim. The handover photos on the left are the evidence.",
+    persetujuan:
+      "Both sides approve the photos in the app. The condition at return is compared against these photos, and they serve as evidence if there's a damage claim.",
+    hubungiPenyewa: "Contact renter",
+    nomorContoh: "Sample number for the prototype, not a real one.",
+    mengerti: "Got it",
+    catatKondisi: "Record vehicle condition",
+    odometerKm: "Odometer (km)",
+    kelengkapan: "Accessories",
+    adaKerusakan: "There's new damage, file a claim",
+    adaKerusakanSub:
+      "Since cash deposits were removed, this is how damage gets billed. The renter's payment is held by rentalaja until the claim is settled.",
+    nilaiKlaim: "Claim amount",
+    kerusakanDiklaim: "Damage being claimed",
+    contohKerusakan: "Cracked left mirror, not in the original handover photos",
+    errOdometer: "Enter the odometer as a number.",
+    errKlaim: "A claim needs an amount and a description of the damage.",
+    klaimBukti: "The claim is sent along with the handover photos as evidence.",
+    acuan: "These notes are the reference when the vehicle is returned.",
+    batal: "Cancel",
+    simpan: "Save notes",
+  },
+});
+type Teks = (typeof TEKS)["id"];
 
-function judul(item: JadwalSerah) {
-  return `${item.jenis === "antar" ? "Antar" : "Ambil kembali"} · ${item.unit}`;
+// Nama berkas foto contoh memakai nama sisi dalam bahasa Indonesia.
+const BERKAS_SISI = ["depan", "belakang", "kiri", "kanan"];
+const sisiKosong = (t: Teks) => t.sisi.map((label) => ({ label, foto: null }));
+
+function judul(item: JadwalSerah, t: Teks) {
+  return `${item.jenis === "antar" ? t.antar : t.ambilKembali} · ${item.unit}`;
 }
 
-function meta(item: JadwalSerah, sekarang: number) {
+function meta(item: JadwalSerah, sekarang: number, bahasa: Bahasa) {
   if (item.telat) {
-    const { label } = statusKembali(item.waktu, sekarang);
+    const { label } = statusKembali(item.waktu, sekarang, bahasa);
     return `${item.penyewa} · ${label.toLowerCase()}${item.catatan ? ` · ${item.catatan}` : ""}`;
   }
   // Jadwal di hari lain selalu menyebut tanggal, supaya "16.00" tidak terbaca
   // seolah hari ini.
   const waktu = hariSama(item.waktu, sekarang)
-    ? jamSaja(item.waktu)
-    : `${tanggalSingkat(item.waktu)} ${jamSaja(item.waktu)}`;
+    ? jamSaja(item.waktu, bahasa)
+    : `${tanggalSingkat(item.waktu, bahasa)} ${jamSaja(item.waktu, bahasa)}`;
   return `${item.penyewa} · ${waktu} · ${item.titik}`;
 }
 
@@ -54,6 +175,7 @@ function jadwalDariPesanan(
   pesanan: Pesanan[],
   catatan: Record<string, CatatanSerah>,
   sekarang: number,
+  t: Teks,
 ): JadwalSerah[] {
   const hariIni = awalHari(sekarang);
   const hasil: JadwalSerah[] = [];
@@ -75,7 +197,7 @@ function jadwalDariPesanan(
 
     for (const e of peristiwa) {
       const id = `${p.id}-${e.jenis}`;
-      const tercatat = catatan[id] ?? { sisi: sisiKosong(), kondisi: [] };
+      const tercatat = catatan[id] ?? { sisi: sisiKosong(t), kondisi: [] };
       hasil.push({
         ...tercatat,
         id,
@@ -87,8 +209,8 @@ function jadwalDariPesanan(
         penyewa: p.penyewa,
         telepon: p.telepon,
         waktu: e.waktu,
-        titik: p.titik ?? "Kantor rental",
-        catatan: e.telat ? "belum ada konfirmasi" : undefined,
+        titik: p.titik ?? t.kantor,
+        catatan: e.telat ? t.belumKonfirmasi : undefined,
         telat: e.telat,
         status: statusDari(tercatat),
       });
@@ -108,6 +230,8 @@ export default function SerahTerimaPanel({
   kicker: string;
 }) {
   const { pesanan, sekarang } = usePesanan();
+  const { bahasa } = useBahasa();
+  const t = TEKS[bahasa];
   const [catatan, setCatatan] = useState(catatanAwal);
   const [tab, setTab] = useState<KunciTabSerah>(tabAwal);
   const [idTerpilih, setIdTerpilih] = useState<string | null>(null);
@@ -115,8 +239,8 @@ export default function SerahTerimaPanel({
   const [formKondisi, setFormKondisi] = useState<JadwalSerah | null>(null);
   const [kabar, setKabar] = useState("");
 
-  const jadwal = jadwalDariPesanan(pesanan, catatan, sekarang);
-  const status = tabSerah.find((t) => t.kunci === tab)!.status;
+  const jadwal = jadwalDariPesanan(pesanan, catatan, sekarang, t);
+  const status = tabSerah.find((x) => x.kunci === tab)!.status;
   const isi = jadwal.filter((i) => i.status === status);
 
   // Tanpa pilihan manual, yang ditampilkan adalah serah terima yang sudah
@@ -128,7 +252,7 @@ export default function SerahTerimaPanel({
   const lengkap = terpilih?.sisi.every((s) => s.foto) ?? false;
 
   function pindahTab(e: React.KeyboardEvent) {
-    const i = tabSerah.findIndex((t) => t.kunci === tab);
+    const i = tabSerah.findIndex((x) => x.kunci === tab);
     const tujuan =
       e.key === "ArrowRight"
         ? (i + 1) % tabSerah.length
@@ -144,7 +268,7 @@ export default function SerahTerimaPanel({
   function simpanCatatan(id: string, ubah: (c: CatatanSerah) => CatatanSerah) {
     setCatatan((lama) => ({
       ...lama,
-      [id]: ubah(lama[id] ?? { sisi: sisiKosong(), kondisi: [] }),
+      [id]: ubah(lama[id] ?? { sisi: sisiKosong(t), kondisi: [] }),
     }));
     setIdTerpilih(id);
   }
@@ -152,9 +276,9 @@ export default function SerahTerimaPanel({
   function simulasikanFoto(item: JadwalSerah) {
     simpanCatatan(item.id, (c) => ({
       ...c,
-      sisi: SISI.map((label) => ({ label, foto: `/serah-terima/scoopy-${label}.webp` })),
+      sisi: t.sisi.map((label, i) => ({ label, foto: `/serah-terima/scoopy-${BERKAS_SISI[i]}.webp` })),
     }));
-    setKabar(`Empat foto ${item.unit} terunggah.`);
+    setKabar(t.fotoTerunggah(item.unit));
   }
 
   function simpanKondisi(
@@ -166,10 +290,10 @@ export default function SerahTerimaPanel({
     setFormKondisi(null);
     setKabar(
       klaim
-        ? `Klaim ${rupiah(klaim.nominal)} diajukan untuk ${item.unit}. Dana penyewa ditahan sampai klaim selesai.`
+        ? t.klaimDiajukan(rupiah(klaim.nominal), item.unit)
         : item.sisi.every((s) => s.foto)
-          ? `Serah terima ${item.unit} selesai dicatat.`
-          : `Kondisi ${item.unit} tercatat. Empat foto masih kurang.`,
+          ? t.selesaiDicatat(item.unit)
+          : t.kondisiTercatat(item.unit),
     );
   }
 
@@ -177,7 +301,7 @@ export default function SerahTerimaPanel({
     <>
       <HeaderHalaman
         kicker={kicker}
-        judul="Serah terima"
+        judul={t.judul}
         aksi={
           <>
             <button
@@ -185,7 +309,7 @@ export default function SerahTerimaPanel({
               onClick={() => setTab("selesai")}
               className={`${kelasTombol.sekunder} px-17 py-11`}
             >
-              Riwayat
+              {t.riwayat}
             </button>
             <button
               type="button"
@@ -193,7 +317,7 @@ export default function SerahTerimaPanel({
               onClick={() => terpilih && setFormKondisi(terpilih)}
               className={`${kelasTombol.primer} px-19 py-11`}
             >
-              Mulai serah terima
+              {t.mulai}
             </button>
           </>
         }
@@ -201,22 +325,22 @@ export default function SerahTerimaPanel({
 
       <div
         role="tablist"
-        aria-label="Status serah terima"
+        aria-label={t.statusSerah}
         className="mt-30 flex gap-28 overflow-x-auto border-b border-mitra-hairline"
       >
-        {tabSerah.map((t) => {
-          const dipilih = t.kunci === tab;
-          const jumlah = jadwal.filter((i) => i.status === t.status).length;
+        {tabSerah.map((x) => {
+          const dipilih = x.kunci === tab;
+          const jumlah = jadwal.filter((i) => i.status === x.status).length;
           return (
             <button
-              key={t.kunci}
-              id={`tab-${t.kunci}`}
+              key={x.kunci}
+              id={`tab-${x.kunci}`}
               type="button"
               role="tab"
               aria-selected={dipilih}
               aria-controls="panel-serah"
               tabIndex={dipilih ? 0 : -1}
-              onClick={() => setTab(t.kunci)}
+              onClick={() => setTab(x.kunci)}
               onKeyDown={pindahTab}
               className={`-mb-1 border-b-2 pb-14 whitespace-nowrap transition-colors duration-160 ease-base ${
                 dipilih
@@ -224,8 +348,8 @@ export default function SerahTerimaPanel({
                   : "border-transparent text-m-nav text-mitra-faint hover:text-mitra-ink"
               }`}
             >
-              {t.label}
-              {t.berjumlah && ` · ${jumlah}`}
+              {x.label[bahasa]}
+              {x.berjumlah && ` · ${jumlah}`}
             </button>
           );
         })}
@@ -239,12 +363,12 @@ export default function SerahTerimaPanel({
       >
         <section aria-labelledby="judul-jadwal">
           <h2 id="judul-jadwal" className="text-m-h2 text-mitra-ink">
-            {tab === "hari-ini" ? "Jadwal hari ini" : tabSerah.find((t) => t.kunci === tab)!.label}
+            {tab === "hari-ini" ? t.jadwalHariIni : tabSerah.find((x) => x.kunci === tab)!.label[bahasa]}
           </h2>
 
           <div className="mt-18 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
             {isi.length === 0 ? (
-              <p className="text-m-body text-mitra-faint">Belum ada serah terima di tab ini.</p>
+              <p className="text-m-body text-mitra-faint">{t.kosong}</p>
             ) : (
               <ul>
                 {isi.map((item) => (
@@ -255,11 +379,11 @@ export default function SerahTerimaPanel({
                   >
                     <ThumbnailUnit foto={item.foto} nama={item.unit} />
                     <div className="min-w-0 flex-1 basis-200">
-                      <p className="text-m-judul-baris text-mitra-ink">{judul(item)}</p>
+                      <p className="text-m-judul-baris text-mitra-ink">{judul(item, t)}</p>
                       <p
                         className={`mt-5 text-m-meta ${item.telat ? "text-mitra-plum" : "text-mitra-muted"}`}
                       >
-                        {meta(item, sekarang)}
+                        {meta(item, sekarang, bahasa)}
                       </p>
                     </div>
                     <div className="shrink-0">
@@ -269,7 +393,7 @@ export default function SerahTerimaPanel({
                           onClick={() => setKontak(item)}
                           className={kelasTombolBaris.sekunder}
                         >
-                          Hubungi
+                          {t.hubungi}
                         </button>
                       ) : (
                         <button
@@ -281,8 +405,8 @@ export default function SerahTerimaPanel({
                               : kelasTombolBaris.sekunder
                           }
                         >
-                          Buka
-                          <span className="sr-only"> {judul(item)}</span>
+                          {t.buka}
+                          <span className="sr-only"> {judul(item, t)}</span>
                         </button>
                       )}
                     </div>
@@ -295,12 +419,12 @@ export default function SerahTerimaPanel({
           {terpilih && (
             <>
               <h2 className="mt-44 text-m-h2 text-mitra-ink">
-                Foto serah terima · {terpilih.unit}
+                {t.fotoSerah(terpilih.unit)}
               </h2>
               <p className="mt-8 text-m-body text-mitra-muted">
                 {lengkap
-                  ? `Diambil ${tanggalSingkat(terpilih.waktu)} ${jamSaja(terpilih.waktu)} bersama ${terpilih.penyewa}. Jadi acuan saat pengembalian.`
-                  : `Belum ada foto. Empat sisi wajib difoto bersama ${terpilih.penyewa} sebelum unit berpindah tangan.`}
+                  ? t.diambil(`${tanggalSingkat(terpilih.waktu, bahasa)} ${jamSaja(terpilih.waktu, bahasa)}`, terpilih.penyewa)
+                  : t.belumFoto(terpilih.penyewa)}
               </p>
 
               <ul className="mt-18 flex flex-wrap gap-14">
@@ -312,7 +436,7 @@ export default function SerahTerimaPanel({
                     {s.foto && (
                       <Image
                         src={s.foto}
-                        alt={`${terpilih.unit} tampak ${s.label}`}
+                        alt={t.tampak(terpilih.unit, s.label)}
                         fill
                         sizes="(max-width: 1100px) 45vw, 200px"
                         className="object-cover"
@@ -336,14 +460,14 @@ export default function SerahTerimaPanel({
                     onClick={() => simulasikanFoto(terpilih)}
                     className={`${kelasTombolBaris.sekunder} mt-14`}
                   >
-                    Simulasikan unggah foto
+                    {t.simulasikan}
                   </button>
                 ) : (
                   // Foto contoh empat sisi baru ada untuk Scoopy. Mengisi slot
                   // unit lain dengan foto Scoopy akan menampilkan unit yang
                   // salah, jadi tombolnya sengaja tidak ditawarkan.
                   <p className="mt-14 text-m-label text-mitra-faint">
-                    Foto contoh empat sisi baru tersedia untuk Honda Scoopy.
+                    {t.hanyaScoopy}
                   </p>
                 ))}
             </>
@@ -352,7 +476,7 @@ export default function SerahTerimaPanel({
 
         <section aria-labelledby="judul-kondisi">
           <h2 id="judul-kondisi" className="text-m-h2 text-mitra-ink">
-            Catatan kondisi
+            {t.catatanKondisi}
           </h2>
           <div className="mt-18 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
             {terpilih && terpilih.kondisi.length > 0 ? (
@@ -369,27 +493,24 @@ export default function SerahTerimaPanel({
               </dl>
             ) : (
               <p className="text-m-body text-mitra-faint">
-                Belum dicatat. Tekan &quot;Mulai serah terima&quot; untuk mengisi odometer,
-                bensin, dan kelengkapan.
+                {t.belumDicatat}
               </p>
             )}
           </div>
           {terpilih?.klaim && (
             <div className="mt-14 rounded-m-callout border border-mitra-plum p-20 min-[640px]:p-24">
               <p className="text-m-judul-baris text-mitra-plum">
-                Klaim kerusakan {rupiah(terpilih.klaim.nominal)}
+                {t.klaim(rupiah(terpilih.klaim.nominal))}
               </p>
               <p className="mt-6 text-m-body text-mitra-muted">{terpilih.klaim.keterangan}</p>
               <p className="mt-10 text-m-label text-mitra-muted">
-                Dana penyewa ditahan rentalaja sampai klaim ini disepakati kedua pihak.
-                Buktinya foto serah terima di sebelah kiri.
+                {t.klaimDitahan}
               </p>
             </div>
           )}
 
           <p className="mt-20 text-m-body text-mitra-muted">
-            Kedua pihak menyetujui foto lewat aplikasi. Kondisi saat kembali dibandingkan
-            dengan foto ini, dan jadi bukti kalau ada klaim kerusakan.
+            {t.persetujuan}
           </p>
         </section>
       </div>
@@ -399,14 +520,14 @@ export default function SerahTerimaPanel({
       </p>
 
       {kontak && (
-        <Modal judul="Hubungi penyewa" onTutup={() => setKontak(null)} lebar="max-w-[420px]">
+        <Modal judul={t.hubungiPenyewa} onTutup={() => setKontak(null)} lebar="max-w-[420px]">
           <p className="mt-10 text-m-judul-baris text-mitra-ink">{kontak.penyewa}</p>
           <p className="mt-4 text-m-meta text-mitra-muted">
-            {judul(kontak)} · {kontak.plat}
+            {judul(kontak, t)} · {kontak.plat}
           </p>
           <p className="mt-14 text-m-total text-mitra-ink">{kontak.telepon}</p>
           <p className="mt-6 text-m-body text-mitra-faint">
-            Nomor contoh untuk prototype, bukan nomor asli.
+            {t.nomorContoh}
           </p>
           <div className="mt-20 flex justify-end">
             <button
@@ -414,7 +535,7 @@ export default function SerahTerimaPanel({
               onClick={() => setKontak(null)}
               className={kelasTombolBaris.primer}
             >
-              Mengerti
+              {t.mengerti}
             </button>
           </div>
         </Modal>
@@ -423,6 +544,8 @@ export default function SerahTerimaPanel({
       {formKondisi && (
         <FormKondisi
           item={formKondisi}
+          t={t}
+          bahasa={bahasa}
           onTutup={() => setFormKondisi(null)}
           onSimpan={(kondisi, klaim) => simpanKondisi(formKondisi, kondisi, klaim)}
         />
@@ -433,9 +556,13 @@ export default function SerahTerimaPanel({
 
 function FormKondisi({
   item,
+  t,
+  bahasa,
   onTutup,
   onSimpan,
 }: {
+  t: Teks;
+  bahasa: Bahasa;
   item: JadwalSerah;
   onTutup: () => void;
   onSimpan: (kondisi: CatatanSerah["kondisi"], klaim: CatatanSerah["klaim"]) => void;
@@ -443,10 +570,11 @@ function FormKondisi({
   const awal = (label: string, bawaan: string) =>
     item.kondisi.find((k) => k.label === label)?.nilai ?? bawaan;
 
-  const [odometer, setOdometer] = useState(awal("Odometer", "").replace(" km", ""));
-  const [bensin, setBensin] = useState(awal("Bensin", "Penuh"));
-  const [kelengkapan, setKelengkapan] = useState(awal("Helm", "2 · jas hujan 1"));
-  const [goresan, setGoresan] = useState(awal("Goresan tercatat", "Tidak ada"));
+  const k = t.kondisi;
+  const [odometer, setOdometer] = useState(awal(k.odometer, "").replace(" km", ""));
+  const [bensin, setBensin] = useState(awal(k.bensin, t.bensinOpsi[0]));
+  const [kelengkapan, setKelengkapan] = useState(awal(k.helm, t.helmBawaan));
+  const [goresan, setGoresan] = useState(awal(k.goresan, t.tidakAda));
   const [adaKlaim, setAdaKlaim] = useState(Boolean(item.klaim));
   const [nominalKlaim, setNominalKlaim] = useState(item.klaim ? String(item.klaim.nominal) : "");
   const [keteranganKlaim, setKeteranganKlaim] = useState(item.klaim?.keterangan ?? "");
@@ -461,8 +589,8 @@ function FormKondisi({
     "mt-6 w-full rounded-m-thumb border border-mitra-border px-12 py-9 text-m-status text-mitra-ink";
 
   return (
-    <Modal judul="Catat kondisi unit" onTutup={onTutup} lebar="max-w-[440px]">
-      <p className="mt-10 text-m-judul-baris text-mitra-ink">{judul(item)}</p>
+    <Modal judul={t.catatKondisi} onTutup={onTutup} lebar="max-w-[440px]">
+      <p className="mt-10 text-m-judul-baris text-mitra-ink">{judul(item, t)}</p>
       <p className="mt-4 text-m-meta text-mitra-muted">
         {item.plat} · {item.penyewa}
       </p>
@@ -473,17 +601,17 @@ function FormKondisi({
           if (!valid) return;
           onSimpan(
             [
-              { label: "Odometer", nilai: `${new Intl.NumberFormat("id-ID").format(angka)} km` },
-              { label: "Bensin", nilai: bensin },
-              { label: "Helm", nilai: kelengkapan },
-              { label: "Goresan tercatat", nilai: goresan.trim() || "Tidak ada" },
+              { label: k.odometer, nilai: `${new Intl.NumberFormat(lokal(bahasa)).format(angka)} km` },
+              { label: k.bensin, nilai: bensin },
+              { label: k.helm, nilai: kelengkapan },
+              { label: k.goresan, nilai: goresan.trim() || t.tidakAda },
             ],
             adaKlaim && bisaKlaim ? { nominal, keterangan: keteranganKlaim.trim() } : undefined,
           );
         }}
       >
         <label htmlFor="odometer" className="mt-18 block text-m-label text-mitra-muted">
-          Odometer (km)
+          {t.odometerKm}
         </label>
         <input
           id="odometer"
@@ -494,7 +622,7 @@ function FormKondisi({
         />
 
         <label htmlFor="bensin" className="mt-14 block text-m-label text-mitra-muted">
-          Bensin
+          {k.bensin}
         </label>
         <select
           id="bensin"
@@ -502,15 +630,13 @@ function FormKondisi({
           onChange={(e) => setBensin(e.target.value)}
           className={kelasIsian}
         >
-          <option>Penuh</option>
-          <option>Tiga perempat</option>
-          <option>Setengah</option>
-          <option>Seperempat</option>
-          <option>Hampir habis</option>
+          {t.bensinOpsi.map((o) => (
+            <option key={o}>{o}</option>
+          ))}
         </select>
 
         <label htmlFor="kelengkapan" className="mt-14 block text-m-label text-mitra-muted">
-          Kelengkapan
+          {t.kelengkapan}
         </label>
         <input
           id="kelengkapan"
@@ -520,7 +646,7 @@ function FormKondisi({
         />
 
         <label htmlFor="goresan" className="mt-14 block text-m-label text-mitra-muted">
-          Goresan tercatat
+          {k.goresan}
         </label>
         <input
           id="goresan"
@@ -539,13 +665,8 @@ function FormKondisi({
                 className="mt-3 size-16"
               />
               <span>
-                <span className="block text-m-status text-mitra-ink">
-                  Ada kerusakan baru, ajukan klaim
-                </span>
-                <span className="mt-2 block text-m-label text-mitra-muted">
-                  Sejak deposit tunai dihapus, inilah cara menagih kerusakan. Dana penyewa
-                  ditahan rentalaja sampai klaim selesai.
-                </span>
+                <span className="block text-m-status text-mitra-ink">{t.adaKerusakan}</span>
+                <span className="mt-2 block text-m-label text-mitra-muted">{t.adaKerusakanSub}</span>
               </span>
             </label>
 
@@ -555,7 +676,7 @@ function FormKondisi({
                   htmlFor="nominal-klaim"
                   className="mt-14 block text-m-label text-mitra-muted"
                 >
-                  Nilai klaim
+                  {t.nilaiKlaim}
                 </label>
                 <input
                   id="nominal-klaim"
@@ -570,14 +691,14 @@ function FormKondisi({
                   htmlFor="keterangan-klaim"
                   className="mt-14 block text-m-label text-mitra-muted"
                 >
-                  Kerusakan yang diklaim
+                  {t.kerusakanDiklaim}
                 </label>
                 <textarea
                   id="keterangan-klaim"
                   rows={2}
                   value={keteranganKlaim}
                   onChange={(e) => setKeteranganKlaim(e.target.value)}
-                  placeholder="Spion kiri retak, tidak ada di foto serah terima awal"
+                  placeholder={t.contohKerusakan}
                   className={kelasIsian}
                 />
               </>
@@ -586,21 +707,15 @@ function FormKondisi({
         )}
 
         <p className="mt-10 text-m-label text-mitra-muted">
-          {!angka
-            ? "Odometer harus diisi angka."
-            : !klaimValid
-              ? "Klaim butuh nilai dan keterangan kerusakannya."
-              : adaKlaim
-                ? "Klaim dikirim bersama foto serah terima sebagai bukti."
-                : "Catatan ini jadi acuan saat unit dikembalikan."}
+          {!angka ? t.errOdometer : !klaimValid ? t.errKlaim : adaKlaim ? t.klaimBukti : t.acuan}
         </p>
 
         <div className="mt-20 flex justify-end gap-8">
           <button type="button" onClick={onTutup} className={kelasTombolBaris.sekunder}>
-            Batal
+            {t.batal}
           </button>
           <button type="submit" disabled={!valid} className={kelasTombolBaris.primer}>
-            Simpan catatan
+            {t.simpan}
           </button>
         </div>
       </form>

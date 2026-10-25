@@ -21,6 +21,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import PetaLokasi from "@/components/ui/PetaLokasi";
+import { useBahasa } from "@/components/BahasaProvider";
+import { kamus } from "@/lib/i18n";
 import {
   contohIsian,
   labelDokumen,
@@ -32,6 +34,86 @@ import {
   simulasi,
 } from "@/lib/mock/pemesanan";
 
+const TEKS = kamus({
+  id: {
+    lengkap: "Lengkap",
+    langkahKe: (n: number, ok: boolean) => `Langkah ${n}: ${ok ? "lengkap" : "belum lengkap"}`,
+    terunggah: (nama: string) => `${nama} · terunggah`,
+    midtrans: "Simulasi MidTrans",
+    pindai: "Pindai QR untuk membayar penuh.",
+    altQr: (total: string) => `Kode QR pembayaran simulasi MidTrans sebesar ${total}`,
+    totalBayar: "Total bayar",
+    memproses: "Memproses…",
+    simulasikanBayar: "Simulasikan Payment",
+    batal: "Batal",
+    diterima: "Pembayaran diterima. Membuka pesanan aktif…",
+    tidakNyata: "Tidak ada pembayaran sungguhan yang diproses.",
+    srLengkap: " — lengkap",
+    srBelum: " — belum lengkap",
+    kartu1: "Tanggal dan titik antar",
+    ambil: "Ambil",
+    kembali: "Kembali",
+    titikAntar: "Titik antar",
+    caraAmbil: "Cara pengambilan unit",
+    kartu2: "Dokumen",
+    dokumenSub: (kategori: string, sim: string) =>
+      `Untuk ${kategori}, KTP atau paspor dan ${sim}. Diverifikasi penyedia sebelum unit diantar.`,
+    kategori: { motor: "motor", mobil: "mobil" },
+    namaDokumen: "Nama sesuai dokumen",
+    whatsapp: "Nomor WhatsApp",
+    email: "Email",
+    kartu3: "Bayar penuh",
+    metode: "Metode pembayaran",
+    simulasikan: "Simulasikan Langsung",
+    simulasikanSub:
+      "Mengisi seluruh kolom dengan data contoh, termasuk kedua dokumen. Pintasan untuk mencoba alur, bukan bagian dari produk.",
+    foto: (nama: string) => `Foto ${nama}`,
+    totalPembayaran: "Total Pembayaran",
+    bayar: (total: string) => `Bayar ${total}`,
+    menunggu: "Menunggu pembayaran di jendela MidTrans.",
+    konfirmasi: "Pesanan menunggu konfirmasi penyedia maksimal 1 jam. Dana kembali penuh kalau ditolak.",
+  },
+  en: {
+    lengkap: "Complete",
+    langkahKe: (n: number, ok: boolean) => `Step ${n}: ${ok ? "complete" : "not complete"}`,
+    terunggah: (nama: string) => `${nama} · uploaded`,
+    midtrans: "MidTrans simulation",
+    pindai: "Scan the QR code to pay in full.",
+    altQr: (total: string) => `Simulated MidTrans payment QR code for ${total}`,
+    totalBayar: "Total to pay",
+    memproses: "Processing…",
+    simulasikanBayar: "Simulate payment",
+    batal: "Cancel",
+    diterima: "Payment received. Opening your active booking…",
+    tidakNyata: "No real payment is processed.",
+    srLengkap: " — complete",
+    srBelum: " — not complete",
+    kartu1: "Dates and delivery point",
+    ambil: "Pick-up",
+    kembali: "Return",
+    titikAntar: "Delivery point",
+    caraAmbil: "How you get the vehicle",
+    kartu2: "Documents",
+    dokumenSub: (kategori: string, sim: string) =>
+      `For a ${kategori}: ID card or passport, plus a ${sim}. Verified by the provider before delivery.`,
+    kategori: { motor: "scooter", mobil: "car" },
+    namaDokumen: "Name as on your documents",
+    whatsapp: "WhatsApp number",
+    email: "Email",
+    kartu3: "Pay in full",
+    metode: "Payment method",
+    simulasikan: "Fill in for me",
+    simulasikanSub:
+      "Fills every field with sample data, including both documents. A shortcut for trying the flow, not part of the product.",
+    foto: (nama: string) => `Photo of ${nama}`,
+    totalPembayaran: "Total Payment",
+    bayar: (total: string) => `Pay ${total}`,
+    menunggu: "Waiting for payment in the MidTrans window.",
+    konfirmasi: "The provider has up to 1 hour to confirm. You get a full refund if they decline.",
+  },
+});
+type Teks = (typeof TEKS)["id"];
+
 const INPUT =
   "w-full rounded-input border border-line bg-white px-12 py-11 text-nav-strong text-ink placeholder:font-medium placeholder:text-placeholder";
 
@@ -39,9 +121,11 @@ function Kartu({
   nomor,
   judul,
   selesai,
+  t,
   className = "",
   children,
 }: {
+  t: Teks;
   nomor: number;
   judul: string;
   selesai: boolean;
@@ -65,11 +149,9 @@ function Kartu({
         </span>
         <h2 className="text-result-head text-ink">{judul}</h2>
         {selesai && (
-          <span className="text-micro text-green-700">Lengkap</span>
+          <span className="text-micro text-green-700">{t.lengkap}</span>
         )}
-        <span className="sr-only">
-          Langkah {nomor}: {selesai ? "lengkap" : "belum lengkap"}
-        </span>
+        <span className="sr-only">{t.langkahKe(nomor, selesai)}</span>
       </div>
       {children}
     </section>
@@ -111,7 +193,11 @@ function Unggah({
   label,
   berkas,
   onPilih,
+  t,
+  petunjuk,
 }: {
+  t: Teks;
+  petunjuk: string;
   label: string;
   berkas: string | null;
   onPilih: (nama: string | null) => void;
@@ -136,7 +222,7 @@ function Unggah({
           berkas ? "text-green-800" : "text-muted"
         }`}
       >
-        {berkas ? `${berkas} · terunggah` : petunjukBerkas}
+        {berkas ? t.terunggah(berkas) : petunjuk}
       </span>
       <input
         id={id}
@@ -159,7 +245,9 @@ function ModalPembayaran({
   total,
   onBayar,
   onTutup,
+  t,
 }: {
+  t: Teks;
   tahap: Exclude<Tahap, "form">;
   /** Nominal yang dibayar, sudah diformat. Harus sama persis dengan angka di
    *  ringkasan supaya tidak ada dua total berbeda di satu layar. */
@@ -198,16 +286,14 @@ function ModalPembayaran({
         className="w-full max-w-[340px] rounded-card border border-line bg-white p-24 text-center shadow-search"
       >
         <h2 id={judulId} className="text-result-head text-ink">
-          Simulasi MidTrans
+          {t.midtrans}
         </h2>
-        <p className="mt-5 text-body-sm text-muted">
-          Pindai QR untuk membayar penuh.
-        </p>
+        <p className="mt-5 text-body-sm text-muted">{t.pindai}</p>
 
         <div className="relative mx-auto mt-16 size-200">
           <Image
             src="/qr-midtrans.png"
-            alt={`Kode QR pembayaran simulasi MidTrans sebesar ${total}`}
+            alt={t.altQr(total)}
             fill
             sizes="200px"
             className="object-contain"
@@ -217,7 +303,7 @@ function ModalPembayaran({
         {/* Nominal ditaruh tepat di bawah QR: pengguna harus bisa mencocokkan
             angka di aplikasi pembayaran tanpa menggulir ke mana pun. */}
         <div className="mt-14 rounded-input bg-green-100 px-12 py-10">
-          <p className="text-meta text-green-800">Total bayar</p>
+          <p className="text-meta text-green-800">{t.totalBayar}</p>
           <p className="mt-2 text-price-lg text-green-700">{total}</p>
         </div>
 
@@ -232,7 +318,7 @@ function ModalPembayaran({
               : "bg-green-700 text-white hover:bg-green-800"
           }`}
         >
-          {memproses ? "Memproses…" : "Simulasikan Payment"}
+          {memproses ? t.memproses : t.simulasikanBayar}
         </button>
 
         {!memproses && (
@@ -241,14 +327,12 @@ function ModalPembayaran({
             onClick={onTutup}
             className="mt-8 text-link-sm text-muted transition-colors duration-160 ease-base hover:text-ink"
           >
-            Batal
+            {t.batal}
           </button>
         )}
 
         <p aria-live="polite" className="mt-10 text-micro text-muted">
-          {memproses
-            ? "Pembayaran diterima. Membuka pesanan aktif…"
-            : "Tidak ada pembayaran sungguhan yang diproses."}
+          {memproses ? t.diterima : t.tidakNyata}
         </p>
       </div>
     </div>
@@ -267,6 +351,9 @@ export default function BookingForm({
   /** Unit dan rincian harga, dibangun dari unit yang diklik di layar detail. */
   ringkasan: RingkasanPesanan;
 }) {
+  const { bahasa, jalur } = useBahasa();
+  const t = TEKS[bahasa];
+  const halamanPesanan = jalur("/pesanan");
   const [titikAntar, setTitikAntar] = useState("");
   const [pengambilan, setPengambilan] = useState<number | null>(null);
 
@@ -295,9 +382,9 @@ export default function BookingForm({
   // navigasi tidak terpicu setelah pengguna meninggalkan halaman.
   useEffect(() => {
     if (tahap !== "proses") return;
-    const timer = setTimeout(() => router.push("/pesanan"), 3000);
+    const timer = setTimeout(() => router.push(halamanPesanan), 3000);
     return () => clearTimeout(timer);
-  }, [tahap, router]);
+  }, [tahap, router, halamanPesanan]);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -328,7 +415,7 @@ export default function BookingForm({
       {/* Stepper — abu sampai langkahnya lengkap, lalu hijau.
           Centang ✓ menggantikan nomor supaya statusnya terbaca tanpa warna. */}
       <ol className="mb-20 flex items-center gap-10">
-        {langkah.map((l, i) => (
+        {langkah[bahasa].map((l, i) => (
           <li key={l} className="flex flex-1 items-center gap-10 last:flex-none">
             <span
               className={`rounded-pill px-13 py-6 transition-colors duration-160 ease-base ${
@@ -339,10 +426,10 @@ export default function BookingForm({
             >
               {selesai[i] ? `✓ ${l.replace(/^\d+ · /, "")}` : l}
               <span className="sr-only">
-                {selesai[i] ? " — lengkap" : " — belum lengkap"}
+                {selesai[i] ? t.srLengkap : t.srBelum}
               </span>
             </span>
-            {i < langkah.length - 1 && (
+            {i < langkah[bahasa].length - 1 && (
               <span
                 aria-hidden
                 className={`h-2 flex-1 transition-colors duration-160 ease-base ${
@@ -356,14 +443,14 @@ export default function BookingForm({
 
       <div className="grid items-start gap-24 lg:grid-cols-[1fr_320px]">
         <div>
-          <Kartu nomor={1} judul="Tanggal dan titik antar" selesai={selesai[0]}>
+          <Kartu t={t} nomor={1} judul={t.kartu1} selesai={selesai[0]}>
             {/* Tanggal sudah dipilih sejak pencarian, jadi di sini hanya
                 ditampilkan, bukan diisi ulang. */}
             <dl className="mt-14 grid gap-12 sm:grid-cols-2">
               {(
                 [
-                  ["Ambil", periode.ambil],
-                  ["Kembali", periode.kembali],
+                  [t.ambil, periode.ambil],
+                  [t.kembali, periode.kembali],
                 ] as const
               ).map(([label, nilai]) => (
                 <div key={label} className="rounded-input border border-line bg-white px-12 py-11">
@@ -375,7 +462,7 @@ export default function BookingForm({
 
             <div className="mt-12">
               <Isian
-                label="Titik antar"
+                label={t.titikAntar}
                 nilai={titikAntar}
                 onUbah={setTitikAntar}
                 placeholder={contohIsian.titikAntar}
@@ -392,10 +479,10 @@ export default function BookingForm({
 
             <div
               role="group"
-              aria-label="Cara pengambilan unit"
+              aria-label={t.caraAmbil}
               className="mt-12 flex flex-wrap gap-8"
             >
-              {opsiPengambilan.map((o, i) => (
+              {opsiPengambilan[bahasa].map((o, i) => (
                 <button
                   key={o}
                   type="button"
@@ -414,25 +501,28 @@ export default function BookingForm({
           </Kartu>
 
           <Kartu
+            t={t}
             nomor={2}
-            judul="Dokumen"
+            judul={t.kartu2}
             selesai={selesai[1]}
             className="mt-14"
           >
             <p className="mt-4 text-body-sm text-muted">
-              Untuk {ringkasan.unit.kategori}, KTP atau paspor dan{" "}
-              {labelDokumen.sim[ringkasan.unit.kategori]}. Diverifikasi penyedia sebelum unit
-              diantar.
+              {t.dokumenSub(t.kategori[ringkasan.unit.kategori], labelDokumen[bahasa].sim[ringkasan.unit.kategori])}
             </p>
 
             <div className="mt-14 grid gap-12 sm:grid-cols-2">
               <Unggah
-                label={labelDokumen.identitas}
+                t={t}
+                petunjuk={petunjukBerkas[bahasa]}
+                label={labelDokumen[bahasa].identitas}
                 berkas={ktp}
                 onPilih={setKtp}
               />
               <Unggah
-                label={labelDokumen.sim[ringkasan.unit.kategori]}
+                t={t}
+                petunjuk={petunjukBerkas[bahasa]}
+                label={labelDokumen[bahasa].sim[ringkasan.unit.kategori]}
                 berkas={sim}
                 onPilih={setSim}
               />
@@ -440,21 +530,21 @@ export default function BookingForm({
 
             <div className="mt-14 grid gap-8 border-t border-line pt-12">
               <Isian
-                label="Nama sesuai dokumen"
+                label={t.namaDokumen}
                 nilai={nama}
                 onUbah={setNama}
                 placeholder={contohIsian.nama}
               />
               <div className="grid gap-12 sm:grid-cols-2">
                 <Isian
-                  label="Nomor WhatsApp"
+                  label={t.whatsapp}
                   tipe="tel"
                   nilai={whatsapp}
                   onUbah={setWhatsapp}
                   placeholder={contohIsian.whatsapp}
                 />
                 <Isian
-                  label="Email"
+                  label={t.email}
                   tipe="email"
                   nilai={email}
                   onUbah={setEmail}
@@ -465,17 +555,18 @@ export default function BookingForm({
           </Kartu>
 
           <Kartu
+            t={t}
             nomor={3}
-            judul="Bayar penuh"
+            judul={t.kartu3}
             selesai={selesai[2]}
             className="mt-14"
           >
             <div
               role="radiogroup"
-              aria-label="Metode pembayaran"
+              aria-label={t.metode}
               className="mt-12 grid gap-8"
             >
-              {metodePembayaran.map((m, i) => (
+              {metodePembayaran[bahasa].map((m, i) => (
                 <button
                   key={m}
                   type="button"
@@ -502,12 +593,9 @@ export default function BookingForm({
             disabled={tahap !== "form"}
             className="mt-14 w-full rounded-input bg-green-700 py-13 text-btn text-white transition-colors duration-160 ease-base hover:bg-green-800"
           >
-            Simulasikan Langsung
+            {t.simulasikan}
           </button>
-          <p className="mt-8 text-micro text-muted">
-            Mengisi seluruh kolom dengan data contoh, termasuk kedua dokumen.
-            Pintasan untuk mencoba alur, bukan bagian dari produk.
-          </p>
+          <p className="mt-8 text-micro text-muted">{t.simulasikanSub}</p>
         </div>
 
         {/* Panel ringkasan sticky */}
@@ -516,7 +604,7 @@ export default function BookingForm({
             <div className="relative h-50 w-66 shrink-0 overflow-hidden rounded-input">
               <Image
                 src={ringkasan.unit.foto}
-                alt={`Foto ${ringkasan.unit.nama}`}
+                alt={t.foto(ringkasan.unit.nama)}
                 fill
                 sizes="66px"
                 className="object-cover"
@@ -539,19 +627,9 @@ export default function BookingForm({
             ))}
           </dl>
 
-          <div className="mt-12 border-t border-line pt-12">
-            <div className="flex items-baseline justify-between gap-12">
-              <p className="text-total-label text-ink">Dibayar penuh sekarang</p>
-              <p className="text-total text-ink">{ringkasan.total}</p>
-            </div>
-            <div className="mt-6 flex justify-between gap-12 text-body-sm text-muted">
-              <span>Ditahan rentalaja sampai unit kembali</span>
-              <span>{ringkasan.total}</span>
-            </div>
-            <div className="mt-4 flex justify-between gap-12 text-body-sm text-muted">
-              <span>Deposit tunai ke pemilik</span>
-              <span>Tidak ada</span>
-            </div>
+          <div className="mt-12 flex items-baseline justify-between gap-12 border-t border-line pt-12">
+            <p className="text-total-label text-ink">{t.totalPembayaran}</p>
+            <p className="text-total whitespace-nowrap text-ink">{ringkasan.total}</p>
           </div>
 
           <button
@@ -564,23 +642,22 @@ export default function BookingForm({
                 : "bg-surface-2 text-placeholder"
             }`}
           >
-            Bayar {ringkasan.total}
+            {t.bayar(ringkasan.total)}
           </button>
 
-          <p aria-live="polite" className="mt-10 text-micro text-muted">
-            {tahap !== "form"
-              ? "Menunggu pembayaran di jendela MidTrans."
-              : semuaSelesai
-                ? "Pesanan menunggu konfirmasi penyedia maksimal 1 jam. Dana kembali penuh kalau ditolak."
-                : `Lengkapi ketiga langkah di atas untuk melanjutkan. Sisa ${
-                    selesai.filter((s) => !s).length
-                  } langkah.`}
-          </p>
+          {/* Tanpa keterangan "Lengkapi ketiga langkah..." (dihapus atas
+              permintaan pemilik proyek); tombol yang mati sudah cukup. */}
+          {(tahap !== "form" || semuaSelesai) && (
+            <p aria-live="polite" className="mt-10 text-micro text-muted">
+              {tahap !== "form" ? t.menunggu : t.konfirmasi}
+            </p>
+          )}
         </aside>
       </div>
 
       {tahap !== "form" && (
         <ModalPembayaran
+          t={t}
           total={ringkasan.total}
           tahap={tahap}
           onBayar={() => setTahap("proses")}

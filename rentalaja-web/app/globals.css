@@ -472,6 +472,39 @@
   --ease-beranda: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+/* Skala 80% untuk beranda, navbar, dan footer (permintaan pemilik proyek,
+   25 Okt 2026: "terlalu besar, dikecilin jadi 80%"). Bukan CSS `zoom`:
+   zoom ikut menyempitkan container (navbar jadi tidak sejajar dengan
+   container-page di layar lain) dan menggeser koordinat klik peta Leaflet.
+   Di sini variabel tema yang dibaca utility ditimpa: spacing, ukuran teks
+   b1-b6, dan radius b-*. Lebar container tetap.
+   Hanya mulai 768px. Di HP teks b6-sm akan jadi 11px dan target sentuh
+   44px jadi 35px, terlalu kecil. */
+@media (min-width: 768px) {
+  .skala-beranda {
+    --spacing: 0.8px;
+
+    --text-b1: 51px;
+    --text-b1-sm: 27px;
+    --text-b2: 32px;
+    --text-b2-sm: 22px;
+    --text-b3: 22px;
+    --text-b3-sm: 18px;
+    --text-b4: 16px;
+    --text-b4-sm: 14.5px;
+    --text-b5: 14px;
+    --text-b5-sm: 13px;
+    --text-b6: 12.5px;
+    --text-b6-sm: 12px;
+
+    --radius-b-sm: 11px;
+    --radius-b-md: 13px;
+    --radius-b-lg: 16px;
+    --radius-b-xl: 19px;
+    --radius-b-2xl: 26px;
+  }
+}
+
 @layer base {
   /* Tautan navbar menuju section di halaman yang sama. Tanpa ini browser
      melompat mendadak, dan pengguna kehilangan rasa "di mana tadi saya".

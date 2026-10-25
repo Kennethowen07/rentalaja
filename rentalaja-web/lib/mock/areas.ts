@@ -11,7 +11,7 @@ export const areaChips = [
   "Uluwatu",
 ] as const;
 
-export const areaChipSisa = "+ 12 area lain";
+export const areaChipSisa = { id: "+ 12 area lain", en: "+ 12 more areas" } as const;
 
 // Opsi combobox "Area antar" pada search card. Desain memakai
 // "Canggu, Badung" sebagai nilai default, jadi ia yang pertama.

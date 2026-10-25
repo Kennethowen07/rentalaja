@@ -15,6 +15,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useBahasa } from "@/components/BahasaProvider";
 
 export default function Modal({
   judul,
@@ -32,6 +33,7 @@ export default function Modal({
   latar?: "biasa" | "pekat";
   children: React.ReactNode;
 }) {
+  const { bahasa } = useBahasa();
   const judulId = useId();
   const tutupRef = useRef<HTMLButtonElement>(null);
   // Portal baru boleh dipasang setelah komponen hidup di browser, karena
@@ -93,7 +95,7 @@ export default function Modal({
             ref={tutupRef}
             type="button"
             onClick={onTutup}
-            aria-label="Tutup"
+            aria-label={bahasa === "en" ? "Close" : "Tutup"}
             className="grid size-44 shrink-0 place-items-center rounded-input text-section text-muted transition-colors duration-160 ease-base hover:bg-surface-2 hover:text-ink"
           >
             <span aria-hidden>×</span>

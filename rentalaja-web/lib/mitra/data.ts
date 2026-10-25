@@ -5,9 +5,14 @@
 // Daftar pesanan adalah sumber tunggal: Beranda menurunkan "unit yang lagi
 // keluar" dari pesanan berstatus active, jadi kedua layar tidak bisa lagi
 // menampilkan angka yang berbeda.
+//
+// Setiap fungsi menerima `bahasa` (bawaan "id"); teks bebas di mock (status
+// dana, alasan batal, transaksi, ulasan, ...) punya padanan Inggris di sini.
 
 import { cache } from "react";
 import { connection } from "next/server";
+import type { Bahasa } from "@/lib/i18n";
+import { teksStatusBayar } from "./data-teks";
 import type {
   DataBeranda,
   Mitra,
@@ -20,7 +25,7 @@ import type {
   Unit,
   UnitKeluar,
 } from "./tipe";
-import { MENIT, namaBulan, pukulWita, tanggalSingkat } from "./waktu";
+import { MENIT, jamSaja, namaBulan, pukulWita, tanggalSingkat } from "./waktu";
 
 /** Waktu server satu request. Di-cache per request supaya layout dan halaman
  *  memakai milidetik yang sama, dan `connection()` membuat halaman dirender
@@ -34,6 +39,9 @@ export async function ambilWaktuServer(): Promise<number> {
   return waktuServer();
 }
 
+/** Pemilih teks: t(bahasa)("Indonesia", "English"). */
+const t = (bahasa: Bahasa) => (id: string, en: string) => (bahasa === "en" ? en : id);
+
 export async function ambilMitra(): Promise<Mitra> {
   return {
     nama: "Bali Motor Rent",
@@ -44,7 +52,11 @@ export async function ambilMitra(): Promise<Mitra> {
 }
 
 // Nomor telepon memakai awalan contoh, bukan nomor asli siapa pun.
-function semuaPesanan(sekarang: number): Pesanan[] {
+function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
+  const p = t(bahasa);
+  const bayar = teksStatusBayar(bahasa);
+  const kantor = p("Kantor rental", "Rental office");
+
   return [
     {
       id: "RA-284207",
@@ -56,7 +68,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       mulai: pukulWita(sekarang, 0, 13),
       selesai: pukulWita(sekarang, 2, 13),
       total: "Rp 285.000",
-      statusBayar: "Dibayar penuh · di escrow",
+      statusBayar: bayar.escrow,
       status: "pending",
       masukPada: sekarang - 18 * MENIT,
       titik: "Villa Canggu, Jl. Pantai Batu Bolong",
@@ -72,10 +84,10 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       mulai: pukulWita(sekarang, 2, 9),
       selesai: pukulWita(sekarang, 5, 9),
       total: "Rp 1.140.000",
-      statusBayar: "Dibayar penuh · di escrow",
+      statusBayar: bayar.escrow,
       status: "pending",
       masukPada: sekarang - 41 * MENIT,
-      titik: "Kantor rental",
+      titik: kantor,
       diantar: false,
     },
 
@@ -90,7 +102,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       selesai: pukulWita(sekarang, 2, 9),
       kembaliPada: pukulWita(sekarang, 2, 9),
       total: "Rp 215.000",
-      statusBayar: "Ditahan escrow",
+      statusBayar: bayar.ditahan,
       status: "active",
       titik: "Villa Canggu, Jl. Pantai Batu Bolong",
     },
@@ -105,7 +117,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       selesai: pukulWita(sekarang, 0, 17),
       kembaliPada: pukulWita(sekarang, 0, 17),
       total: "Rp 330.000",
-      statusBayar: "Ditahan escrow",
+      statusBayar: bayar.ditahan,
       status: "active",
       titik: "Villa Berawa",
     },
@@ -120,10 +132,10 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       selesai: pukulWita(sekarang, -1, 9),
       kembaliPada: pukulWita(sekarang, -1, 9),
       total: "Rp 480.000",
-      statusBayar: "Ditahan escrow",
+      statusBayar: bayar.ditahan,
       status: "active",
-      denda: "denda berjalan Rp 120.000",
-      titik: "Kantor rental",
+      denda: p("denda berjalan Rp 120.000", "late fee so far Rp 120.000"),
+      titik: kantor,
     },
     {
       id: "RA-284150",
@@ -136,7 +148,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       selesai: pukulWita(sekarang, 3, 8),
       kembaliPada: pukulWita(sekarang, 3, 8),
       total: "Rp 300.000",
-      statusBayar: "Ditahan escrow",
+      statusBayar: bayar.ditahan,
       status: "active",
       titik: "Villa Tiying Tutul",
     },
@@ -151,7 +163,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       selesai: pukulWita(sekarang, 4, 10),
       kembaliPada: pukulWita(sekarang, 4, 10),
       total: "Rp 520.000",
-      statusBayar: "Ditahan escrow",
+      statusBayar: bayar.ditahan,
       status: "active",
       titik: "Hotel Pererenan",
     },
@@ -166,9 +178,9 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       selesai: pukulWita(sekarang, 1, 11),
       kembaliPada: pukulWita(sekarang, 1, 11),
       total: "Rp 190.000",
-      statusBayar: "Ditahan escrow",
+      statusBayar: bayar.ditahan,
       status: "active",
-      titik: "Kantor rental",
+      titik: kantor,
     },
 
     {
@@ -182,7 +194,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       selesai: pukulWita(sekarang, -6, 9),
       selesaiPada: pukulWita(sekarang, -6, 9),
       total: "Rp 215.000",
-      statusBayar: "Dana dilepas",
+      statusBayar: bayar.dilepas,
       status: "completed",
     },
     {
@@ -196,7 +208,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       selesai: pukulWita(sekarang, -8, 8),
       selesaiPada: pukulWita(sekarang, -8, 8),
       total: "Rp 1.140.000",
-      statusBayar: "Dana dilepas",
+      statusBayar: bayar.dilepas,
       status: "completed",
     },
     {
@@ -210,7 +222,7 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       selesai: pukulWita(sekarang, -5, 10),
       selesaiPada: pukulWita(sekarang, -5, 10),
       total: "Rp 150.000",
-      statusBayar: "Dana dilepas",
+      statusBayar: bayar.dilepas,
       status: "completed",
     },
 
@@ -224,9 +236,9 @@ function semuaPesanan(sekarang: number): Pesanan[] {
       mulai: pukulWita(sekarang, -3, 9),
       selesai: pukulWita(sekarang, -1, 9),
       total: "Rp 330.000",
-      statusBayar: "Dana dikembalikan",
+      statusBayar: bayar.dikembalikan,
       status: "cancelled",
-      alasan: "Dibatalkan penyewa",
+      alasan: p("Dibatalkan penyewa", "Cancelled by the renter"),
     },
   ];
 }
@@ -236,7 +248,17 @@ function semuaPesanan(sekarang: number): Pesanan[] {
 // chip "Kosong · 11" akan membuka daftar kosong. Plat unit yang sedang
 // disewa sengaja sama dengan plat di daftar pesanan, karena status "sedang
 // keluar" diturunkan dari pesanan berjalan, bukan disimpan dua kali.
-function semuaUnit(sekarang: number): Unit[] {
+function semuaUnit(sekarang: number, bahasa: Bahasa): Unit[] {
+  const en = bahasa === "en";
+  // Spesifikasi ditulis sekali dalam bahasa Indonesia lalu diterjemahkan.
+  const spek = (s: string) =>
+    en
+      ? s
+          .replace("matic", "automatic")
+          .replace("2 helm", "2 helmets")
+          .replace("1 helm", "1 helmet")
+          .replace("MPV 7 kursi · bensin", "7-seat MPV · petrol")
+      : s;
   const motor = (
     id: string,
     nama: string,
@@ -246,7 +268,7 @@ function semuaUnit(sekarang: number): Unit[] {
     hargaPerHari: number,
     status: Unit["status"] = "available",
     servisSampai?: number,
-  ): Unit => ({ id, nama, plat, foto, spesifikasi, hargaPerHari, status, servisSampai });
+  ): Unit => ({ id, nama, plat, foto, spesifikasi: spek(spesifikasi), hargaPerHari, status, servisSampai });
 
   return [
     // Enam unit di bawah platnya cocok dengan pesanan berstatus active.
@@ -274,12 +296,12 @@ function semuaUnit(sekarang: number): Unit[] {
   ];
 }
 
-export async function ambilUnit(): Promise<Unit[]> {
+export async function ambilUnit(bahasa: Bahasa = "id"): Promise<Unit[]> {
   const sekarang = await waktuServer();
-  return semuaUnit(sekarang);
+  return semuaUnit(sekarang, bahasa);
 }
 
-export async function ambilPesanan(): Promise<{
+export async function ambilPesanan(bahasa: Bahasa = "id"): Promise<{
   sekarangServer: number;
   pesanan: Pesanan[];
 }> {
@@ -288,126 +310,129 @@ export async function ambilPesanan(): Promise<{
   // menit lalu), jadi demo tidak pernah kehabisan pesanan menunggu. API
   // sungguhan mengembalikan createdAt tetap, dan pembatalan otomatis setelah
   // 1 jam harus terjadi di server, bukan hanya disembunyikan di client.
-  return { sekarangServer: sekarang, pesanan: semuaPesanan(sekarang) };
+  return { sekarangServer: sekarang, pesanan: semuaPesanan(sekarang, bahasa) };
 }
 
 // Pendapatan sengaja tidak diturunkan dari daftar pesanan: daftar itu hanya
 // contoh belasan pesanan, sementara angka di layar ini mewakili seluruh bulan
 // dari 18 unit. Menurunkannya akan membuat angka bulanan terlihat jauh lebih
 // kecil daripada di Beranda.
-function semuaPeriode(sekarang: number): Periode[] {
+function semuaPeriode(sekarang: number, bahasa: Bahasa): Periode[] {
+  const p = t(bahasa);
+  /** "12 Sep 09.24" (id) atau "12 Sep 09:24" (en). */
+  const waktu = (geserHari: number, jam: number, menit = 0) => {
+    const w = pukulWita(sekarang, geserHari, jam, menit);
+    return `${tanggalSingkat(w, bahasa)} ${jamSaja(w, bahasa)}`;
+  };
+  const masukEscrow = p("Dana masuk escrow", "Funds into escrow");
+  const pencairan = p("Pencairan ke rekening", "Payout to bank account");
+
   const transaksiTerbaru: Transaksi[] = [
     {
       id: "tr-01",
-      judul: "Dana masuk escrow · Honda Vario 160",
-      meta: `${tanggalSingkat(pukulWita(sekarang, 0, 9, 24))} 09.24 · Dewi Anggraini · BCA VA`,
+      judul: `${masukEscrow} · Honda Vario 160`,
+      meta: `${waktu(0, 9, 24)} · Dewi Anggraini · BCA VA`,
       nilai: 85_500,
       arah: "masuk",
     },
     {
       id: "tr-02",
-      judul: "Dana dilepas · Honda Scoopy 2023",
-      meta: `${tanggalSingkat(pukulWita(sekarang, 0, 9, 5))} 09.05 · Adi Prasetyo · unit sudah kembali`,
+      judul: `${p("Dana dilepas", "Funds released")} · Honda Scoopy 2023`,
+      meta: `${waktu(0, 9, 5)} · Adi Prasetyo · ${p("unit sudah kembali", "vehicle returned")}`,
       nilai: 147_000,
       arah: "masuk",
     },
     {
       id: "tr-03",
-      judul: "Biaya layanan · pesanan #RA-284102",
-      meta: `${tanggalSingkat(pukulWita(sekarang, 0, 9, 5))} 09.05 · dipotong otomatis`,
+      judul: p("Biaya layanan · pesanan #RA-284102", "Service fee · booking #RA-284102"),
+      meta: `${waktu(0, 9, 5)} · ${p("dipotong otomatis", "deducted automatically")}`,
       nilai: 10_750,
       arah: "keluar",
     },
     {
       id: "tr-04",
-      judul: "Dana masuk escrow · Toyota Avanza 2021",
-      meta: `${tanggalSingkat(pukulWita(sekarang, -1, 20, 14))} 20.14 · Michael Lim · BCA VA`,
+      judul: `${masukEscrow} · Toyota Avanza 2021`,
+      meta: `${waktu(-1, 20, 14)} · Michael Lim · BCA VA`,
       nilai: 342_000,
       arah: "masuk",
     },
     {
       id: "tr-05",
-      judul: "Pencairan ke rekening",
-      meta: `${tanggalSingkat(pukulWita(sekarang, -3, 10))} 10.00 · BCA ···4471`,
+      judul: pencairan,
+      meta: `${waktu(-3, 10)} · BCA ···4471`,
       nilai: 6_200_000,
       arah: "keluar",
     },
   ];
 
-  const bulanIni = namaBulan(sekarang);
-  const bulanLalu = namaBulan(sekarang, -1);
+  const bulanIni = namaBulan(sekarang, 0, bahasa);
+  const bulanLalu = namaBulan(sekarang, -1, bahasa);
+  const tahun = new Date(sekarang).getFullYear();
   const tanggalHariIni = new Intl.DateTimeFormat("id-ID", {
     timeZone: "Asia/Makassar",
     day: "numeric",
   }).format(sekarang);
+  const sumber = (motor: number, mobil: number, tambahan: number) => [
+    { label: p("Motor", "Scooters"), nilai: motor },
+    { label: p("Mobil", "Cars"), nilai: mobil },
+    { label: p("Tambahan", "Extras"), nilai: tambahan },
+  ];
 
   return [
     {
       kunci: "bulan-ini",
-      label: `${bulanIni} berjalan`,
-      rentang: `1 – ${tanggalHariIni} ${bulanIni} ${new Date(sekarang).getFullYear()}`,
+      label: p(`${bulanIni} berjalan`, `${bulanIni} to date`),
+      rentang: `1 – ${tanggalHariIni} ${bulanIni} ${tahun}`,
       kotor: 24_800_000,
       biaya: 1_240_000,
       bersih: 23_560_000,
-      bandingan: `naik 18% dari ${bulanLalu}`,
+      bandingan: p(`naik 18% dari ${bulanLalu}`, `up 18% from ${bulanLalu}`),
       transaksi: transaksiTerbaru,
-      sumber: [
-        { label: "Motor", nilai: 15_800_000 },
-        { label: "Mobil", nilai: 7_400_000 },
-        { label: "Tambahan", nilai: 1_600_000 },
-      ],
+      sumber: sumber(15_800_000, 7_400_000, 1_600_000),
     },
     {
       kunci: "bulan-lalu",
-      label: `${bulanLalu} penuh`,
-      rentang: `${bulanLalu} ${new Date(sekarang).getFullYear()}`,
+      label: p(`${bulanLalu} penuh`, `All of ${bulanLalu}`),
+      rentang: `${bulanLalu} ${tahun}`,
       kotor: 21_000_000,
       biaya: 1_050_000,
       bersih: 19_950_000,
-      bandingan: "naik 9% dari bulan sebelumnya",
+      bandingan: p("naik 9% dari bulan sebelumnya", "up 9% from the month before"),
       transaksi: [
         {
           id: "tr-11",
-          judul: "Pencairan ke rekening",
-          meta: `${tanggalSingkat(pukulWita(sekarang, -24, 10))} 10.00 · BCA ···4471`,
+          judul: pencairan,
+          meta: `${waktu(-24, 10)} · BCA ···4471`,
           nilai: 8_400_000,
           arah: "keluar",
         },
         {
           id: "tr-12",
-          judul: "Dana masuk escrow · Yamaha NMAX 155",
-          meta: `${tanggalSingkat(pukulWita(sekarang, -26, 15, 40))} 15.40 · Tom Becker · BCA VA`,
+          judul: `${masukEscrow} · Yamaha NMAX 155`,
+          meta: `${waktu(-26, 15, 40)} · Tom Becker · BCA VA`,
           nilai: 99_000,
           arah: "masuk",
         },
         {
           id: "tr-13",
-          judul: "Denda keterlambatan · Honda Beat 2022",
-          meta: `${tanggalSingkat(pukulWita(sekarang, -28, 11))} 11.00 · Gede Surya`,
+          judul: `${p("Denda keterlambatan", "Late fee")} · Honda Beat 2022`,
+          meta: `${waktu(-28, 11)} · Gede Surya`,
           nilai: 60_000,
           arah: "masuk",
         },
       ],
-      sumber: [
-        { label: "Motor", nilai: 13_400_000 },
-        { label: "Mobil", nilai: 6_200_000 },
-        { label: "Tambahan", nilai: 1_400_000 },
-      ],
+      sumber: sumber(13_400_000, 6_200_000, 1_400_000),
     },
     {
       kunci: "90-hari",
-      label: "90 hari terakhir",
-      rentang: `90 hari sampai ${tanggalSingkat(sekarang)}`,
+      label: p("90 hari terakhir", "Last 90 days"),
+      rentang: p(`90 hari sampai ${tanggalSingkat(sekarang)}`, `90 days to ${tanggalSingkat(sekarang, bahasa)}`),
       kotor: 62_400_000,
       biaya: 3_120_000,
       bersih: 59_280_000,
-      bandingan: "rata-rata Rp 20,8jt per bulan",
+      bandingan: p("rata-rata Rp 20,8jt per bulan", "average Rp 20.8M per month"),
       transaksi: transaksiTerbaru,
-      sumber: [
-        { label: "Motor", nilai: 39_500_000 },
-        { label: "Mobil", nilai: 18_700_000 },
-        { label: "Tambahan", nilai: 4_200_000 },
-      ],
+      sumber: sumber(39_500_000, 18_700_000, 4_200_000),
     },
   ];
 }
@@ -415,42 +440,51 @@ function semuaPeriode(sekarang: number): Periode[] {
 // Catatan serah terima yang sudah tercatat, dikunci ke id pesanan. Jadwalnya
 // sendiri tidak disimpan di sini: layar Serah terima menurunkannya dari
 // pesanan berjalan, jadi pesanan yang baru diterima langsung muncul.
-export async function ambilCatatanSerah(): Promise<Record<string, CatatanSerah>> {
+export async function ambilCatatanSerah(bahasa: Bahasa = "id"): Promise<Record<string, CatatanSerah>> {
+  const p = t(bahasa);
+  // Nama berkas foto memakai label Indonesia; yang tampil ikut bahasa.
+  const sisi = ["depan", "belakang", "kiri", "kanan"] as const;
+  const labelSisi: Record<(typeof sisi)[number], string> = {
+    depan: p("depan", "front"),
+    belakang: p("belakang", "rear"),
+    kiri: p("kiri", "left"),
+    kanan: p("kanan", "right"),
+  };
+  const helm = p("2 · jas hujan 1", "2 · 1 raincoat");
+
   return {
     "RA-284102-antar": {
-      sisi: ["depan", "belakang", "kiri", "kanan"].map((label) => ({
-        label,
-        foto: `/serah-terima/scoopy-${label}.webp`,
-      })),
+      sisi: sisi.map((s) => ({ label: labelSisi[s], foto: `/serah-terima/scoopy-${s}.webp` })),
       kondisi: [
-        { label: "Odometer", nilai: "18.204 km" },
-        { label: "Bensin", nilai: "Setengah" },
-        { label: "Helm", nilai: "2 · jas hujan 1" },
-        { label: "Goresan tercatat", nilai: "Spakbor kanan" },
+        { label: "Odometer", nilai: p("18.204 km", "18,204 km") },
+        { label: p("Bensin", "Fuel"), nilai: p("Setengah", "Half") },
+        { label: p("Helm", "Helmets"), nilai: helm },
+        { label: p("Goresan tercatat", "Recorded scratches"), nilai: p("Spakbor kanan", "Right fender") },
       ],
     },
     "RA-284077-ambil": {
-      sisi: ["depan", "belakang", "kiri", "kanan"].map((label) => ({ label, foto: null })),
+      sisi: sisi.map((s) => ({ label: labelSisi[s], foto: null })),
       kondisi: [
-        { label: "Odometer", nilai: "24.910 km" },
-        { label: "Bensin", nilai: "Seperempat" },
-        { label: "Helm", nilai: "2 · jas hujan 1" },
-        { label: "Goresan tercatat", nilai: "Tidak ada" },
+        { label: "Odometer", nilai: p("24.910 km", "24,910 km") },
+        { label: p("Bensin", "Fuel"), nilai: p("Seperempat", "Quarter") },
+        { label: p("Helm", "Helmets"), nilai: helm },
+        { label: p("Goresan tercatat", "Recorded scratches"), nilai: p("Tidak ada", "None") },
       ],
     },
   };
 }
 
-export async function ambilPendapatan(): Promise<Periode[]> {
+export async function ambilPendapatan(bahasa: Bahasa = "id"): Promise<Periode[]> {
   const sekarang = await waktuServer();
-  return semuaPeriode(sekarang);
+  return semuaPeriode(sekarang, bahasa);
 }
 
 // Delapan ulasan terbaru. Ringkasan di kolom kanan tetap memakai angka
 // sepanjang 12 bulan (142 ulasan) seperti spec, sedangkan chip filter
 // menghitung yang benar-benar tampil, supaya mengklik chip tidak membuka
 // daftar yang isinya jauh lebih sedikit dari angkanya.
-function semuaUlasan(sekarang: number): Ulasan[] {
+function semuaUlasan(sekarang: number, bahasa: Bahasa): Ulasan[] {
+  const p = t(bahasa);
   return [
     {
       id: "ul-01",
@@ -458,7 +492,10 @@ function semuaUlasan(sekarang: number): Ulasan[] {
       unit: "Yamaha NMAX 155",
       skor: 5,
       tanggal: pukulWita(sekarang, -1, 18),
-      isi: "Unit bersih, diantar tepat jam 9. Foto serah terima bikin tenang, jadi tidak ada debat waktu kembalikan.",
+      isi: p(
+        "Unit bersih, diantar tepat jam 9. Foto serah terima bikin tenang, jadi tidak ada debat waktu kembalikan.",
+        "Clean scooter, delivered right at 9. The handover photos put my mind at ease, so there was no argument at return.",
+      ),
     },
     {
       id: "ul-02",
@@ -466,9 +503,14 @@ function semuaUlasan(sekarang: number): Ulasan[] {
       unit: "Honda PCX 160",
       skor: 4,
       tanggal: pukulWita(sekarang, -3, 11),
-      isi: "Motor oke, tapi jas hujan cuma satu padahal disewa berdua.",
-      balasan:
+      isi: p(
+        "Motor oke, tapi jas hujan cuma satu padahal disewa berdua.",
+        "The scooter was fine, but there was only one raincoat even though two of us were riding.",
+      ),
+      balasan: p(
         "Maaf ya Kevin, jas hujan kedua sudah kami tambahkan di semua unit sejak minggu ini.",
+        "Sorry about that, Kevin. We've added a second raincoat to every vehicle as of this week.",
+      ),
     },
     {
       id: "ul-03",
@@ -476,7 +518,10 @@ function semuaUlasan(sekarang: number): Ulasan[] {
       unit: "Honda Beat 2022",
       skor: 5,
       tanggal: pukulWita(sekarang, -4, 9),
-      isi: "Harga jelas di depan, tidak ada biaya tambahan waktu ambil unit.",
+      isi: p(
+        "Harga jelas di depan, tidak ada biaya tambahan waktu ambil unit.",
+        "Clear price up front, no extra charges when I picked up the scooter.",
+      ),
     },
     {
       id: "ul-04",
@@ -484,7 +529,10 @@ function semuaUlasan(sekarang: number): Ulasan[] {
       unit: "Toyota Avanza 2021",
       skor: 3.5,
       tanggal: pukulWita(sekarang, -6, 16),
-      isi: "Mobil sesuai foto, cuma telat 30 menit waktu antar karena macet.",
+      isi: p(
+        "Mobil sesuai foto, cuma telat 30 menit waktu antar karena macet.",
+        "The car matched the photos, it was just 30 minutes late on delivery because of traffic.",
+      ),
     },
     {
       id: "ul-05",
@@ -492,8 +540,14 @@ function semuaUlasan(sekarang: number): Ulasan[] {
       unit: "Honda Scoopy 2023",
       skor: 5,
       tanggal: pukulWita(sekarang, -8, 13),
-      isi: "Scoopy-nya masih baru dan bensin penuh waktu diantar. Prosesnya cepat, tidak perlu chat panjang.",
-      balasan: "Terima kasih Rina, senang bisa membantu. Sampai jumpa lagi di Canggu.",
+      isi: p(
+        "Scoopy-nya masih baru dan bensin penuh waktu diantar. Prosesnya cepat, tidak perlu chat panjang.",
+        "The Scoopy was nearly new and had a full tank on delivery. Quick process, no long chats needed.",
+      ),
+      balasan: p(
+        "Terima kasih Rina, senang bisa membantu. Sampai jumpa lagi di Canggu.",
+        "Thank you Rina, happy to help. See you again in Canggu.",
+      ),
     },
     {
       id: "ul-06",
@@ -501,9 +555,14 @@ function semuaUlasan(sekarang: number): Ulasan[] {
       unit: "Yamaha NMAX 155",
       skor: 3.5,
       tanggal: pukulWita(sekarang, -11, 10),
-      isi: "Pengembalian agak lama karena saya harus menunggu pemilik datang ke titik janjian.",
-      balasan:
+      isi: p(
+        "Pengembalian agak lama karena saya harus menunggu pemilik datang ke titik janjian.",
+        "The return took a while because I had to wait for the owner to arrive at the meeting point.",
+      ),
+      balasan: p(
         "Terima kasih masukannya Tom. Sekarang jadwal ambil kembali kami kunci di aplikasi supaya tidak bentrok.",
+        "Thanks for the feedback, Tom. We now lock return pick-up times in the app so they don't clash.",
+      ),
     },
     {
       id: "ul-07",
@@ -511,8 +570,14 @@ function semuaUlasan(sekarang: number): Ulasan[] {
       unit: "Yamaha Fino 2021",
       skor: 4.5,
       tanggal: pukulWita(sekarang, -14, 15),
-      isi: "Fino nyaman buat keliling Canggu, helm bersih dan wangi.",
-      balasan: "Makasih Ayu, helm memang kami cuci tiap unit kembali.",
+      isi: p(
+        "Fino nyaman buat keliling Canggu, helm bersih dan wangi.",
+        "The Fino was comfortable for getting around Canggu, and the helmets were clean and fresh.",
+      ),
+      balasan: p(
+        "Makasih Ayu, helm memang kami cuci tiap unit kembali.",
+        "Thanks Ayu, we wash the helmets every time a vehicle comes back.",
+      ),
     },
     {
       id: "ul-08",
@@ -520,19 +585,25 @@ function semuaUlasan(sekarang: number): Ulasan[] {
       unit: "Vespa Sprint 2021",
       skor: 5,
       tanggal: pukulWita(sekarang, -18, 12),
-      isi: "Vespa terawat, pemiliknya ramah dan balas cepat sebelum saya pesan.",
-      balasan: "Terima kasih Nicolas, titip salam buat rombongannya.",
+      isi: p(
+        "Vespa terawat, pemiliknya ramah dan balas cepat sebelum saya pesan.",
+        "Well-kept Vespa, and the owner was friendly and replied quickly before I booked.",
+      ),
+      balasan: p(
+        "Terima kasih Nicolas, titip salam buat rombongannya.",
+        "Thank you Nicolas, say hi to the rest of your group.",
+      ),
     },
   ];
 }
 
-export async function ambilUlasan(): Promise<{
+export async function ambilUlasan(bahasa: Bahasa = "id"): Promise<{
   daftar: Ulasan[];
   ringkasan: RingkasanUlasan;
 }> {
   const sekarang = await waktuServer();
   return {
-    daftar: semuaUlasan(sekarang),
+    daftar: semuaUlasan(sekarang, bahasa),
     ringkasan: {
       rata: 4.9,
       total: 142,
@@ -547,29 +618,31 @@ export async function ambilUlasan(): Promise<{
   };
 }
 
-export async function ambilBeranda(): Promise<DataBeranda> {
+export async function ambilBeranda(bahasa: Bahasa = "id"): Promise<DataBeranda> {
   const sekarang = await waktuServer();
-  const berjalan = semuaPesanan(sekarang).filter((p) => p.status === "active");
+  const p = t(bahasa);
+  const berjalan = semuaPesanan(sekarang, bahasa).filter((x) => x.status === "active");
 
-  const daftar: UnitKeluar[] = berjalan.slice(0, 4).map((p) => ({
-    id: p.id,
-    nama: p.unit,
-    plat: p.plat,
-    penyewa: p.penyewa,
-    foto: p.foto,
-    kembaliPada: p.kembaliPada ?? p.selesai,
+  const daftar: UnitKeluar[] = berjalan.slice(0, 4).map((x) => ({
+    id: x.id,
+    nama: x.unit,
+    plat: x.plat,
+    penyewa: x.penyewa,
+    foto: x.foto,
+    kembaliPada: x.kembaliPada ?? x.selesai,
   }));
 
   const unitKeluarPerHari = [6, 8, 3, 2, 4, 4, 7];
+  const bulanLalu = namaBulan(sekarang, -1, bahasa);
 
   return {
     sekarang,
     pesananHariIni: { masuk: 7, dikonfirmasi: 5 },
     unitKeluar: { jumlah: berjalan.length, totalUnit: 18, daftar },
     pendapatan: {
-      bulan: namaBulan(sekarang),
-      nilai: "Rp 24,8jt",
-      keterangan: `naik 18% dari ${namaBulan(sekarang, -1)}`,
+      bulan: namaBulan(sekarang, 0, bahasa),
+      nilai: p("Rp 24,8jt", "Rp 24.8M"),
+      keterangan: p(`naik 18% dari ${bulanLalu}`, `up 18% from ${bulanLalu}`),
     },
     mingguIni: unitKeluarPerHari.map((jumlah, i) => ({
       tanggal: pukulWita(sekarang, i, 12),

@@ -7,36 +7,67 @@
 // Poin 1 dan 2 ditulis ulang pemilik proyek 25 Okt 2026.
 
 import Image from "next/image";
+import { kamus } from "@/lib/i18n";
+import { bahasaAktif } from "@/lib/i18n-server";
 
-const checklist = [
-  {
-    judul: "Bandingkan harga rental tanpa ribet",
-    body: "Masukkan tanggal dan tempat, semua kendaraan yang dapat disewa langsung muncul.",
+const TEKS = kamus({
+  id: {
+    kicker: "Kenapa rentalaja",
+    judul: "Ketersediaan yang jujur, harga yang tidak berubah di tengah jalan.",
+    checklist: [
+      {
+        judul: "Bandingkan harga rental tanpa ribet",
+        body: "Masukkan tanggal dan tempat, semua kendaraan yang dapat disewa langsung muncul.",
+      },
+      {
+        judul: "Sistem peminjamannya aman",
+        body: "Kondisi unit didokumentasikan saat diantar dan dikembalikan melalui foto serah terima.",
+      },
+      {
+        judul: "Tanpa deposit tunai ke pemilik",
+        body: "Pembayaranmu ditahan rentalaja sampai unit kembali. Semua biaya tertulis sebelum bayar.",
+      },
+    ],
+    altSerah: "Honda Scoopy putih siap diserahkan ke penyewa",
   },
-  {
-    judul: "Sistem peminjamannya aman",
-    body: "Kondisi unit didokumentasikan saat diantar dan dikembalikan melalui foto serah terima.",
+  en: {
+    kicker: "Why rentalaja",
+    judul: "Honest availability, prices that don't change halfway.",
+    checklist: [
+      {
+        judul: "Compare rental prices without the hassle",
+        body: "Enter your dates and location, and every vehicle you can rent shows up right away.",
+      },
+      {
+        judul: "A safe rental process",
+        body: "The vehicle's condition is documented with handover photos at delivery and at return.",
+      },
+      {
+        judul: "No cash deposit to the owner",
+        body: "Your payment is held by rentalaja until the vehicle is returned. Every cost is listed before you pay.",
+      },
+    ],
+    altSerah: "White Honda Scoopy ready to be handed over to the renter",
   },
-  {
-    judul: "Tanpa deposit tunai ke pemilik",
-    body: "Pembayaranmu ditahan rentalaja sampai unit kembali. Semua biaya tertulis sebelum bayar.",
-  },
-];
+});
 
-export default function WhyUs() {
+export default async function WhyUs() {
+  const bahasa = await bahasaAktif();
+  const t = TEKS[bahasa];
+
   return (
     <section aria-labelledby="judul-kenapa" className="py-64 md:py-96">
-      <div className="container-beranda grid items-center gap-32 md:gap-48 min-[75rem]:grid-cols-[minmax(0,1fr)_576px]">
+      <div className="container-beranda grid items-center gap-32 md:gap-48 min-[75rem]:grid-cols-[minmax(0,1fr)_--spacing(576)]">
         <div>
           <p className="text-b6-sm font-bold tracking-[0.08em] text-green-700 uppercase md:text-b6">
-            Kenapa rentalaja
+            {t.kicker}
           </p>
           <h2 id="judul-kenapa" className="mt-12 max-w-560 text-b2-sm text-balance md:text-b2">
-            Ketersediaan yang jujur, harga yang tidak berubah di tengah jalan.
+            {t.judul}
           </h2>
           <ul className="mt-24 grid gap-24 md:mt-40">
-            {checklist.map((c) => (
-              <li key={c.judul} className="grid grid-cols-[28px_1fr] gap-16">
+            {t.checklist.map((c) => (
+              <li key={c.judul} className="grid grid-cols-[--spacing(28)_1fr] gap-16">
                 <span
                   aria-hidden
                   className="mt-1 grid size-28 place-items-center rounded-full bg-green-700 text-white"
@@ -62,11 +93,11 @@ export default function WhyUs() {
           </ul>
         </div>
 
-        <div className="grid gap-16 md:grid-cols-[280px_280px] md:grid-rows-[232px_232px]">
+        <div className="grid gap-16 md:grid-cols-[--spacing(280)_--spacing(280)] md:grid-rows-[--spacing(232)_--spacing(232)]">
           <div className="bingkai-foto relative h-300 overflow-hidden rounded-b-lg md:row-span-2 md:h-auto md:rounded-b-xl">
             <Image
               src="/landing/serah-terima.webp"
-              alt="Honda Scoopy putih siap diserahkan ke penyewa"
+              alt={t.altSerah}
               fill
               sizes="(min-width: 768px) 280px, 100vw"
               className="foto-unit object-cover object-[45%_55%]"

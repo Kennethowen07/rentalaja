@@ -94,7 +94,7 @@ export function ThumbnailUnit({
   return (
     <div className={`relative shrink-0 overflow-hidden rounded-m-thumb bg-mitra-panel ${className}`}>
       {foto && (
-        <Image src={foto} alt={`Foto ${nama}`} fill sizes="96px" className="object-cover" />
+        <Image src={foto} alt={nama} fill sizes="96px" className="object-cover" />
       )}
     </div>
   );

@@ -5,13 +5,22 @@
 // bagian ini yang butuh state. Petanya OpenStreetMap lewat PetaLokasi.
 
 import { useState } from "react";
+import { useBahasa } from "@/components/BahasaProvider";
 import Modal from "@/components/ui/Modal";
 import PetaLokasi from "@/components/ui/PetaLokasi";
+import { kamus } from "@/lib/i18n";
 import { pesananAktif } from "@/lib/mock/pesanan-aktif";
+
+const TEKS = kamus({
+  id: { tombol: "Lihat titik pengembalian", judul: "Titik pengembalian", mengerti: "Mengerti" },
+  en: { tombol: "View return point", judul: "Return point", mengerti: "Got it" },
+});
 
 export default function ReturnPointButton() {
   const [terbuka, setTerbuka] = useState(false);
-  const titik = pesananAktif.titikPengembalian;
+  const { bahasa } = useBahasa();
+  const t = TEKS[bahasa];
+  const titik = pesananAktif[bahasa].titikPengembalian;
 
   return (
     <>
@@ -21,12 +30,12 @@ export default function ReturnPointButton() {
         onClick={() => setTerbuka(true)}
         className="mt-8 w-full rounded-input border border-line py-10 text-link-sm text-ink transition-colors duration-160 ease-base hover:border-green-700 hover:text-green-700"
       >
-        Lihat titik pengembalian
+        {t.tombol}
       </button>
 
       {terbuka && (
         <Modal
-          judul="Titik pengembalian"
+          judul={t.judul}
           onTutup={() => setTerbuka(false)}
           lebar="max-w-[720px]"
         >
@@ -40,7 +49,7 @@ export default function ReturnPointButton() {
             onClick={() => setTerbuka(false)}
             className="mt-14 w-full rounded-input bg-green-700 py-13 text-btn text-white transition-colors duration-160 ease-base hover:bg-green-800"
           >
-            Mengerti
+            {t.mengerti}
           </button>
         </Modal>
       )}

@@ -2,17 +2,20 @@
 // Testimoni ini fiktif; lihat catatan di lib/mock/testimonials.ts.
 
 import Image from "next/image";
+import { bahasaAktif } from "@/lib/i18n-server";
 import { testimoni } from "@/lib/mock/testimonials";
 
-export default function Testimonials() {
+export default async function Testimonials() {
+  const bahasa = await bahasaAktif();
+
   return (
     <section aria-labelledby="judul-testimoni" className="bg-green-900 py-64 text-white md:py-96">
       <div className="container-beranda">
         <h2 id="judul-testimoni" className="text-b2-sm md:text-b2">
-          Kata Penyewa
+          {bahasa === "en" ? "What Renters Say" : "Kata Penyewa"}
         </h2>
         <ul className="mt-24 md:mt-40 grid gap-16 md:grid-cols-3 md:gap-24">
-          {testimoni.map((t) => (
+          {testimoni[bahasa].map((t) => (
             <li key={t.id}>
               <figure className="flex h-full flex-col rounded-b-lg border border-white/12 bg-white/6 p-24 md:rounded-b-xl md:p-32">
                 <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden className="size-32 text-mint-ikon">

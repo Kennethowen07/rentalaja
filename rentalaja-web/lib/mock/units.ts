@@ -1,5 +1,7 @@
 // Mock data. README/State Management: idealnya di-fetch dari
-// GET /api/units/popular?limit=3 — boleh hardcode dulu memakai copy desain.
+// GET /api/units/popular?limit=4 — boleh hardcode dulu memakai copy desain.
+// Unit keempat (Vespa) ditambah 25 Okt 2026; harga dan areanya sama dengan
+// lib/mock/search.ts.
 // Seluruh mock terkumpul di lib/mock/ supaya mudah diganti API nanti.
 
 export type Unit = {
@@ -34,6 +36,16 @@ export const unitPopuler: Unit[] = [
     hargaPerHari: 110000,
     fotoLabel: "foto unit",
     foto: "/units/yamaha-nmax-2022.webp",
+  },
+  {
+    id: "vespa-sprint-2021",
+    nama: "Vespa Sprint 2021",
+    rating: "4,6",
+    area: "Seminyak",
+    spesifikasi: "skutik 150cc",
+    hargaPerHari: 145000,
+    fotoLabel: "foto unit",
+    foto: "/units/vespa-sprint-2021.webp",
   },
   {
     id: "toyota-avanza-2021",

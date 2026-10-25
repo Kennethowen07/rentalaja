@@ -14,7 +14,24 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
+import { useBahasa } from "@/components/BahasaProvider";
 import { alamatDari, cariAlamat, type Koordinat } from "@/lib/geocode";
+import { kamus } from "@/lib/i18n";
+
+const TEKS = kamus({
+  id: {
+    mencari: "Mencari lokasi…",
+    tidakKetemu: "Alamat belum ketemu di peta. Tulis nama jalan atau daerahnya, atau klik peta.",
+    gagal: "Peta tidak bisa mencari alamat saat ini. Klik peta untuk memilih titik.",
+    pilih: "Klik peta atau geser pin untuk memilih titik antar.",
+  },
+  en: {
+    mencari: "Finding the location…",
+    tidakKetemu: "Couldn't find that address on the map. Type the street or area name, or click the map.",
+    gagal: "The map can't look up addresses right now. Click the map to pick a point.",
+    pilih: "Click the map or drag the pin to choose the delivery point.",
+  },
+});
 
 const PetaLeaflet = dynamic(() => import("@/components/ui/PetaLeaflet"), {
   ssr: false,
@@ -38,6 +55,8 @@ export default function PetaLokasi({
   /** Ukuran dan margin kotak peta, mis. "mt-8 h-240" atau "aspect-[16/9]". */
   className?: string;
 }) {
+  const { bahasa } = useBahasa();
+  const t = TEKS[bahasa];
   const [posisi, setPosisi] = useState<Koordinat>(PUSAT_AWAL);
   const [status, setStatus] = useState<Status>("siap");
   // Alamat terakhir yang diisi dari peta. Alamat itu tidak dicari ulang,
@@ -90,13 +109,13 @@ export default function PetaLokasi({
 
   const keterangan =
     status === "mencari"
-      ? "Mencari lokasi…"
+      ? t.mencari
       : status === "tidakKetemu"
-        ? "Alamat belum ketemu di peta. Tulis nama jalan atau daerahnya, atau klik peta."
+        ? t.tidakKetemu
         : status === "gagal"
-          ? "Peta tidak bisa mencari alamat saat ini. Klik peta untuk memilih titik."
+          ? t.gagal
           : onPilihAlamat
-            ? "Klik peta atau geser pin untuk memilih titik antar."
+            ? t.pilih
             : null;
 
   return (

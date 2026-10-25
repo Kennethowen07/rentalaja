@@ -2,9 +2,9 @@
 // query ?saring=.
 
 export const filterUlasan = [
-  { kunci: "semua", label: "Semua" },
-  { kunci: "belum-dibalas", label: "Belum dibalas" },
-  { kunci: "skor-rendah", label: "Di bawah 4,0" },
+  { kunci: "semua", label: { id: "Semua", en: "All" } },
+  { kunci: "belum-dibalas", label: { id: "Belum dibalas", en: "Not replied" } },
+  { kunci: "skor-rendah", label: { id: "Di bawah 4,0", en: "Below 4.0" } },
 ] as const;
 
 export type KunciFilterUlasan = (typeof filterUlasan)[number]["kunci"];

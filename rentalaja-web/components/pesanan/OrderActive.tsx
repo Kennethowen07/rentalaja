@@ -1,18 +1,44 @@
 // Layar 5 · Pesanan aktif.
 //
-// Layar ini server component. Satu-satunya bagian yang butuh state — tombol
-// "Lihat titik pengembalian" dan pop-up petanya — dipisah ke
-// ReturnPointButton. Tombol aksi lain di panel kanan masih <button> tanpa
-// handler: layar tujuannya (hubungi penyedia, perpanjang, reschedule, lapor
-// masalah) belum ada di scope.
+// Layar ini server component. Bagian yang butuh state dipisah: tombol
+// "Lihat titik pengembalian" dan pop-up petanya di ReturnPointButton, dan
+// "Hubungi penyedia" (perlu masuk, lalu ke /chat) di TombolHubungi. Tombol
+// "Perlu ubah?" masih <button> tanpa handler: layar tujuannya (perpanjang,
+// reschedule, lapor masalah) belum ada di scope.
 
 import Image from "next/image";
 import ReturnPointButton from "@/components/pesanan/ReturnPointButton";
-import { pesananAktif } from "@/lib/mock/pesanan-aktif";
+import TombolHubungi from "@/components/pesanan/TombolHubungi";
+import AvatarKosong from "@/components/ui/AvatarKosong";
+import { kamus } from "@/lib/i18n";
+import { bahasaAktif } from "@/lib/i18n-server";
+import { pesananAktif as dataPesanan } from "@/lib/mock/pesanan-aktif";
+
+const TEKS = kamus({
+  id: {
+    foto: (nama: string) => `Foto ${nama}`,
+    sampai: "sampai",
+    fotoSerah: (sisi: string) => `Foto serah terima ${sisi}`,
+    rincian: "Rincian pembayaran",
+    penyedia: "Penyedia",
+    perluUbah: "Perlu ubah?",
+  },
+  en: {
+    foto: (nama: string) => `Photo of ${nama}`,
+    sampai: "to",
+    fotoSerah: (sisi: string) => `Handover photo, ${sisi}`,
+    rincian: "Payment details",
+    penyedia: "Provider",
+    perluUbah: "Need to change something?",
+  },
+});
 
 const KARTU = "rounded-card border border-line p-18";
 
-export default function OrderActive() {
+export default async function OrderActive() {
+  const bahasa = await bahasaAktif();
+  const t = TEKS[bahasa];
+  const pesananAktif = dataPesanan[bahasa];
   const { unit, serahTerima, penyedia, perluUbah } = pesananAktif;
 
   return (
@@ -38,7 +64,7 @@ export default function OrderActive() {
                 <div className="relative h-68 w-92 shrink-0 overflow-hidden rounded-input">
                   <Image
                     src={unit.foto}
-                    alt={`Foto ${unit.nama}`}
+                    alt={t.foto(unit.nama)}
                     fill
                     sizes="92px"
                     className="object-cover"
@@ -46,30 +72,36 @@ export default function OrderActive() {
                 </div>
                 <div>
                   <h2 className="text-unit-name text-ink">{unit.nama}</h2>
-                  <p className="mt-3 text-body-sm text-muted">{unit.plat}</p>
-                  <p className="mt-2 text-body-sm text-muted">{unit.periode}</p>
+                  <p className="mt-3 text-body-sm text-ink">{unit.plat}</p>
+                  <p className="mt-2 flex items-center gap-8 text-body-sm text-muted">
+                    {unit.periode.mulai}
+                    <svg aria-label={t.sampai} role="img" viewBox="0 0 64 10" className="h-10 w-56 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 5h61M57 1l5 4-5 4" />
+                    </svg>
+                    {unit.periode.selesai}
+                  </p>
                 </div>
               </div>
 
               {/* Timeline. Tahap yang sudah lewat ditandai bar hijau DAN
                   centang pada labelnya — bukan warna saja. */}
               <ol className="mt-20 flex">
-                {pesananAktif.tahap.map((t, i) => (
-                  <li key={t.label} className={i > 0 ? "ml-6 flex-1" : "flex-1"}>
+                {pesananAktif.tahap.map((tahap, i) => (
+                  <li key={tahap.label} className={i > 0 ? "ml-6 flex-1" : "flex-1"}>
                     <div
                       className={`h-4 rounded-bar ${
-                        t.selesai ? "bg-green-700" : "bg-line"
+                        tahap.selesai ? "bg-green-700" : "bg-line"
                       }`}
                     />
                     <p
                       className={`mt-7 text-step-label ${
-                        t.selesai ? "text-ink" : "text-muted"
+                        tahap.selesai ? "text-ink" : "text-muted"
                       }`}
                     >
-                      {t.selesai ? `✓ ${t.label}` : t.label}
+                      {tahap.selesai ? `✓ ${tahap.label}` : tahap.label}
                     </p>
                     <p className="text-testimonial-meta text-muted">
-                      {t.waktu}
+                      {tahap.waktu}
                     </p>
                   </li>
                 ))}
@@ -80,8 +112,7 @@ export default function OrderActive() {
           {/* Serah terima berfoto */}
           <section className={`${KARTU} mt-14`}>
             <h2 className="text-section-sm text-ink">{serahTerima.judul}</h2>
-            <p className="mt-4 text-body-sm text-muted">{serahTerima.sub}</p>
-            <ul className="mt-12 grid grid-cols-2 gap-8 sm:grid-cols-4">
+            <ul className="mt-12 grid grid-cols-3 gap-8 sm:grid-cols-5">
               {serahTerima.sisi.map((s) => (
                 <li
                   key={s.label}
@@ -89,9 +120,9 @@ export default function OrderActive() {
                 >
                   <Image
                     src={s.foto}
-                    alt={`Foto serah terima sisi ${s.label}`}
+                    alt={t.fotoSerah(s.label)}
                     fill
-                    sizes="(min-width: 640px) 25vw, 50vw"
+                    sizes="(min-width: 640px) 20vw, 50vw"
                     className="object-cover"
                   />
                 </li>
@@ -102,7 +133,7 @@ export default function OrderActive() {
 
           {/* Rincian pembayaran */}
           <section className={`${KARTU} mt-14`}>
-            <h2 className="text-section-sm text-ink">Rincian pembayaran</h2>
+            <h2 className="text-section-sm text-ink">{t.rincian}</h2>
             <dl className="mt-11 grid gap-8">
               {pesananAktif.pembayaran.map((b) => (
                 <div key={b.label} className="flex justify-between gap-12">
@@ -123,28 +154,20 @@ export default function OrderActive() {
         {/* Panel kanan */}
         <div className="grid gap-14 lg:sticky lg:top-76">
           <section className={KARTU}>
-            <h2 className="text-panel text-ink">Penyedia</h2>
+            <h2 className="text-panel text-ink">{t.penyedia}</h2>
             <div className="mt-11 flex items-center gap-11">
-              <span
-                aria-hidden
-                className="size-42 shrink-0 rounded-pill bg-surface-2"
-              />
+              <AvatarKosong className="size-42" />
               <div>
                 <p className="text-panel text-ink">{penyedia.nama}</p>
                 <p className="mt-2 text-micro text-muted">{penyedia.meta}</p>
               </div>
             </div>
-            <button
-              type="button"
-              className="mt-13 w-full rounded-input bg-green-700 py-11 text-panel text-white transition-colors duration-160 ease-base hover:bg-green-800"
-            >
-              Hubungi penyedia
-            </button>
+            <TombolHubungi />
             <ReturnPointButton />
           </section>
 
           <section className={KARTU}>
-            <h2 className="text-panel text-ink">Perlu ubah?</h2>
+            <h2 className="text-panel text-ink">{t.perluUbah}</h2>
             <ul className="mt-11 grid gap-8">
               {perluUbah.aksi.map((a) => (
                 <li key={a.label}>

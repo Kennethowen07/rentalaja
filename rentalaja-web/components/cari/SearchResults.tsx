@@ -9,9 +9,11 @@
 
 import Link from "next/link";
 import ResultCard from "@/components/cari/ResultCard";
+import { jalur } from "@/lib/i18n";
+import { bahasaAktif } from "@/lib/i18n-server";
 import { type Kategori, type RentangTanggal, urutkanHasil } from "@/lib/mock/search";
 
-export default function SearchResults({
+export default async function SearchResults({
   ringkasanFilter,
   kategori,
   rentang,
@@ -22,6 +24,8 @@ export default function SearchResults({
   rentang: RentangTanggal;
 }) {
   const hasil = urutkanHasil(kategori);
+  const bahasa = await bahasaAktif();
+  const en = bahasa === "en";
 
   return (
     <>
@@ -60,13 +64,12 @@ export default function SearchResults({
               <path d="M3.5 10h17M8 3v4M16 3v4" />
             </svg>
             {rentang.label}
-            <span className="font-medium text-muted-kuat">· {rentang.hari} hari</span>
           </p>
           <Link
-            href="/"
+            href={jalur(bahasa, "/")}
             className="ml-auto flex min-h-44 items-center text-b6-sm font-semibold text-green-700 decoration-2 underline-offset-4 hover:underline md:text-b6"
           >
-            Ubah pencarian
+            {en ? "Change search" : "Ubah pencarian"}
           </Link>
         </div>
       </div>
@@ -74,12 +77,12 @@ export default function SearchResults({
       <div className="container-beranda pt-24 pb-28">
         {/* Baris jumlah unit dan "Urutkan" dihapus atas permintaan pemilik
             proyek. Judul tetap ada untuk pembaca layar. */}
-        <h1 className="sr-only">Hasil pencarian</h1>
+        <h1 className="sr-only">{en ? "Search results" : "Hasil pencarian"}</h1>
 
         <ul className="grid gap-16 sm:grid-cols-2 lg:grid-cols-3">
           {hasil.map((h) => (
             <li key={h.unit.id}>
-              <ResultCard hasil={h} sewa={{ mulai: rentang.mulai, hari: rentang.hari }} />
+              <ResultCard hasil={h} sewa={{ mulai: rentang.mulai, hari: rentang.hari }} bahasa={bahasa} />
             </li>
           ))}
         </ul>

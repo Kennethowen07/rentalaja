@@ -14,13 +14,15 @@
 // Kedua field tanggal membuka KalenderSewa, kalender buatan sendiri yang
 // menggantikan input tanggal bawaan browser (25 Okt 2026). Field area
 // membuka PanelArea: daftar area plus "Pilih di peta" yang mendeteksi area
-// terdekat dari pin.
+// terdekat dari pin. Field jam membuka PanelJam, juga pengganti <select>.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import KalenderSewa, { DURASI_MAKS, type ModeKalender } from "@/components/KalenderSewa";
 import PanelArea from "@/components/PanelArea";
-import { jamAmbilOptions } from "@/lib/mock/areas";
+import PanelJam from "@/components/PanelJam";
+import { useBahasa } from "@/components/BahasaProvider";
+import { kamus, lokal, type Bahasa } from "@/lib/i18n";
 import { heroStats } from "@/lib/mock/stats";
 import { isoTanggalLokal, parseIso, selisihHari } from "@/lib/tanggal-lokal";
 
@@ -40,34 +42,69 @@ type Errors = Partial<Record<FieldTervalidasi, string>>;
 /** Urutan fokus saat submit gagal, mengikuti urutan visual field. */
 const URUTAN_FIELD: FieldTervalidasi[] = ["area", "tanggalAmbil", "tanggalKembali", "jamAmbil"];
 
-const formatTanggal = new Intl.DateTimeFormat("id-ID", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
+const TEKS = kamus({
+  id: {
+    errArea: "Pilih area antar.",
+    errAmbil: "Pilih tanggal ambil.",
+    errLampau: "Tanggal tidak boleh di masa lalu.",
+    errKembali: "Pilih tanggal kembali.",
+    errUrutan: "Harus setelah tanggal ambil.",
+    errJam: "Pilih jam ambil.",
+    cariUnit: "Cari unit",
+    jenis: "Jenis kendaraan",
+    motor: "Motor",
+    mobil: "Mobil",
+    area: "Area antar",
+    ambil: "Tanggal ambil",
+    kembali: "Tanggal kembali",
+    jam: "Jam ambil",
+    jamPendek: "Jam ambil",
+  },
+  en: {
+    errArea: "Choose a delivery area.",
+    errAmbil: "Choose a pick-up date.",
+    errLampau: "The date can't be in the past.",
+    errKembali: "Choose a return date.",
+    errUrutan: "Must be after the pick-up date.",
+    errJam: "Choose a pick-up time.",
+    cariUnit: "Search",
+    jenis: "Vehicle type",
+    motor: "Scooter",
+    mobil: "Car",
+    area: "Delivery area",
+    ambil: "Pick-up date",
+    kembali: "Return date",
+    jam: "Pick-up time",
+    // "Pick-up time" terpotong di field jam yang sempit (148px di desktop).
+    jamPendek: "Time",
+  },
 });
+type Teks = (typeof TEKS)["id"];
 
-/** "25 Okt 2026". Intl menulis "Okt." dengan titik; titiknya dibuang. */
-function tampilTanggal(iso: string): string | null {
+/** "25 Okt 2026" / "25 Oct 2026". Intl menulis "Okt." dengan titik; titiknya dibuang. */
+function tampilTanggal(iso: string, bahasa: Bahasa): string | null {
   const d = parseIso(iso);
-  return d ? formatTanggal.format(d).replace(".", "") : null;
+  if (!d) return null;
+  const format = new Intl.DateTimeFormat(lokal(bahasa), { day: "numeric", month: "short", year: "numeric" });
+  return format.format(d).replace(".", "");
 }
 
 /** Fungsi murni, dipanggil saat render supaya pesan error selalu
  *  mencerminkan isi form saat ini. */
-function hitungErrors(form: SearchForm, minTanggal: string): Errors {
+function hitungErrors(form: SearchForm, minTanggal: string, t: Teks): Errors {
   const next: Errors = {};
-  if (!form.area) next.area = "Pilih area antar.";
+  if (!form.area) next.area = t.errArea;
   if (!form.tanggalAmbil) {
-    next.tanggalAmbil = "Pilih tanggal ambil.";
+    next.tanggalAmbil = t.errAmbil;
   } else if (minTanggal && form.tanggalAmbil < minTanggal) {
-    next.tanggalAmbil = "Tanggal tidak boleh di masa lalu.";
+    next.tanggalAmbil = t.errLampau;
   }
   if (!form.tanggalKembali) {
-    next.tanggalKembali = "Pilih tanggal kembali.";
+    next.tanggalKembali = t.errKembali;
   } else if (form.tanggalAmbil && form.tanggalKembali <= form.tanggalAmbil) {
-    next.tanggalKembali = "Harus setelah tanggal ambil.";
+    next.tanggalKembali = t.errUrutan;
   }
-  if (!form.jamAmbil) next.jamAmbil = "Pilih jam ambil.";
+  if (!form.jamAmbil) next.jamAmbil = t.errJam;
   return next;
 }
 
@@ -179,11 +216,10 @@ function Field({
 const kelasIsi = (terisi: boolean) =>
   `truncate text-b5-sm font-semibold whitespace-nowrap md:text-b5 ${terisi ? "text-ink" : "text-muted-kuat"}`;
 
-const kelasSelect =
-  "absolute inset-0 size-full appearance-none rounded-b-sm bg-transparent pr-36 pl-40 focus-visible:shadow-none md:pr-40 md:pl-48";
-
 export default function SearchCard() {
   const router = useRouter();
+  const { bahasa, jalur } = useBahasa();
+  const t = TEKS[bahasa];
 
   const [form, setForm] = useState<SearchForm>({
     jenis: "motor",
@@ -204,7 +240,9 @@ export default function SearchCard() {
   const areaWadahRef = useRef<HTMLDivElement>(null);
   const tanggalAmbilRef = useRef<HTMLButtonElement>(null);
   const tanggalKembaliRef = useRef<HTMLButtonElement>(null);
-  const jamAmbilRef = useRef<HTMLSelectElement>(null);
+  const [jamTerbuka, setJamTerbuka] = useState(false);
+  const jamAmbilRef = useRef<HTMLButtonElement>(null);
+  const jamWadahRef = useRef<HTMLDivElement>(null);
   const rentangRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -231,7 +269,17 @@ export default function SearchCard() {
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [areaTerbuka]);
 
-  const errors = hitungErrors(form, minTanggal);
+  // Dan untuk panel jam.
+  useEffect(() => {
+    if (!jamTerbuka) return;
+    function onPointerDown(e: PointerEvent) {
+      if (!jamWadahRef.current?.contains(e.target as Node)) setJamTerbuka(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [jamTerbuka]);
+
+  const errors = hitungErrors(form, minTanggal, t);
   // Jangan tampilkan error sebelum user pernah menekan "Cari unit".
   const errorTampil: Errors = sudahSubmit ? errors : {};
 
@@ -286,7 +334,7 @@ export default function SearchCard() {
       jam: form.jamAmbil,
       durasi: String(selisihHari(form.tanggalAmbil, form.tanggalKembali)),
     });
-    router.push(`/cari?${query.toString()}`);
+    router.push(jalur(`/cari?${query.toString()}`));
   }
 
   const atributError = (f: FieldTervalidasi) => ({
@@ -294,20 +342,21 @@ export default function SearchCard() {
     "aria-describedby": errorTampil[f] ? `${f}-error` : undefined,
   });
 
-  const tampilAmbil = tampilTanggal(form.tanggalAmbil);
-  const tampilKembali = tampilTanggal(form.tanggalKembali);
+  const tampilAmbil = tampilTanggal(form.tanggalAmbil, bahasa);
+  const tampilKembali = tampilTanggal(form.tanggalKembali, bahasa);
+  const tampilJam = form.jamAmbil && bahasa === "en" ? form.jamAmbil.replace(".", ":") : form.jamAmbil;
 
   return (
     <div className="container-beranda relative z-2 -mt-130 md:-mt-76">
       <form
         onSubmit={onSubmit}
         noValidate
-        aria-label="Cari unit"
+        aria-label={t.cariUnit}
         className="rounded-b-lg bg-white p-16 shadow-b-cari md:rounded-b-xl md:p-24"
       >
         <div
           role="group"
-          aria-label="Jenis kendaraan"
+          aria-label={t.jenis}
           className="flex h-44 w-full rounded-b-sm bg-green-100 p-4 md:inline-flex md:w-auto"
         >
           {(["motor", "mobil"] as const).map((jenis) => (
@@ -322,12 +371,12 @@ export default function SearchCard() {
                   : "text-ink hover:text-green-700"
               }`}
             >
-              {jenis === "motor" ? "Motor" : "Mobil"}
+              {jenis === "motor" ? t.motor : t.mobil}
             </button>
           ))}
         </div>
 
-        <div className="mt-12 grid grid-cols-2 items-start gap-12 md:mt-16 min-[75rem]:grid-cols-[minmax(0,1fr)_432px_185px_165px]">
+        <div className="mt-12 grid grid-cols-2 items-start gap-12 md:mt-16 min-[75rem]:grid-cols-[minmax(0,1fr)_--spacing(560)_--spacing(185)_--spacing(165)]">
           <div ref={areaWadahRef} className="relative col-span-2 min-[75rem]:col-span-1">
             <Field
               ikon={IKON.lokasi}
@@ -342,15 +391,16 @@ export default function SearchCard() {
                 ref={areaRef}
                 aria-haspopup="dialog"
                 aria-expanded={areaTerbuka}
-                aria-label={form.area ? `Area antar, ${form.area}` : "Area antar"}
+                aria-label={form.area ? `${t.area}, ${form.area}` : t.area}
                 {...atributError("area")}
                 onClick={() => {
                   setKalender(null);
+                  setJamTerbuka(false);
                   setAreaTerbuka((t) => !t);
                 }}
                 className={`absolute inset-0 rounded-b-sm pr-36 pl-40 text-left focus-visible:shadow-none md:pr-40 md:pl-48 ${kelasIsi(Boolean(form.area))}`}
               >
-                {form.area || "Area antar"}
+                {form.area || t.area}
               </button>
             </Field>
             {areaTerbuka && (
@@ -387,15 +437,16 @@ export default function SearchCard() {
                 ref={tanggalAmbilRef}
                 aria-haspopup="dialog"
                 aria-expanded={kalender === "ambil"}
-                aria-label={tampilAmbil ? `Tanggal ambil, ${tampilAmbil}` : "Tanggal ambil"}
+                aria-label={tampilAmbil ? `${t.ambil}, ${tampilAmbil}` : t.ambil}
                 {...atributError("tanggalAmbil")}
                 onClick={() => {
                   setAreaTerbuka(false);
+                  setJamTerbuka(false);
                   setKalender((k) => (k === "ambil" ? null : "ambil"));
                 }}
                 className={`absolute inset-0 rounded-b-sm pr-8 pl-40 text-left focus-visible:shadow-none md:pl-48 ${kelasIsi(Boolean(tampilAmbil))}`}
               >
-                {tampilAmbil ?? "Tanggal ambil"}
+                {tampilAmbil ?? t.ambil}
               </button>
             </Field>
 
@@ -411,18 +462,19 @@ export default function SearchCard() {
                 ref={tanggalKembaliRef}
                 aria-haspopup="dialog"
                 aria-expanded={kalender === "kembali"}
-                aria-label={tampilKembali ? `Tanggal kembali, ${tampilKembali}` : "Tanggal kembali"}
+                aria-label={tampilKembali ? `${t.kembali}, ${tampilKembali}` : t.kembali}
                 {...atributError("tanggalKembali")}
                 // Tanpa tanggal ambil, kalender meminta tanggal ambil dulu.
                 onClick={() => {
                   setAreaTerbuka(false);
+                  setJamTerbuka(false);
                   setKalender((k) =>
                     k === "kembali" ? null : form.tanggalAmbil ? "kembali" : "ambil",
                   );
                 }}
                 className={`absolute inset-0 rounded-b-sm pr-8 pl-40 text-left focus-visible:shadow-none md:pl-48 ${kelasIsi(Boolean(tampilKembali))}`}
               >
-                {tampilKembali ?? "Tanggal kembali"}
+                {tampilKembali ?? t.kembali}
               </button>
             </Field>
 
@@ -438,29 +490,47 @@ export default function SearchCard() {
             )}
           </div>
 
-          <Field ikon={IKON.jam} dropdown error={errorTampil.jamAmbil} errorId="jamAmbil-error">
-            <label htmlFor="jam-ambil" className="sr-only">
-              Jam ambil
-            </label>
-            <select
-              id="jam-ambil"
-              ref={jamAmbilRef}
-              required
-              value={form.jamAmbil}
-              {...atributError("jamAmbil")}
-              onChange={(e) => setForm((f) => ({ ...f, jamAmbil: e.target.value }))}
-              className={`${kelasSelect} ${kelasIsi(Boolean(form.jamAmbil))}`}
+          <div ref={jamWadahRef} className="relative">
+            <Field
+              ikon={IKON.jam}
+              dropdown
+              error={errorTampil.jamAmbil}
+              errorId="jamAmbil-error"
+              aktif={jamTerbuka}
             >
-              <option value="" disabled>
-                Jam ambil
-              </option>
-              {jamAmbilOptions.map((j) => (
-                <option key={j} value={j}>
-                  {j}
-                </option>
-              ))}
-            </select>
-          </Field>
+              <button
+                type="button"
+                id="jam-ambil"
+                ref={jamAmbilRef}
+                aria-haspopup="listbox"
+                aria-expanded={jamTerbuka}
+                aria-label={tampilJam ? `${t.jam}, ${tampilJam}` : t.jam}
+                {...atributError("jamAmbil")}
+                onClick={() => {
+                  setKalender(null);
+                  setAreaTerbuka(false);
+                  setJamTerbuka((t) => !t);
+                }}
+                className={`absolute inset-0 rounded-b-sm pr-36 pl-40 text-left focus-visible:shadow-none md:pr-40 md:pl-48 ${kelasIsi(Boolean(form.jamAmbil))}`}
+              >
+                {tampilJam || t.jamPendek}
+              </button>
+            </Field>
+            {jamTerbuka && (
+              <PanelJam
+                nilai={form.jamAmbil}
+                onPilih={(jam) => {
+                  setForm((f) => ({ ...f, jamAmbil: jam }));
+                  setJamTerbuka(false);
+                  jamAmbilRef.current?.focus();
+                }}
+                onTutup={() => {
+                  setJamTerbuka(false);
+                  jamAmbilRef.current?.focus();
+                }}
+              />
+            )}
+          </div>
 
           <button
             type="submit"
@@ -470,14 +540,14 @@ export default function SearchCard() {
               <circle cx="11" cy="11" r="6.5" />
               <path d="M16 16l4 4" />
             </Svg>
-            Cari unit
+            {t.cariUnit}
           </button>
         </div>
       </form>
 
       {/* Di desktop angka ini ada di hero; di HP hero terlalu sempit. */}
       <dl className="mt-20 grid grid-cols-[1fr_1.1fr_1.4fr] md:hidden">
-        {heroStats.map((s) => (
+        {heroStats[bahasa].map((s) => (
           <div
             key={s.label}
             className="flex flex-col-reverse border-l border-green-200 pr-8 pl-10 first:border-l-0 first:pl-0"

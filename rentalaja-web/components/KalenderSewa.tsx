@@ -11,7 +11,9 @@
 // Keyboard: panah pindah hari/minggu, PageUp/PageDown pindah bulan,
 // Home/End ke awal/akhir minggu, Enter/Spasi memilih, Esc menutup.
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useBahasa } from "@/components/BahasaProvider";
+import { kamus, lokal } from "@/lib/i18n";
 import { geserHari, isoTanggalLokal, parseIso } from "@/lib/tanggal-lokal";
 
 export type ModeKalender = "ambil" | "kembali";
@@ -19,14 +21,22 @@ export type ModeKalender = "ambil" | "kembali";
 /** Sama dengan batas durasi di lib/sewa.ts dan rentalaja-api. */
 export const DURASI_MAKS = 60;
 
-const formatBulan = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" });
-const formatLengkap = new Intl.DateTimeFormat("id-ID", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
+const TEKS = kamus({
+  id: {
+    pilihAmbil: "Pilih tanggal ambil",
+    pilihKembali: "Pilih tanggal kembali",
+    sebelumnya: "Bulan sebelumnya",
+    berikutnya: "Bulan berikutnya",
+    namaHari: ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"],
+  },
+  en: {
+    pilihAmbil: "Choose a pick-up date",
+    pilihKembali: "Choose a return date",
+    sebelumnya: "Previous month",
+    berikutnya: "Next month",
+    namaHari: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  },
 });
-const NAMA_HARI = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 
 const awalBulan = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const tambahBulan = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
@@ -77,6 +87,20 @@ export default function KalenderSewa({
   onPilih: (iso: string) => void;
   onTutup: () => void;
 }) {
+  const { bahasa } = useBahasa();
+  const t = TEKS[bahasa];
+  const { formatBulan, formatLengkap } = useMemo(
+    () => ({
+      formatBulan: new Intl.DateTimeFormat(lokal(bahasa), { month: "long", year: "numeric" }),
+      formatLengkap: new Intl.DateTimeFormat(lokal(bahasa), {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    }),
+    [bahasa],
+  );
   const hariIni = minTanggal || isoTanggalLokal(new Date());
   const awal = (mode === "kembali" ? kembali || geserHari(ambil, 1) : ambil) || hariIni;
 
@@ -155,12 +179,12 @@ export default function KalenderSewa({
     <div
       ref={wadahRef}
       role="dialog"
-      aria-label={mode === "ambil" ? "Pilih tanggal ambil" : "Pilih tanggal kembali"}
+      aria-label={mode === "ambil" ? t.pilihAmbil : t.pilihKembali}
       onKeyDown={onKeyDown}
-      className="absolute top-full right-0 left-0 z-20 mt-8 rounded-b-lg border border-green-200 bg-white p-16 shadow-b-cari md:right-auto md:w-[360px] md:rounded-b-xl md:p-24"
+      className="absolute top-full right-0 left-0 z-20 mt-8 rounded-b-lg border border-green-200 bg-white p-16 shadow-b-cari md:right-auto md:w-360 md:rounded-b-xl md:p-24"
     >
       <p className="text-b6-sm font-semibold text-muted-kuat md:text-b6">
-        {mode === "ambil" ? "Pilih tanggal ambil" : "Pilih tanggal kembali"}
+        {mode === "ambil" ? t.pilihAmbil : t.pilihKembali}
       </p>
       <div className="mt-8 flex items-center justify-between gap-12">
         <p aria-live="polite" className="text-b5-sm font-bold capitalize md:text-b5">
@@ -171,7 +195,7 @@ export default function KalenderSewa({
             type="button"
             onClick={() => setTampil((t) => tambahBulan(t, -1))}
             disabled={!bisaMundur}
-            aria-label="Bulan sebelumnya"
+            aria-label={t.sebelumnya}
             className="grid size-40 place-items-center rounded-full border border-green-200 text-ink transition-colors duration-160 ease-beranda hover:border-green-700 hover:text-green-700 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-green-200 disabled:hover:text-ink"
           >
             <Panah arah="kiri" />
@@ -179,7 +203,7 @@ export default function KalenderSewa({
           <button
             type="button"
             onClick={() => setTampil((t) => tambahBulan(t, 1))}
-            aria-label="Bulan berikutnya"
+            aria-label={t.berikutnya}
             className="grid size-40 place-items-center rounded-full border border-green-200 text-ink transition-colors duration-160 ease-beranda hover:border-green-700 hover:text-green-700"
           >
             <Panah arah="kanan" />
@@ -194,7 +218,7 @@ export default function KalenderSewa({
             <div key={label}>
               <div role="grid" aria-label={label}>
                 <div role="row" className="grid grid-cols-7">
-                  {NAMA_HARI.map((h) => (
+                  {t.namaHari.map((h) => (
                     <span
                       key={h}
                       role="columnheader"

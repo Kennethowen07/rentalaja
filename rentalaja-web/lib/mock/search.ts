@@ -15,6 +15,7 @@
 // Formatter tanggal WITA dipakai bersama dengan panel mitra. Letaknya di
 // lib/mitra/ karena di sanalah pertama kali dibutuhkan, tapi isinya tidak
 // mitra-spesifik: semua tanggal di produk ini memakai zona Bali.
+import type { Bahasa } from "@/lib/i18n";
 import { HARI, rentangTanggal } from "@/lib/mitra/waktu";
 import type { Sewa } from "@/lib/sewa";
 
@@ -28,9 +29,9 @@ export type RentangTanggal = {
 };
 
 /** Rentang yang dicari penyewa, dari ?mulai=&durasi= (lihat lib/sewa.ts). */
-export function rentangDari(sewa: Sewa): RentangTanggal {
+export function rentangDari(sewa: Sewa, bahasa: Bahasa = "id"): RentangTanggal {
   const selesai = sewa.mulai + sewa.hari * HARI;
-  return { mulai: sewa.mulai, selesai, hari: sewa.hari, label: rentangTanggal(sewa.mulai, selesai) };
+  return { mulai: sewa.mulai, selesai, hari: sewa.hari, label: rentangTanggal(sewa.mulai, selesai, bahasa) };
 }
 
 export type Kategori = "motor" | "mobil";
@@ -149,10 +150,22 @@ export const unitHasil: UnitHasil[] = [
 
 /** Tag paket di kartu hasil, per kategori. Mobil disewa tanpa sopir
  *  (backend.md bagian 1), jadi itu yang disebut, bukan helm. */
-export const tagPaket: Record<Kategori, string[]> = {
-  motor: ["2 helm", "Jas hujan", "Antar gratis"],
-  mobil: ["7 kursi", "Tanpa sopir", "Antar gratis"],
+export const tagPaket: Record<Bahasa, Record<Kategori, string[]>> = {
+  id: {
+    motor: ["2 helm", "Jas hujan", "Antar gratis"],
+    mobil: ["7 kursi", "Tanpa sopir", "Antar gratis"],
+  },
+  en: {
+    motor: ["2 helmets", "Raincoat", "Free delivery"],
+    mobil: ["7 seats", "Self-drive", "Free delivery"],
+  },
 };
+
+/** Jenis unit di kartu: "Skutik 110cc" / "Scooter 110cc", "MPV 7 kursi" / "7-seat MPV". */
+export function jenisUnit(jenis: string, bahasa: Bahasa): string {
+  if (bahasa === "id") return jenis;
+  return jenis.replace("Skutik", "Scooter").replace(/^MPV (\d+) kursi$/, "$1-seat MPV");
+}
 
 export type HasilUrut = {
   unit: UnitHasil;

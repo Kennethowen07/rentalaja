@@ -6,6 +6,8 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
+import { useBahasa } from "@/components/BahasaProvider";
+import { kamus } from "@/lib/i18n";
 import { rupiah, rupiahSingkat } from "@/lib/mitra/format";
 import type { Periode } from "@/lib/mitra/tipe";
 import { HeaderHalaman, kelasTombol, kelasTombolBaris } from "./ui";
@@ -16,18 +18,79 @@ function warnaBar(persen: number) {
   return "bg-mitra-bar-muda";
 }
 
-function unduhCsv(periode: Periode) {
+const TEKS = kamus({
+  id: {
+    csv: {
+      kepala: ["Tanggal dan keterangan", "Transaksi", "Nilai"],
+      kotor: "Pendapatan kotor",
+      biaya: "Biaya layanan rentalaja",
+      bersih: "Bersih diterima",
+      berkas: "pendapatan",
+    },
+    judul: "Pendapatan",
+    pilihPeriode: "Pilih periode",
+    diunduh: (label: string) => `Laporan ${label} diunduh sebagai CSV.`,
+    unduh: "Unduh laporan",
+    bersihLabel: (label: string) => `Pendapatan bersih ${label}`,
+    bersih: "Bersih diterima",
+    dari: (kotor: string, biaya: string) =>
+      `Dari nilai sewa ${kotor}, setelah biaya layanan rentalaja 5% sebesar ${biaya}.`,
+    ditahan: "Dana penyewa ditahan rentalaja dan dilepas 1x24 jam setelah unit kembali.",
+    transaksi: "Transaksi terbaru",
+    ringkas: "Ringkas",
+    lihatSemua: "Lihat semua",
+    sumber: "Sumber pendapatan",
+    tambahan: "Tambahan mencakup antar-jemput unit, helm ekstra, dan denda keterlambatan.",
+    periodeLaporan: "Periode laporan",
+    diganti: (label: string) => `Periode diganti ke ${label}.`,
+    kotor: (r: string) => `kotor ${r}`,
+    tutup: "Tutup",
+  },
+  en: {
+    csv: {
+      kepala: ["Date and details", "Transaction", "Amount"],
+      kotor: "Gross earnings",
+      biaya: "rentalaja service fee",
+      bersih: "Net received",
+      berkas: "earnings",
+    },
+    judul: "Earnings",
+    pilihPeriode: "Choose period",
+    diunduh: (label: string) => `${label} report downloaded as CSV.`,
+    unduh: "Download report",
+    bersihLabel: (label: string) => `Net earnings, ${label}`,
+    bersih: "Net received",
+    dari: (kotor: string, biaya: string) =>
+      `From ${kotor} in rentals, after the 5% rentalaja service fee of ${biaya}.`,
+    ditahan: "Renters' payments are held by rentalaja and released 24 hours after the vehicle is returned.",
+    transaksi: "Recent transactions",
+    ringkas: "Show less",
+    lihatSemua: "See all",
+    sumber: "Earnings by source",
+    tambahan: "Extras cover vehicle delivery and pick-up, extra helmets, and late fees.",
+    periodeLaporan: "Report period",
+    diganti: (label: string) => `Period changed to ${label}.`,
+    kotor: (r: string) => `gross ${r}`,
+    tutup: "Close",
+  },
+});
+type TeksCsv = (typeof TEKS)["id"]["csv"];
+
+/** Huruf pertama kapital: keterangan bandingan di data diawali huruf kecil. */
+const kapital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function unduhCsv(periode: Periode, csv: TeksCsv) {
   const baris = [
-    ["Tanggal dan keterangan", "Transaksi", "Nilai"],
+    csv.kepala,
     ...periode.transaksi.map((t) => [
       t.meta,
       t.judul,
       `${t.arah === "keluar" ? "-" : ""}${t.nilai}`,
     ]),
     [],
-    ["Pendapatan kotor", "", String(periode.kotor)],
-    ["Biaya layanan rentalaja", "", String(periode.biaya)],
-    ["Bersih diterima", "", String(periode.bersih)],
+    [csv.kotor, "", String(periode.kotor)],
+    [csv.biaya, "", String(periode.biaya)],
+    [csv.bersih, "", String(periode.bersih)],
   ];
   // Titik koma dipakai sebagai pemisah supaya Excel berbahasa Indonesia
   // membuka filenya dengan kolom yang benar.
@@ -37,12 +100,14 @@ function unduhCsv(periode: Periode) {
   const url = URL.createObjectURL(new Blob(["﻿" + isi], { type: "text/csv;charset=utf-8" }));
   const tautan = document.createElement("a");
   tautan.href = url;
-  tautan.download = `pendapatan-${periode.kunci}.csv`;
+  tautan.download = `${csv.berkas}-${periode.kunci}.csv`;
   tautan.click();
   URL.revokeObjectURL(url);
 }
 
 export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
+  const { bahasa } = useBahasa();
+  const t = TEKS[bahasa];
   const [kunci, setKunci] = useState(periode[0].kunci);
   const [pilihPeriode, setPilihPeriode] = useState(false);
   const [semuaTransaksi, setSemuaTransaksi] = useState(false);
@@ -56,7 +121,7 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
     <>
       <HeaderHalaman
         kicker={p.rentang}
-        judul="Pendapatan"
+        judul={t.judul}
         aksi={
           <>
             <button
@@ -64,17 +129,17 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
               onClick={() => setPilihPeriode(true)}
               className={`${kelasTombol.sekunder} px-17 py-11`}
             >
-              Pilih periode
+              {t.pilihPeriode}
             </button>
             <button
               type="button"
               onClick={() => {
-                unduhCsv(p);
-                setKabar(`Laporan ${p.label} diunduh sebagai CSV.`);
+                unduhCsv(p, t.csv);
+                setKabar(t.diunduh(p.label));
               }}
               className={`${kelasTombol.primer} px-19 py-11`}
             >
-              Unduh laporan
+              {t.unduh}
             </button>
           </>
         }
@@ -84,25 +149,22 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
           layanan tetap disebut, tapi sebagai keterangan, bukan tiga kartu
           yang saling bersaing. */}
       <section
-        aria-label={`Pendapatan bersih ${p.label}`}
+        aria-label={t.bersihLabel(p.label)}
         className="mt-36 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24"
       >
-        <p className="text-m-label text-mitra-faint">Bersih diterima</p>
-        <p className="mt-6 text-m-metrik text-mitra-primer">{rupiahSingkat(p.bersih)}</p>
+        <p className="text-m-label text-mitra-faint">{t.bersih}</p>
+        <p className="mt-6 text-m-metrik text-mitra-primer">{rupiahSingkat(p.bersih, bahasa)}</p>
         <p className="mt-6 max-w-620 text-m-body text-mitra-muted">
-          Dari nilai sewa {rupiahSingkat(p.kotor)}, setelah biaya layanan rentalaja 5%
-          sebesar {rupiahSingkat(p.biaya)}. {p.bandingan}.
+          {t.dari(rupiahSingkat(p.kotor, bahasa), rupiahSingkat(p.biaya, bahasa))} {kapital(p.bandingan)}.
         </p>
-        <p className="mt-4 max-w-620 text-m-body text-mitra-muted">
-          Dana penyewa ditahan rentalaja dan dilepas 1x24 jam setelah unit kembali.
-        </p>
+        <p className="mt-4 max-w-620 text-m-body text-mitra-muted">{t.ditahan}</p>
       </section>
 
       <div className="mt-44 grid items-start gap-44 min-[1100px]:grid-cols-[1.55fr_1fr] min-[1100px]:gap-64">
         <section aria-labelledby="judul-transaksi">
           <div className="flex items-baseline justify-between gap-16">
             <h2 id="judul-transaksi" className="text-m-h2 text-mitra-ink">
-              Transaksi terbaru
+              {t.transaksi}
             </h2>
             {p.transaksi.length > 3 && (
               <button
@@ -110,28 +172,28 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
                 onClick={() => setSemuaTransaksi((v) => !v)}
                 className="whitespace-nowrap text-m-tautan text-mitra-primer hover:underline"
               >
-                {semuaTransaksi ? "Ringkas" : "Lihat semua"}
+                {semuaTransaksi ? t.ringkas : t.lihatSemua}
               </button>
             )}
           </div>
 
           <div className="mt-18 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
             <ul>
-              {transaksi.map((t) => (
+              {transaksi.map((x) => (
                 <li
-                  key={t.id}
+                  key={x.id}
                   className="flex flex-wrap items-center gap-16 border-t border-mitra-hairline py-22 first:border-t-0"
                 >
                   <div className="min-w-0 flex-1 basis-200">
-                    <p className="text-m-total text-mitra-ink">{t.judul}</p>
-                    <p className="mt-4 text-m-meta text-mitra-muted">{t.meta}</p>
+                    <p className="text-m-total text-mitra-ink">{x.judul}</p>
+                    <p className="mt-4 text-m-meta text-mitra-muted">{x.meta}</p>
                   </div>
                   <p
                     className={`shrink-0 whitespace-nowrap text-m-total ${
-                      t.arah === "masuk" ? "text-mitra-ink" : "text-mitra-muted"
+                      x.arah === "masuk" ? "text-mitra-ink" : "text-mitra-muted"
                     }`}
                   >
-                    {t.arah === "masuk" ? "+" : "−"} {rupiah(t.nilai)}
+                    {x.arah === "masuk" ? "+" : "−"} {rupiah(x.nilai)}
                   </p>
                 </li>
               ))}
@@ -141,7 +203,7 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
 
         <section aria-labelledby="judul-sumber">
           <h2 id="judul-sumber" className="text-m-h2 text-mitra-ink">
-            Sumber pendapatan
+            {t.sumber}
           </h2>
           <div className="mt-18 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
             <ul>
@@ -160,7 +222,7 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
                       />
                     </span>
                     <span className="w-72 shrink-0 text-right text-m-angka text-mitra-ink">
-                      {rupiahSingkat(s.nilai).replace("Rp ", "")}
+                      {rupiahSingkat(s.nilai, bahasa).replace("Rp ", "")}
                     </span>
                   </li>
                 );
@@ -168,7 +230,7 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
             </ul>
           </div>
           <p className="mt-20 text-m-body text-mitra-muted">
-            Tambahan mencakup antar-jemput unit, helm ekstra, dan denda keterlambatan.
+            {t.tambahan}
           </p>
         </section>
       </div>
@@ -178,8 +240,8 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
       </p>
 
       {pilihPeriode && (
-        <Modal judul="Pilih periode" onTutup={() => setPilihPeriode(false)} lebar="max-w-[420px]">
-          <div role="radiogroup" aria-label="Periode laporan" className="mt-14">
+        <Modal judul={t.pilihPeriode} onTutup={() => setPilihPeriode(false)} lebar="max-w-[420px]">
+          <div role="radiogroup" aria-label={t.periodeLaporan} className="mt-14">
             {periode.map((x) => (
               <label
                 key={x.kunci}
@@ -194,14 +256,14 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
                     setKunci(x.kunci);
                     setSemuaTransaksi(false);
                     setPilihPeriode(false);
-                    setKabar(`Periode diganti ke ${x.label}.`);
+                    setKabar(t.diganti(x.label));
                   }}
                   className="mt-3 size-16"
                 />
                 <span>
                   <span className="block text-m-status text-mitra-ink">{x.label}</span>
                   <span className="mt-2 block text-m-label text-mitra-muted">
-                    {x.rentang} · kotor {rupiahSingkat(x.kotor)}
+                    {x.rentang} · {t.kotor(rupiahSingkat(x.kotor, bahasa))}
                   </span>
                 </span>
               </label>
@@ -213,7 +275,7 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
               onClick={() => setPilihPeriode(false)}
               className={kelasTombolBaris.sekunder}
             >
-              Tutup
+              {t.tutup}
             </button>
           </div>
         </Modal>
