@@ -17,7 +17,7 @@ const kolomLink = [
   {
     judul: "Penyedia",
     items: [
-      { label: "Daftarkan rental", href: "/#jadi-penyedia" },
+      { label: "Daftarkan rental", href: "/jadi-penyedia" },
       { label: "Dashboard", href: "/mitra" },
       { label: "Biaya layanan", href: "#" },
     ],

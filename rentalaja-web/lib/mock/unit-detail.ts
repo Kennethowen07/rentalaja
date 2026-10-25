@@ -6,7 +6,7 @@
 // dipakai bersama karena desain hanya menggambarkannya sekali.
 
 import { biayaLayanan } from "@/lib/harga";
-import { unitHasil, type UnitHasil } from "@/lib/mock/search";
+import { type Kategori, unitHasil, type UnitHasil } from "@/lib/mock/search";
 import { HARI, hariSingkat, rentangTanggal, tanggalSingkat } from "@/lib/mitra/waktu";
 import type { Sewa } from "@/lib/sewa";
 
@@ -61,11 +61,28 @@ const TIDAK_TERMASUK = [
   "Kerusakan di luar pemakaian normal, tarif perbaikan tertulis di lampiran perjanjian.",
 ];
 
-const JAMINAN = [
-  "Tanpa deposit tunai. Pembayaranmu ditahan rentalaja sampai unit kembali, lalu diteruskan ke penyedia.",
-  "Dokumen wajib, KTP atau paspor dan SIM C atau SIM internasional. Diunggah di langkah pemesanan, diverifikasi penyedia sebelum unit diantar.",
-  "Batas usia penyewa 18 tahun.",
-];
+/** Semua area unit mock ada di Badung, kecuali Ubud (Gianyar). */
+function kabupaten(area: string): string {
+  return area === "Ubud" ? "Gianyar" : "Badung";
+}
+
+/** SIM yang diminta mengikuti kategori: SIM C untuk motor, SIM A untuk mobil. */
+function jaminan(kategori: Kategori): string[] {
+  const sim = kategori === "mobil" ? "SIM A" : "SIM C";
+  return [
+    "Tanpa deposit tunai. Pembayaranmu ditahan rentalaja sampai unit kembali, lalu diteruskan ke penyedia.",
+    "Dokumen wajib, KTP atau paspor dan " + sim + " atau SIM internasional. Diunggah di langkah pemesanan, diverifikasi penyedia sebelum unit diantar.",
+    "Batas usia penyewa 18 tahun.",
+  ];
+}
+
+/** Isi paket per kategori. Mobil disewa tanpa sopir (backend.md bagian 1). */
+function paket(unit: UnitHasil): string[] {
+  const antar = "Antar jemput area " + unit.area + ", gratis";
+  return unit.kategori === "mobil"
+    ? ["Tanpa sopir, lepas kunci", antar, "STNK asli di unit"]
+    : ["2 helm SNI", "Jas hujan", antar, "STNK asli di unit"];
+}
 
 
 /** Satu-satunya sumber detail. Mengembalikan null kalau slug tidak dikenal.
@@ -85,16 +102,13 @@ export function detailUnit(slug: string, sewa: Sewa): DetailUnit | null {
     rentangLabel: rentangTanggal(sewa.mulai, sewa.mulai + sewa.hari * HARI),
     hari: sewa.hari,
     sewa,
-    meta: `${unit.jenis} · matic · ★ ${unit.rating} (128 ulasan) · ${unit.area}, Badung`,
+    meta: [unit.jenis, unit.kategori === "motor" ? "matic" : null, "★ " + unit.rating + " (128 ulasan)", unit.area + ", " + kabupaten(unit.area)]
+      .filter(Boolean)
+      .join(" · "),
     kalender: bangunKalender(sewa.mulai),
-    paket: [
-      "2 helm SNI",
-      "Jas hujan",
-      `Antar jemput area ${unit.area}, gratis`,
-      "STNK asli di unit",
-    ],
+    paket: paket(unit),
     tidakTermasuk: TIDAK_TERMASUK,
-    jaminan: JAMINAN,
+    jaminan: jaminan(unit.kategori),
     penyedia: {
       nama: unit.penyedia,
       meta: `★ ${unit.rating} · 18 unit · bergabung 2023 · balas dalam 1 jam`,

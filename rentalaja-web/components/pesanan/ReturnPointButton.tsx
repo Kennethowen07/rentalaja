@@ -2,8 +2,7 @@
 
 // Tombol "Lihat titik pengembalian" di Layar 5 beserta pop-up petanya.
 // Dipisah dari OrderActive supaya layar itu tetap server component — hanya
-// bagian ini yang butuh state. Petanya Google Maps Embed lewat PetaLokasi,
-// dengan gambar statis sebagai cadangan.
+// bagian ini yang butuh state. Petanya OpenStreetMap lewat PetaLokasi.
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
@@ -34,11 +33,7 @@ export default function ReturnPointButton() {
           <p className="mt-10 text-nav-strong text-ink">{titik.alamat}</p>
           <p className="mt-2 text-body-sm text-muted">{titik.waktu}</p>
 
-          <PetaLokasi
-            alamat={titik.alamat}
-            className="mt-14 aspect-[16/9]"
-            sizes="(min-width: 768px) 680px, 100vw"
-          />
+          <PetaLokasi alamat={titik.alamat} className="mt-14 aspect-[16/9]" />
 
           <button
             type="button"

@@ -36,13 +36,13 @@ export default function ResultCard({
         ) : (
           <ImagePlaceholder label="foto unit" className="absolute inset-0" />
         )}
-        <span
-          className={`absolute top-8 left-8 rounded-pill px-8 py-4 text-badge-sm text-white ${
-            kosong ? "bg-green-700" : "bg-muted"
-          }`}
-        >
-          {kosong ? "Kosong" : "Sudah tersewa"}
-        </span>
+        {/* Badge "Kosong" dihapus atas permintaan pemilik proyek; yang
+            tersisa hanya penanda untuk unit yang tidak bisa dipesan. */}
+        {!kosong && (
+          <span className="absolute top-8 left-8 rounded-pill bg-muted px-8 py-4 text-badge-sm text-white">
+            Sudah tersewa
+          </span>
+        )}
       </div>
 
       <div className="px-14 pt-13 pb-15">
@@ -53,7 +53,7 @@ export default function ResultCard({
         </p>
 
         <ul className="mt-9 flex flex-wrap gap-5">
-          {tagPaket.map((t) => (
+          {tagPaket[unit.kategori].map((t) => (
             <li
               key={t}
               className="rounded-tag border border-line px-6 py-3 text-tag text-muted"

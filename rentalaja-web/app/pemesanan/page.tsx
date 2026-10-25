@@ -67,6 +67,7 @@ function ringkasanDari(detail: DetailUnit): RingkasanPesanan {
       penyedia: unit.penyedia,
       rating: unit.rating,
       foto: unit.foto ?? "",
+      kategori: unit.kategori,
     },
     rincian: [
       { label: `${hari} hari sewa`, nilai: formatRupiah(harga.subtotal) },

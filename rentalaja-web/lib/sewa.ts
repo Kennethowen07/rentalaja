@@ -42,6 +42,9 @@ export function keIso(ms: number): string {
  *   - tanggal tidak terbaca   -> besok
  *   - tanggal sudah lewat     -> besok, karena menawarkan unit untuk kemarin
  *                                lebih membingungkan daripada menggeser hari
+ *   - hari ini tetap diterima, sama dengan form pencarian di beranda dan
+ *     dengan API (rentalaja-api bacaRentangSewa). Dulu hari ini ikut digeser
+ *     ke besok, sehingga tanggal yang dipilih di beranda berubah di /cari.
  *   - durasi di luar 1..60    -> 3 hari, tapi tanggalnya tetap dipakai
  */
 export function bacaSewa(
@@ -49,6 +52,7 @@ export function bacaSewa(
   durasi: string | undefined,
   sekarang: number,
 ): Sewa {
+  const hariIni = pukulWita(sekarang, 0, 0);
   const besok = pukulWita(sekarang, 1, 0);
   const diminta = mulai ? dariIso(mulai) : null;
 
@@ -56,7 +60,7 @@ export function bacaSewa(
   const hari =
     Number.isFinite(angka) && angka >= 1 && angka <= HARI_MAKS ? angka : HARI_DEFAULT;
 
-  return { mulai: diminta && diminta >= besok ? diminta : besok, hari };
+  return { mulai: diminta !== null && diminta >= hariIni ? diminta : besok, hari };
 }
 
 /** Versi untuk Route Handler, yang menerima URLSearchParams. */
@@ -72,13 +76,6 @@ const satu = (v: string | string[] | undefined) =>
 /** Versi untuk Page, yang menerima searchParams hasil await. */
 export function sewaDariParams(params: Query, sekarang: number): Sewa {
   return bacaSewa(satu(params.mulai), satu(params.durasi), sekarang);
-}
-
-/** True kalau penyewa memang memilih tanggal, bukan sekadar jatuh ke default.
- *  Dipakai untuk memberi label "pilihanmu" pada chip pertama di /cari. */
-export function adaPilihan(params: Query): boolean {
-  const m = satu(params.mulai);
-  return m !== undefined && dariIso(m) !== null;
 }
 
 /** Potongan query untuk ditempel ke tautan antar layar. */

@@ -1,10 +1,11 @@
 // Mock data Layar 2 "Hasil pencarian".
 //
-// Diambil verbatim dari kelas DCLogic di dalam
-// design_handoff_rentalaja_landing/RentalAja Wireframes.dc.html (turn 1a):
-// 6 unit, 3 rentang tanggal, dan array `free[]` per unit yang menentukan
-// unit mana yang kosong di rentang mana. Ini implementasi konkret dari
-// "momen ganti tanggal" yang disebut design brief sebagai inti prototype.
+// Diambil dari kelas DCLogic di dalam
+// design_handoff_rentalaja_landing/RentalAja Wireframes.dc.html (turn 1a).
+// Desain aslinya punya 3 chip rentang tanggal; atas permintaan pemilik
+// proyek (25 Okt 2026) /cari kini hanya menampilkan rentang yang dicari
+// penyewa, jadi status kosong tiap unit cukup satu nilai. Ketersediaan
+// sungguhan per tanggal datang dari API (rentalaja-api GET /pencarian).
 //
 // Catatan: desain memberi Honda Scoopy harga Rp 70.000 di layar ini, tapi
 // Rp 75.000 di kartu "Unit populer" landing page. Keduanya dipertahankan
@@ -20,48 +21,23 @@ import type { Sewa } from "@/lib/sewa";
 export type RentangTanggal = {
   label: string;
   hari: number;
-  catatan: string;
   /** Epoch ms tengah malam WITA, dipakai saat tanggal diteruskan ke layar lain. */
   mulai: number;
   /** Tanggal unit dikembalikan, yaitu mulai + hari. */
   selesai: number;
 };
 
-/**
- * Tiga rentang tanggal untuk chip filter.
- *
- * Dulu ini konstanta "12–14 Sep" dan kawan-kawan, disalin dari file desain.
- * Masalahnya dua: tanggalnya ikut basi begitu bulannya lewat, dan tanggal yang
- * baru saja diisi penyewa di landing page diabaikan begitu saja.
- *
- * Sekarang chip pertama memakai tanggal pilihan penyewa, dua chip lain
- * diturunkan darinya. Ketiganya selalu di masa depan. Yang dipertahankan dari
- * desain adalah idenya: mengganti chip mengubah daftar unit, lewat
- * `kosongPada` yang indeksnya sejajar dengan array ini.
- */
-export function bangunRentang(sewa: Sewa, dipilihPenyewa: boolean): RentangTanggal[] {
-  const { mulai: mulai0, hari: hari0 } = sewa;
-
-  const mulai1 = mulai0 + (hari0 + 2) * HARI;
-  const mulai2 = mulai1 + 4 * HARI;
-
-  const buat = (mulai: number, hari: number, catatan: string): RentangTanggal => ({
-    mulai,
-    selesai: mulai + hari * HARI,
-    hari,
-    catatan,
-    label: rentangTanggal(mulai, mulai + hari * HARI),
-  });
-
-  return [
-    buat(mulai0, hari0, dipilihPenyewa ? "pilihanmu" : "akhir pekan"),
-    buat(mulai1, 2, "hari kerja"),
-    buat(mulai2, 8, "sewa panjang"),
-  ];
+/** Rentang yang dicari penyewa, dari ?mulai=&durasi= (lihat lib/sewa.ts). */
+export function rentangDari(sewa: Sewa): RentangTanggal {
+  const selesai = sewa.mulai + sewa.hari * HARI;
+  return { mulai: sewa.mulai, selesai, hari: sewa.hari, label: rentangTanggal(sewa.mulai, selesai) };
 }
+
+export type Kategori = "motor" | "mobil";
 
 export type UnitHasil = {
   id: string;
+  kategori: Kategori;
   nama: string;
   jenis: string;
   tahun: string;
@@ -69,8 +45,8 @@ export type UnitHasil = {
   area: string;
   penyedia: string;
   hargaPerHari: number;
-  /** Ketersediaan per rentang; indeksnya sejajar dengan rentangTanggal. */
-  kosongPada: boolean[];
+  /** Kosong di rentang yang dicari. Mock: sama untuk tanggal berapa pun. */
+  kosong: boolean;
   /** Foto asli kalau ada; null jatuh ke ImagePlaceholder. */
   foto: string | null;
 };
@@ -78,6 +54,7 @@ export type UnitHasil = {
 export const unitHasil: UnitHasil[] = [
   {
     id: "honda-scoopy-2023",
+    kategori: "motor",
     nama: "Honda Scoopy 2023",
     jenis: "Skutik 110cc",
     tahun: "2023",
@@ -85,11 +62,12 @@ export const unitHasil: UnitHasil[] = [
     area: "Canggu",
     penyedia: "Bali Motor Rent",
     hargaPerHari: 70000,
-    kosongPada: [true, true, false],  
+    kosong: true,
     foto: "/units/honda-scoopy-2023.webp",
   },
   {
     id: "honda-beat-2022",
+    kategori: "motor",
     nama: "Honda Beat 2022",
     jenis: "Skutik 110cc",
     tahun: "2022",
@@ -97,11 +75,12 @@ export const unitHasil: UnitHasil[] = [
     area: "Kerobokan",
     penyedia: "Wayan Rental",
     hargaPerHari: 55000,
-    kosongPada: [true, false, true],
+    kosong: true,
     foto: "/units/honda-beat-2022.webp",
   },
   {
     id: "yamaha-nmax-2022",
+    kategori: "motor",
     nama: "Yamaha NMAX 155 2022",
     jenis: "Skutik 155cc",
     tahun: "2022",
@@ -109,11 +88,12 @@ export const unitHasil: UnitHasil[] = [
     area: "Canggu",
     penyedia: "Bali Motor Rent",
     hargaPerHari: 110000,
-    kosongPada: [true, true, true],
+    kosong: true,
     foto: "/units/yamaha-nmax-2022.webp",
   },
   {
     id: "vespa-sprint-2021",
+    kategori: "motor",
     nama: "Vespa Sprint 2021",
     jenis: "Skutik 150cc",
     tahun: "2021",
@@ -121,11 +101,12 @@ export const unitHasil: UnitHasil[] = [
     area: "Seminyak",
     penyedia: "Retro Ride Bali",
     hargaPerHari: 145000,
-    kosongPada: [false, true, false],
+    kosong: false,
     foto: "/units/vespa-sprint-2021.webp",
   },
   {
     id: "honda-pcx-160-2023",
+    kategori: "motor",
     nama: "Honda PCX 160 2023",
     jenis: "Skutik 160cc",
     tahun: "2023",
@@ -133,11 +114,12 @@ export const unitHasil: UnitHasil[] = [
     area: "Canggu",
     penyedia: "Dewa Motor",
     hargaPerHari: 120000,
-    kosongPada: [true, true, true],
+    kosong: true,
     foto: "/units/honda-pcx-160-2023.webp",
   },
   {
     id: "yamaha-fino-2021",
+    kategori: "motor",
     nama: "Yamaha Fino 2021",
     jenis: "Skutik 125cc",
     tahun: "2021",
@@ -145,16 +127,32 @@ export const unitHasil: UnitHasil[] = [
     area: "Pererenan",
     penyedia: "Pererenan Rent",
     hargaPerHari: 60000,
-    kosongPada: [false, true, true],
+    kosong: false,
     foto: "/units/yamaha-fino-2021.webp",
+  },
+  // Mobil. Harga dan area sama dengan kartu "Unit populer" di beranda,
+  // yang menautkan ke /unit/toyota-avanza-2021.
+  {
+    id: "toyota-avanza-2021",
+    kategori: "mobil",
+    nama: "Toyota Avanza 2021",
+    jenis: "MPV 7 kursi",
+    tahun: "2021",
+    rating: "4,7",
+    area: "Ubud",
+    penyedia: "Bali Motor Rent",
+    hargaPerHari: 320000,
+    kosong: true,
+    foto: "/units/toyota-avanza-2021.webp",
   },
 ];
 
-/** Tag paket yang sama untuk semua unit di desain. */
-export const tagPaket = ["2 helm", "Jas hujan", "Antar gratis"];
-
-/** Filter selain tanggal — belum interaktif di desain, hanya tampil. */
-export const filterPasif = ["Harga", "Jenis motor", "Antar jemput"];
+/** Tag paket di kartu hasil, per kategori. Mobil disewa tanpa sopir
+ *  (backend.md bagian 1), jadi itu yang disebut, bukan helm. */
+export const tagPaket: Record<Kategori, string[]> = {
+  motor: ["2 helm", "Jas hujan", "Antar gratis"],
+  mobil: ["7 kursi", "Tanpa sopir", "Antar gratis"],
+};
 
 export type HasilUrut = {
   unit: UnitHasil;
@@ -162,16 +160,13 @@ export type HasilUrut = {
 };
 
 /** Urutan dari desain (`sorted(ri)`): yang kosong dulu, lalu harga termurah. */
-export function urutkanHasil(rentangIndex: number): HasilUrut[] {
+export function urutkanHasil(kategori: Kategori): HasilUrut[] {
   return unitHasil
-    .map((unit) => ({ unit, kosong: unit.kosongPada[rentangIndex] === true }))
+    .filter((unit) => unit.kategori === kategori)
+    .map((unit) => ({ unit, kosong: unit.kosong }))
     .sort(
       (a, b) =>
         Number(b.kosong) - Number(a.kosong) ||
         a.unit.hargaPerHari - b.unit.hargaPerHari,
     );
-}
-
-export function jumlahKosong(rentangIndex: number): number {
-  return unitHasil.filter((u) => u.kosongPada[rentangIndex] === true).length;
 }

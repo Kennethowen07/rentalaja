@@ -10,11 +10,19 @@
 //
 // /cari masih membaca ?durasi= (lihat app/cari/page.tsx), jadi durasi tetap
 // dikirim, dihitung dari selisih kedua tanggal.
+//
+// Kedua field tanggal membuka KalenderSewa, kalender buatan sendiri yang
+// menggantikan input tanggal bawaan browser (25 Okt 2026). Field area
+// membuka PanelArea: daftar area plus "Pilih di peta" yang mendeteksi area
+// terdekat dari pin.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { areaAntarOptions, jamAmbilOptions } from "@/lib/mock/areas";
+import KalenderSewa, { DURASI_MAKS, type ModeKalender } from "@/components/KalenderSewa";
+import PanelArea from "@/components/PanelArea";
+import { jamAmbilOptions } from "@/lib/mock/areas";
 import { heroStats } from "@/lib/mock/stats";
+import { isoTanggalLokal, parseIso, selisihHari } from "@/lib/tanggal-lokal";
 
 type Jenis = "motor" | "mobil";
 
@@ -32,44 +40,11 @@ type Errors = Partial<Record<FieldTervalidasi, string>>;
 /** Urutan fokus saat submit gagal, mengikuti urutan visual field. */
 const URUTAN_FIELD: FieldTervalidasi[] = ["area", "tanggalAmbil", "tanggalKembali", "jamAmbil"];
 
-const HARI_MS = 24 * 60 * 60 * 1000;
-
 const formatTanggal = new Intl.DateTimeFormat("id-ID", {
   day: "numeric",
   month: "short",
   year: "numeric",
 });
-
-/** yyyy-mm-dd dari komponen tanggal LOKAL.
- *  toISOString() tidak dipakai karena bergeser ke UTC dan bisa memundurkan
- *  tanggal satu hari untuk pengguna di WITA (UTC+8). */
-function isoTanggalLokal(d: Date): string {
-  const bulan = String(d.getMonth() + 1).padStart(2, "0");
-  const hari = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${bulan}-${hari}`;
-}
-
-function parseIso(iso: string): Date | null {
-  const [y, m, d] = iso.split("-").map(Number);
-  if (!y || !m || !d) return null;
-  const tanggal = new Date(y, m - 1, d);
-  return Number.isNaN(tanggal.getTime()) ? null : tanggal;
-}
-
-function geserHari(iso: string, hari: number): string {
-  const d = parseIso(iso);
-  if (!d) return "";
-  return isoTanggalLokal(new Date(d.getFullYear(), d.getMonth(), d.getDate() + hari));
-}
-
-/** Jumlah hari dari ambil ke kembali. Math.round menyerap geseran satu jam
- *  kalau rentangnya melewati pergantian jam musim panas di zona pengguna. */
-function selisihHari(ambil: string, kembali: string): number | null {
-  const a = parseIso(ambil);
-  const b = parseIso(kembali);
-  if (!a || !b) return null;
-  return Math.round((b.getTime() - a.getTime()) / HARI_MS);
-}
 
 /** "25 Okt 2026". Intl menulis "Okt." dengan titik; titiknya dibuang. */
 function tampilTanggal(iso: string): string | null {
@@ -146,6 +121,7 @@ function Field({
   error,
   errorId,
   dropdown = false,
+  aktif = false,
   className = "",
   children,
 }: {
@@ -153,6 +129,8 @@ function Field({
   error?: string;
   errorId: string;
   dropdown?: boolean;
+  /** Kalender untuk field ini sedang terbuka. */
+  aktif?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -160,7 +138,11 @@ function Field({
     <div className={className}>
       <div
         className={`relative flex h-64 items-center rounded-b-sm border-[1.5px] bg-white transition-colors duration-160 ease-beranda focus-within:border-green-700 focus-within:ring-3 focus-within:ring-green-700/20 ${
-          error ? "border-error" : "border-garis-field hover:border-garis-field-hover"
+          aktif
+            ? "border-green-700 ring-3 ring-green-700/20"
+            : error
+              ? "border-error"
+              : "border-garis-field hover:border-garis-field-hover"
         }`}
       >
         <Svg className="pointer-events-none absolute top-1/2 left-12 size-20 -translate-y-1/2 text-green-700 md:left-16">
@@ -215,30 +197,68 @@ export default function SearchCard() {
   const [minTanggal, setMinTanggal] = useState("");
   const [sudahSubmit, setSudahSubmit] = useState(false);
 
-  const areaRef = useRef<HTMLSelectElement>(null);
-  const tanggalAmbilRef = useRef<HTMLInputElement>(null);
-  const tanggalKembaliRef = useRef<HTMLInputElement>(null);
+  const [kalender, setKalender] = useState<ModeKalender | null>(null);
+
+  const [areaTerbuka, setAreaTerbuka] = useState(false);
+  const areaRef = useRef<HTMLButtonElement>(null);
+  const areaWadahRef = useRef<HTMLDivElement>(null);
+  const tanggalAmbilRef = useRef<HTMLButtonElement>(null);
+  const tanggalKembaliRef = useRef<HTMLButtonElement>(null);
   const jamAmbilRef = useRef<HTMLSelectElement>(null);
+  const rentangRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMinTanggal(isoTanggalLokal(new Date()));
   }, []);
 
+  // Klik di luar kedua field tanggal dan kalendernya menutup kalender.
+  useEffect(() => {
+    if (!kalender) return;
+    function onPointerDown(e: PointerEvent) {
+      if (!rentangRef.current?.contains(e.target as Node)) setKalender(null);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [kalender]);
+
+  // Sama untuk panel area: klik di luar field area dan panelnya menutupnya.
+  useEffect(() => {
+    if (!areaTerbuka) return;
+    function onPointerDown(e: PointerEvent) {
+      if (!areaWadahRef.current?.contains(e.target as Node)) setAreaTerbuka(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [areaTerbuka]);
+
   const errors = hitungErrors(form, minTanggal);
   // Jangan tampilkan error sebelum user pernah menekan "Cari unit".
   const errorTampil: Errors = sudahSubmit ? errors : {};
 
-  function ubahTanggalAmbil(nilai: string) {
-    setForm((f) => {
-      // Kalau tanggal ambil dimajukan sampai melewati tanggal kembali,
-      // tanggal kembali ikut digeser supaya lama sewanya tetap sama.
-      if (nilai && f.tanggalKembali && f.tanggalKembali <= nilai) {
-        const lama = selisihHari(f.tanggalAmbil, f.tanggalKembali);
-        const geser = lama && lama >= 1 ? lama : 1;
-        return { ...f, tanggalAmbil: nilai, tanggalKembali: geserHari(nilai, geser) };
-      }
-      return { ...f, tanggalAmbil: nilai };
-    });
+  function tutupKalender() {
+    const mode = kalender;
+    setKalender(null);
+    (mode === "kembali" ? tanggalKembaliRef : tanggalAmbilRef).current?.focus();
+  }
+
+  /**
+   * Alur memilih rentang: tanggal ambil dulu, lalu kalender langsung meminta
+   * tanggal kembali. Saat memilih tanggal kembali, tanggal yang tidak lebih
+   * lambat dari tanggal ambil dianggap tanggal ambil baru.
+   */
+  function pilihTanggal(iso: string) {
+    if (kalender === "ambil" || !form.tanggalAmbil || iso <= form.tanggalAmbil) {
+      setForm((f) => {
+        const lama = f.tanggalKembali ? selisihHari(iso, f.tanggalKembali) : null;
+        const kembaliMasihSah = lama !== null && lama >= 1 && lama <= DURASI_MAKS;
+        return { ...f, tanggalAmbil: iso, tanggalKembali: kembaliMasihSah ? f.tanggalKembali : "" };
+      });
+      setKalender("kembali");
+      return;
+    }
+    setForm((f) => ({ ...f, tanggalKembali: iso }));
+    setKalender(null);
+    tanggalKembaliRef.current?.focus();
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -274,16 +294,6 @@ export default function SearchCard() {
     "aria-describedby": errorTampil[f] ? `${f}-error` : undefined,
   });
 
-  /** Klik di mana pun pada field membuka pemilih tanggal (Chrome, Edge,
-   *  Safari 16+). Browser lain tetap bisa lewat keyboard. */
-  function bukaPemilih(e: React.MouseEvent<HTMLInputElement>) {
-    try {
-      e.currentTarget.showPicker?.();
-    } catch {
-      // showPicker melempar kalau dipanggil tanpa gestur pengguna.
-    }
-  }
-
   const tampilAmbil = tampilTanggal(form.tanggalAmbil);
   const tampilKembali = tampilTanggal(form.tanggalKembali);
 
@@ -317,89 +327,116 @@ export default function SearchCard() {
           ))}
         </div>
 
-        <div className="mt-12 grid grid-cols-2 items-start gap-12 md:mt-16 min-[75rem]:grid-cols-[minmax(0,1fr)_210px_210px_185px_165px]">
-          <Field
-            ikon={IKON.lokasi}
-            dropdown
-            error={errorTampil.area}
-            errorId="area-error"
-            className="col-span-2 min-[75rem]:col-span-1"
-          >
-            <label htmlFor="area" className="sr-only">
-              Area antar
-            </label>
-            <select
-              id="area"
-              ref={areaRef}
-              required
-              value={form.area}
-              {...atributError("area")}
-              onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))}
-              className={`${kelasSelect} ${kelasIsi(Boolean(form.area))}`}
+        <div className="mt-12 grid grid-cols-2 items-start gap-12 md:mt-16 min-[75rem]:grid-cols-[minmax(0,1fr)_432px_185px_165px]">
+          <div ref={areaWadahRef} className="relative col-span-2 min-[75rem]:col-span-1">
+            <Field
+              ikon={IKON.lokasi}
+              dropdown
+              error={errorTampil.area}
+              errorId="area-error"
+              aktif={areaTerbuka}
             >
-              <option value="" disabled>
-                Area antar
-              </option>
-              {areaAntarOptions.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
-          </Field>
+              <button
+                type="button"
+                id="area"
+                ref={areaRef}
+                aria-haspopup="dialog"
+                aria-expanded={areaTerbuka}
+                aria-label={form.area ? `Area antar, ${form.area}` : "Area antar"}
+                {...atributError("area")}
+                onClick={() => {
+                  setKalender(null);
+                  setAreaTerbuka((t) => !t);
+                }}
+                className={`absolute inset-0 rounded-b-sm pr-36 pl-40 text-left focus-visible:shadow-none md:pr-40 md:pl-48 ${kelasIsi(Boolean(form.area))}`}
+              >
+                {form.area || "Area antar"}
+              </button>
+            </Field>
+            {areaTerbuka && (
+              <PanelArea
+                nilai={form.area}
+                onPilih={(area) => {
+                  setForm((f) => ({ ...f, area }));
+                  setAreaTerbuka(false);
+                  areaRef.current?.focus();
+                }}
+                onTutup={() => {
+                  setAreaTerbuka(false);
+                  areaRef.current?.focus();
+                }}
+              />
+            )}
+          </div>
 
-          <Field
-            ikon={IKON.kalender}
-            error={errorTampil.tanggalAmbil}
-            errorId="tanggalAmbil-error"
-            className="col-span-2 md:col-span-1"
+          {/* Kedua field tanggal satu wadah, supaya kalender bisa menempel
+              di bawah keduanya dan klik di dalamnya tidak dianggap klik luar. */}
+          <div
+            ref={rentangRef}
+            className="relative col-span-2 grid items-start gap-12 md:grid-cols-2 min-[75rem]:col-span-1"
           >
-            <span aria-hidden className={`min-w-0 pr-8 pl-40 md:pl-48 ${kelasIsi(Boolean(tampilAmbil))}`}>
-              {tampilAmbil ?? "Tanggal ambil"}
-            </span>
-            <label htmlFor="tanggal-ambil" className="sr-only">
-              Tanggal ambil
-            </label>
-            <input
-              id="tanggal-ambil"
-              ref={tanggalAmbilRef}
-              type="date"
-              required
-              value={form.tanggalAmbil}
-              min={minTanggal || undefined}
-              {...atributError("tanggalAmbil")}
-              onClick={bukaPemilih}
-              onChange={(e) => ubahTanggalAmbil(e.target.value)}
-              className="input-tanggal-tersembunyi"
-            />
-          </Field>
+            <Field
+              ikon={IKON.kalender}
+              error={errorTampil.tanggalAmbil}
+              errorId="tanggalAmbil-error"
+              aktif={kalender === "ambil"}
+            >
+              <button
+                type="button"
+                id="tanggal-ambil"
+                ref={tanggalAmbilRef}
+                aria-haspopup="dialog"
+                aria-expanded={kalender === "ambil"}
+                aria-label={tampilAmbil ? `Tanggal ambil, ${tampilAmbil}` : "Tanggal ambil"}
+                {...atributError("tanggalAmbil")}
+                onClick={() => {
+                  setAreaTerbuka(false);
+                  setKalender((k) => (k === "ambil" ? null : "ambil"));
+                }}
+                className={`absolute inset-0 rounded-b-sm pr-8 pl-40 text-left focus-visible:shadow-none md:pl-48 ${kelasIsi(Boolean(tampilAmbil))}`}
+              >
+                {tampilAmbil ?? "Tanggal ambil"}
+              </button>
+            </Field>
 
-          <Field
-            ikon={IKON.kalenderCek}
-            error={errorTampil.tanggalKembali}
-            errorId="tanggalKembali-error"
-            className="col-span-2 md:col-span-1"
-          >
-            <span aria-hidden className={`min-w-0 pr-8 pl-40 md:pl-48 ${kelasIsi(Boolean(tampilKembali))}`}>
-              {tampilKembali ?? "Tanggal kembali"}
-            </span>
-            <label htmlFor="tanggal-kembali" className="sr-only">
-              Tanggal kembali
-            </label>
-            <input
-              id="tanggal-kembali"
-              ref={tanggalKembaliRef}
-              type="date"
-              required
-              value={form.tanggalKembali}
-              // Paling cepat sehari setelah tanggal ambil.
-              min={geserHari(form.tanggalAmbil, 1) || minTanggal || undefined}
-              {...atributError("tanggalKembali")}
-              onClick={bukaPemilih}
-              onChange={(e) => setForm((f) => ({ ...f, tanggalKembali: e.target.value }))}
-              className="input-tanggal-tersembunyi"
-            />
-          </Field>
+            <Field
+              ikon={IKON.kalenderCek}
+              error={errorTampil.tanggalKembali}
+              errorId="tanggalKembali-error"
+              aktif={kalender === "kembali"}
+            >
+              <button
+                type="button"
+                id="tanggal-kembali"
+                ref={tanggalKembaliRef}
+                aria-haspopup="dialog"
+                aria-expanded={kalender === "kembali"}
+                aria-label={tampilKembali ? `Tanggal kembali, ${tampilKembali}` : "Tanggal kembali"}
+                {...atributError("tanggalKembali")}
+                // Tanpa tanggal ambil, kalender meminta tanggal ambil dulu.
+                onClick={() => {
+                  setAreaTerbuka(false);
+                  setKalender((k) =>
+                    k === "kembali" ? null : form.tanggalAmbil ? "kembali" : "ambil",
+                  );
+                }}
+                className={`absolute inset-0 rounded-b-sm pr-8 pl-40 text-left focus-visible:shadow-none md:pl-48 ${kelasIsi(Boolean(tampilKembali))}`}
+              >
+                {tampilKembali ?? "Tanggal kembali"}
+              </button>
+            </Field>
+
+            {kalender && (
+              <KalenderSewa
+                ambil={form.tanggalAmbil}
+                kembali={form.tanggalKembali}
+                mode={kalender}
+                minTanggal={minTanggal}
+                onPilih={pilihTanggal}
+                onTutup={tutupKalender}
+              />
+            )}
+          </div>
 
           <Field ikon={IKON.jam} dropdown error={errorTampil.jamAmbil} errorId="jamAmbil-error">
             <label htmlFor="jam-ambil" className="sr-only">

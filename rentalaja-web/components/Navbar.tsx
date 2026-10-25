@@ -15,10 +15,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AuthModal, { type ModeAuth } from "@/components/auth/AuthModal";
 
+// Diawali "/" supaya tetap berfungsi dari halaman selain beranda.
 const navLinks = [
-  { label: "Cara kerja", href: "#cara-kerja" },
-  { label: "Jadi penyedia", href: "#jadi-penyedia" },
-  { label: "Bantuan", href: "#faq" },
+  { label: "Cara kerja", href: "/#cara-kerja" },
+  { label: "Jadi penyedia", href: "/jadi-penyedia" },
+  { label: "Bantuan", href: "/#faq" },
 ];
 
 export default function Navbar() {
@@ -85,7 +86,11 @@ export default function Navbar() {
               <a
                 key={l.href}
                 href={l.href}
-                className="flex items-center text-b5 font-medium text-ink transition-colors duration-160 ease-beranda hover:text-green-700"
+                aria-current={pathname === l.href ? "page" : undefined}
+                className={"flex items-center text-b5 transition-colors duration-160 ease-beranda hover:text-green-700 " +
+                  (pathname === l.href
+                    ? "border-b-2 border-green-700 font-semibold text-green-700"
+                    : "font-medium text-ink")}
               >
                 {l.label}
               </a>
@@ -163,8 +168,10 @@ export default function Navbar() {
             <a
               key={l.href}
               href={l.href}
+              aria-current={pathname === l.href ? "page" : undefined}
               onClick={tutupDrawer}
-              className="flex min-h-56 items-center border-b border-green-200 text-b4-sm font-semibold text-ink"
+              className={"flex min-h-56 items-center border-b border-green-200 text-b4-sm font-semibold " +
+                (pathname === l.href ? "text-green-700" : "text-ink")}
             >
               {l.label}
             </a>

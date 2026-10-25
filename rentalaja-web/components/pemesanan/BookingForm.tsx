@@ -380,13 +380,13 @@ export default function BookingForm({
                 onUbah={setTitikAntar}
                 placeholder={contohIsian.titikAntar}
               />
-              {/* Peta mengikuti alamat yang diketik; kalau kosong, pakai
-                  alamat contoh. Tinggi 200px, bukan 96px spec: kartu info
-                  tempat Google Embed sendiri ~100px dan akan menutup peta. */}
+              {/* Dua arah: alamat yang diketik menggeser pin, klik peta atau
+                  geser pin mengisi kolom titik antar. Kalau kolomnya kosong,
+                  peta menunjuk alamat contoh. */}
               <PetaLokasi
                 alamat={titikAntar.trim() || contohIsian.titikAntar}
-                className="mt-8 h-200"
-                sizes="(min-width: 1024px) 60vw, 100vw"
+                onPilihAlamat={setTitikAntar}
+                className="mt-8 h-240"
               />
             </div>
 
@@ -420,8 +420,9 @@ export default function BookingForm({
             className="mt-14"
           >
             <p className="mt-4 text-body-sm text-muted">
-              Untuk motor, KTP atau paspor dan SIM C. Diverifikasi penyedia
-              sebelum unit diantar.
+              Untuk {ringkasan.unit.kategori}, KTP atau paspor dan{" "}
+              {labelDokumen.sim[ringkasan.unit.kategori]}. Diverifikasi penyedia sebelum unit
+              diantar.
             </p>
 
             <div className="mt-14 grid gap-12 sm:grid-cols-2">
@@ -430,7 +431,11 @@ export default function BookingForm({
                 berkas={ktp}
                 onPilih={setKtp}
               />
-              <Unggah label={labelDokumen.sim} berkas={sim} onPilih={setSim} />
+              <Unggah
+                label={labelDokumen.sim[ringkasan.unit.kategori]}
+                berkas={sim}
+                onPilih={setSim}
+              />
             </div>
 
             <div className="mt-14 grid gap-8 border-t border-line pt-12">

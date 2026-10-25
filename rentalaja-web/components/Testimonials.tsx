@@ -8,13 +8,10 @@ export default function Testimonials() {
   return (
     <section aria-labelledby="judul-testimoni" className="bg-green-900 py-64 text-white md:py-96">
       <div className="container-beranda">
-        <h2
-          id="judul-testimoni"
-          className="text-b6-sm font-bold tracking-[0.08em] text-mint uppercase md:text-b6"
-        >
-          Kata penyewa
+        <h2 id="judul-testimoni" className="text-b2-sm md:text-b2">
+          Kata Penyewa
         </h2>
-        <ul className="mt-24 grid gap-16 md:grid-cols-3 md:gap-24">
+        <ul className="mt-24 md:mt-40 grid gap-16 md:grid-cols-3 md:gap-24">
           {testimoni.map((t) => (
             <li key={t.id}>
               <figure className="flex h-full flex-col rounded-b-lg border border-white/12 bg-white/6 p-24 md:rounded-b-xl md:p-32">

@@ -24,12 +24,12 @@ export default function ProviderCta() {
               >
                 Buka panel mitra
               </Link>
-              <a
-                href="#simulasi"
+              <Link
+                href="/jadi-penyedia"
                 className="inline-flex min-h-52 items-center justify-center rounded-b-sm border-[1.5px] border-white/70 px-24 text-b5-sm font-bold text-white transition-colors duration-160 ease-beranda hover:bg-white/10 md:text-b5"
               >
-                Lihat simulasi
-              </a>
+                Pelajari selengkapnya
+              </Link>
             </div>
           </div>
           <div className="relative order-first h-180 md:order-none md:h-auto">

@@ -15,8 +15,10 @@
 // titik antar) di sini turun jadi PLACEHOLDER. Formnya mulai kosong supaya
 // bisa diisi sungguhan, dan stepper baru menghijau setelah terisi.
 
+import type { Kategori } from "@/lib/mock/search";
+
 export type RingkasanPesanan = {
-  unit: { nama: string; penyedia: string; rating: string; foto: string };
+  unit: { nama: string; penyedia: string; rating: string; foto: string; kategori: Kategori };
   rincian: { label: string; nilai: string }[];
   total: string;
 };
@@ -29,6 +31,7 @@ export const pesanan: RingkasanPesanan = {
     penyedia: "Bali Motor Rent",
     rating: "4,9",
     foto: "/units/honda-scoopy-2023.webp",
+    kategori: "motor",
   },
   rincian: [
     { label: "3 hari sewa", nilai: "Rp 210.000" },
@@ -64,7 +67,8 @@ export const contohIsian = {
 
 export const labelDokumen = {
   identitas: "KTP / Paspor",
-  sim: "SIM C",
+  /** SIM yang diminta mengikuti kategori unit yang dipesan. */
+  sim: { motor: "SIM C", mobil: "SIM A" } as Record<Kategori, string>,
 } as const;
 
 export const petunjukBerkas = "Tarik file ke sini atau pilih";

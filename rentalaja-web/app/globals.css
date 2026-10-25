@@ -592,26 +592,7 @@
     pointer-events: none;
   }
 
-  /* Input tanggal disembunyikan di balik tampilan kustom. Ikon kalender
-     bawaan Chrome direntangkan ke seluruh field supaya klik di mana pun
-     membuka pemilih tanggal. */
-  .input-tanggal-tersembunyi {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-  }
-
-  .input-tanggal-tersembunyi::-webkit-calendar-picker-indicator {
-    position: absolute;
-    inset: 0;
-    width: auto;
-    height: auto;
-    cursor: pointer;
-  }
-
-/* Hover kartu tiga langkah: hijau primer dengan kilau putih lembut di
+  /* Hover kartu tiga langkah: hijau primer dengan kilau putih lembut di
      pojok kiri atas, menggelap ke kanan bawah. Kilaunya habis sebelum area
      judul, jadi teks putih tetap di atas 6:1. */
   .bg-langkah-aktif {
