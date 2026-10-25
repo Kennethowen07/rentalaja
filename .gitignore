@@ -3,3 +3,25 @@ project-brief/
 
 # Spesifikasi backend, disimpan lokal saja.
 backend.md
+
+# Catatan dan konfigurasi alat bantu AI, hanya untuk mesin lokal.
+.claude/
+**/CLAUDE.md
+**/AGENTS.md
+claude design instructions/
+design_handoff_rentalaja_landing/PROMPT.md
+graphify-out/
+design-lab/
+
+# Bahan mentah: foto sumber, screenshot referensi, dan wireframe. Foto yang
+# dipakai situs ada di rentalaja-web/public/ dengan kredit di /kredit.
+assets/
+UI references/
+UI/
+
+# Dokumen kuliah dan riset di luar kode.
+BMC/
+VIDEO/
+SURVEY/
+logo/
+PRD*.md

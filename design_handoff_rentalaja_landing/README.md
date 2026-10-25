@@ -321,4 +321,3 @@ Desain digambar di 1060px. Aturan yang diminta:
   (referensi utama). Turn 1 (`id="1a"`) = 11 layar flow.
 - `RentalAja Wireframes (CHECKPOINT 2).dc.html` — snapshot versi yang disetujui (identik).
 - `assets/hero-parkir.png`
-- `PROMPT.md` — prompt siap-tempel untuk Claude Code.
