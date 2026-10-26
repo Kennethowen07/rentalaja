@@ -143,7 +143,7 @@ export default async function UnitDetail({ data }: { data: DetailUnit }) {
               <AvatarKosong className="size-44" />
               <div>
                 <p className="text-section-sm text-ink">{data.penyedia.nama}</p>
-                <p className="mt-2 text-body text-muted">{data.penyedia.meta}</p>
+                <p className="mt-2 whitespace-pre-line text-body text-muted">{data.penyedia.meta}</p>
               </div>
             </div>
           </Seksi>

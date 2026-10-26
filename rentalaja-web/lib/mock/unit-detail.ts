@@ -119,8 +119,8 @@ export function detailUnit(slug: string, sewa: Sewa, bahasa: Bahasa = "id"): Det
       nama: unit.penyedia,
       meta:
         bahasa === "en"
-          ? `★ ${desimal(unit.rating, bahasa)} · 18 Vehicles · Joined in 2023 (Average Reply Time: 1 Hour)`
-          : `★ ${unit.rating} · 18 Unit · Bergabung Sejak 2023 (Rata-Rata Waktu Balas: 1 Jam)`,
+          ? `★ ${desimal(unit.rating, bahasa)}\nJoined in 2023\nAverage Reply Time: 1 Hour`
+          : `★ ${desimal(unit.rating, bahasa)}\nBergabung Sejak 2023\nRata-Rata Waktu Balas: 1 Jam`,
     },
     harga: {
       perHari: unit.hargaPerHari,

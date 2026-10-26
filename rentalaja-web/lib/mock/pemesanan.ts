@@ -77,15 +77,23 @@ export const contohIsian = {
   email: "adi@email.com",
 } as const;
 
-export const labelDokumen = kamus<{ identitas: string; sim: Record<Kategori, string> }>({
+/** Asal penyewa, dipilih di pop-up sebelum form tampil. WNI menyerahkan KTP
+ *  dan SIM Indonesia; wisatawan asing menyerahkan paspor, International
+ *  Driving Permit, dan SIM negara asalnya. */
+export type Asal = "wni" | "wna";
+
+export const labelDokumen = kamus<{
+  wni: { identitas: string; sim: Record<Kategori, string> };
+  wna: { identitas: string; idp: string; sim: string };
+}>({
   id: {
-    identitas: "KTP / Paspor",
     /** SIM yang diminta mengikuti kategori unit yang dipesan. */
-    sim: { motor: "SIM C", mobil: "SIM A" },
+    wni: { identitas: "KTP", sim: { motor: "SIM C", mobil: "SIM A" } },
+    wna: { identitas: "Paspor", idp: "International Driving Permit", sim: "SIM negara asal" },
   },
   en: {
-    identitas: "ID card / Passport",
-    sim: { motor: "Motorcycle licence (SIM C)", mobil: "Car licence (SIM A)" },
+    wni: { identitas: "ID card (KTP)", sim: { motor: "Motorcycle licence (SIM C)", mobil: "Car licence (SIM A)" } },
+    wna: { identitas: "Passport", idp: "International Driving Permit", sim: "Home country licence" },
   },
 });
 
@@ -105,6 +113,8 @@ export const simulasi = {
   pengambilan: 0,
   ktp: "ktp-adi.jpg",
   sim: "sim-adi.jpg",
+  /** Pengganti dokumen di atas untuk wisatawan asing. */
+  wna: { identitas: "passport.jpg", idp: "idp.jpg", sim: "licence.jpg", negara: "Australia" },
   nama: contohIsian.nama,
   whatsapp: contohIsian.whatsapp,
   email: contohIsian.email,

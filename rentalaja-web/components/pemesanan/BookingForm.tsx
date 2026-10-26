@@ -18,12 +18,14 @@
 // dibaca di memori, cukup untuk prototype.
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
+import Modal from "@/components/ui/Modal";
 import PetaLokasi from "@/components/ui/PetaLokasi";
 import { useBahasa } from "@/components/BahasaProvider";
-import { kamus } from "@/lib/i18n";
+import { gantiBahasa, kamus } from "@/lib/i18n";
 import {
+  type Asal,
   contohIsian,
   labelDokumen,
   langkah,
@@ -56,9 +58,16 @@ const TEKS = kamus({
     titikAntar: "Titik antar",
     caraAmbil: "Cara pengambilan unit",
     kartu2: "Dokumen",
-    dokumenSub: (kategori: string, sim: string) =>
-      `Untuk ${kategori}, KTP atau paspor dan ${sim}. Diverifikasi penyedia sebelum unit diantar.`,
-    kategori: { motor: "motor", mobil: "mobil" },
+    negara: "Kewarganegaraan",
+    kyc: "Verifikasi wajah (KYC)",
+    kycOk: "Wajah terverifikasi",
+    kycPetunjuk: (dok: string) =>
+      `Posisikan wajah di dalam bingkai, cahaya cukup, tanpa kacamata hitam. Wajahmu dicocokkan dengan foto di ${dok}.`,
+    kycMulai: "Mulai verifikasi",
+    kycProses: "Memeriksa wajah…",
+    kycBerhasil: (dok: string) => `Wajah cocok dengan foto ${dok}.`,
+    kycSelesai: "Selesai",
+    kycSimulasi: "Simulasi, kamera tidak dinyalakan.",
     namaDokumen: "Nama sesuai dokumen",
     whatsapp: "Nomor WhatsApp",
     email: "Email",
@@ -66,7 +75,7 @@ const TEKS = kamus({
     metode: "Metode pembayaran",
     simulasikan: "Simulasikan Langsung",
     simulasikanSub:
-      "Mengisi seluruh kolom dengan data contoh, termasuk kedua dokumen. Pintasan untuk mencoba alur, bukan bagian dari produk.",
+      "Mengisi seluruh kolom dengan data contoh, termasuk dokumennya. Pintasan untuk mencoba alur, bukan bagian dari produk.",
     foto: (nama: string) => `Foto ${nama}`,
     totalPembayaran: "Total Pembayaran",
     bayar: (total: string) => `Bayar ${total}`,
@@ -94,9 +103,16 @@ const TEKS = kamus({
     titikAntar: "Delivery point",
     caraAmbil: "How you get the vehicle",
     kartu2: "Documents",
-    dokumenSub: (kategori: string, sim: string) =>
-      `For a ${kategori}: ID card or passport, plus a ${sim}. Verified by the provider before delivery.`,
-    kategori: { motor: "scooter", mobil: "car" },
+    negara: "Nationality",
+    kyc: "Face verification (KYC)",
+    kycOk: "Face verified",
+    kycPetunjuk: (dok: string) =>
+      `Keep your face inside the frame, in good light, without sunglasses. It is matched against the photo on your ${dok}.`,
+    kycMulai: "Start verification",
+    kycProses: "Checking your face…",
+    kycBerhasil: (dok: string) => `Your face matches the ${dok} photo.`,
+    kycSelesai: "Done",
+    kycSimulasi: "Simulation, the camera is not turned on.",
     namaDokumen: "Name as on your documents",
     whatsapp: "WhatsApp number",
     email: "Email",
@@ -104,7 +120,7 @@ const TEKS = kamus({
     metode: "Payment method",
     simulasikan: "Fill in for me",
     simulasikanSub:
-      "Fills every field with sample data, including both documents. A shortcut for trying the flow, not part of the product.",
+      "Fills every field with sample data, including the documents. A shortcut for trying the flow, not part of the product.",
     foto: (nama: string) => `Photo of ${nama}`,
     totalPembayaran: "Total Payment",
     bayar: (total: string) => `Pay ${total}`,
@@ -343,23 +359,47 @@ function ModalPembayaran({
  *  bentuk teks siap tampil. Tidak bisa diubah di sini. */
 export type PeriodeSewa = { ambil: string; kembali: string };
 
+/** Pertanyaan asal penyewa sengaja selalu berbahasa Inggris: wisatawan asing
+ *  bisa saja tiba di versi bahasa Indonesia, dan justru merekalah yang harus
+ *  bisa menjawabnya. */
+const TANYA_ASAL = {
+  judul: "Are you a foreign visitor?",
+  wni: "No, I'm Indonesian",
+  wna: "Yes, I'm visiting from abroad",
+};
+
 export default function BookingForm({
   periode,
   ringkasan,
+  asal,
 }: {
   periode: PeriodeSewa;
   /** Unit dan rincian harga, dibangun dari unit yang diklik di layar detail. */
   ringkasan: RingkasanPesanan;
+  /** Dari ?asal=. Kosong berarti belum dipilih, jadi pop-up asal tampil
+   *  lebih dulu dan menentukan dokumen yang diminta di langkah 2. */
+  asal: Asal | null;
 }) {
   const { bahasa, jalur } = useBahasa();
   const t = TEKS[bahasa];
   const halamanPesanan = jalur("/pesanan");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [titikAntar, setTitikAntar] = useState("");
   const [pengambilan, setPengambilan] = useState<number | null>(null);
 
+  // WNI: KTP + SIM Indonesia. WNA: paspor + IDP + SIM negara asal.
   const [ktp, setKtp] = useState<string | null>(null);
   const [sim, setSim] = useState<string | null>(null);
+  const [idp, setIdp] = useState<string | null>(null);
+  const [negara, setNegara] = useState("");
+  // Verifikasi wajah: belum -> proses (jeda 2 detik) -> ok. Simulasi saja.
+  const [kyc, setKyc] = useState<"belum" | "proses" | "ok">("belum");
+  const [bukaKyc, setBukaKyc] = useState(false);
   const [nama, setNama] = useState("");
+  const label = labelDokumen[bahasa];
+  // Dokumen berfoto yang dicocokkan dengan wajah penyewa.
+  const dokumenWajah = asal === "wna" ? label.wna.identitas : label.wni.identitas;
   const [whatsapp, setWhatsapp] = useState("");
   const [email, setEmail] = useState("");
 
@@ -372,7 +412,15 @@ export default function BookingForm({
   // Satu langkah hijau hanya kalau SELURUH field miliknya terisi.
   const selesai = [
     Boolean(titikAntar.trim() && pengambilan !== null),
-    Boolean(ktp && sim && nama.trim() && whatsapp.trim() && email.trim()),
+    Boolean(
+      ktp &&
+        sim &&
+        (asal !== "wna" || (idp && negara.trim())) &&
+        kyc === "ok" &&
+        nama.trim() &&
+        whatsapp.trim() &&
+        email.trim(),
+    ),
     pembayaran !== null,
   ];
   const semuaSelesai = selesai.every(Boolean);
@@ -392,6 +440,22 @@ export default function BookingForm({
     setTahap("qr");
   }
 
+  /** Pilihan asal disimpan di URL (?asal=), jadi tetap bertahan saat halaman
+   *  dimuat ulang dan bisa dibagikan. Wisatawan asing dipindah ke versi bahasa
+   *  Inggris, termasuk navbar dan footer. */
+  function pilihAsal(pilihan: Asal) {
+    const q = new URLSearchParams(searchParams.toString());
+    q.set("asal", pilihan);
+    const tujuan = pilihan === "wna" ? gantiBahasa(pathname, "en") : pathname;
+    router.replace(`${tujuan}?${q}`, { scroll: false });
+  }
+
+  useEffect(() => {
+    if (kyc !== "proses") return;
+    const timer = setTimeout(() => setKyc("ok"), 2000);
+    return () => clearTimeout(timer);
+  }, [kyc]);
+
   function tutupModal() {
     setTahap("form");
     bayarRef.current?.focus();
@@ -402,8 +466,16 @@ export default function BookingForm({
   function isiOtomatis() {
     setTitikAntar(simulasi.titikAntar);
     setPengambilan(simulasi.pengambilan);
-    setKtp(simulasi.ktp);
-    setSim(simulasi.sim);
+    setKyc("ok");
+    if (asal === "wna") {
+      setKtp(simulasi.wna.identitas);
+      setIdp(simulasi.wna.idp);
+      setSim(simulasi.wna.sim);
+      setNegara(simulasi.wna.negara);
+    } else {
+      setKtp(simulasi.ktp);
+      setSim(simulasi.sim);
+    }
     setNama(simulasi.nama);
     setWhatsapp(simulasi.whatsapp);
     setEmail(simulasi.email);
@@ -507,34 +579,76 @@ export default function BookingForm({
             selesai={selesai[1]}
             className="mt-14"
           >
-            <p className="mt-4 text-body-sm text-muted">
-              {t.dokumenSub(t.kategori[ringkasan.unit.kategori], labelDokumen[bahasa].sim[ringkasan.unit.kategori])}
-            </p>
-
-            <div className="mt-14 grid gap-12 sm:grid-cols-2">
+            <div className={`mt-14 grid gap-12 ${asal === "wna" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
               <Unggah
                 t={t}
                 petunjuk={petunjukBerkas[bahasa]}
-                label={labelDokumen[bahasa].identitas}
+                label={asal === "wna" ? label.wna.identitas : label.wni.identitas}
                 berkas={ktp}
                 onPilih={setKtp}
               />
+              {asal === "wna" && (
+                <Unggah
+                  t={t}
+                  petunjuk={petunjukBerkas[bahasa]}
+                  label={label.wna.idp}
+                  berkas={idp}
+                  onPilih={setIdp}
+                />
+              )}
               <Unggah
                 t={t}
                 petunjuk={petunjukBerkas[bahasa]}
-                label={labelDokumen[bahasa].sim[ringkasan.unit.kategori]}
+                label={asal === "wna" ? label.wna.sim : label.wni.sim[ringkasan.unit.kategori]}
                 berkas={sim}
                 onPilih={setSim}
               />
             </div>
 
+            {/* Tombol solid, bukan kotak putus-putus seperti unggah dokumen,
+                supaya terbaca sebagai langkah yang harus ditekan. */}
+            {kyc === "ok" ? (
+              <p className="mt-12 flex items-center justify-center gap-8 rounded-input border border-green-700 bg-green-100 py-13 text-btn text-green-700">
+                ✓ {t.kycOk}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setBukaKyc(true)}
+                className="mt-12 flex w-full items-center justify-center gap-10 rounded-input bg-green-700 py-13 text-btn text-white transition-colors duration-160 ease-base hover:bg-green-800"
+              >
+                <svg aria-hidden viewBox="0 0 24 24" className="size-20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <circle cx="12" cy="13" r="3.5" />
+                </svg>
+                {t.kyc}
+              </button>
+            )}
+
             <div className="mt-14 grid gap-8 border-t border-line pt-12">
-              <Isian
-                label={t.namaDokumen}
-                nilai={nama}
-                onUbah={setNama}
-                placeholder={contohIsian.nama}
-              />
+              {asal === "wna" ? (
+                <div className="grid gap-12 sm:grid-cols-2">
+                  <Isian
+                    label={t.namaDokumen}
+                    nilai={nama}
+                    onUbah={setNama}
+                    placeholder={contohIsian.nama}
+                  />
+                  <Isian
+                    label={t.negara}
+                    nilai={negara}
+                    onUbah={setNegara}
+                    placeholder={simulasi.wna.negara}
+                  />
+                </div>
+              ) : (
+                <Isian
+                  label={t.namaDokumen}
+                  nilai={nama}
+                  onUbah={setNama}
+                  placeholder={contohIsian.nama}
+                />
+              )}
               <div className="grid gap-12 sm:grid-cols-2">
                 <Isian
                   label={t.whatsapp}
@@ -663,6 +777,56 @@ export default function BookingForm({
           onBayar={() => setTahap("proses")}
           onTutup={tutupModal}
         />
+      )}
+
+      {/* Ditanya sebelum form bisa diisi; latarnya digelapkan pekat. Menutup
+          tanpa memilih berarti batal memesan, jadi kembali ke halaman unit. */}
+      {bukaKyc && (
+        <Modal judul={t.kyc} onTutup={() => kyc !== "proses" && setBukaKyc(false)} lebar="max-w-[400px]">
+          <div className="mt-16 grid place-items-center">
+            {/* Bingkai wajah oval; hijau setelah cocok. */}
+            <div
+              aria-hidden
+              className={`grid h-200 w-160 place-items-center rounded-[50%] border-3 border-dashed bg-surface-2 transition-colors duration-160 ease-base ${
+                kyc === "ok" ? "border-green-700" : kyc === "proses" ? "animate-pulse border-green-700" : "border-line"
+              }`}
+            >
+              <svg viewBox="0 0 40 40" className="size-96 text-placeholder">
+                <circle cx="20" cy="15.5" r="7" fill="currentColor" />
+                <path d="M6 38c0-8 6.3-13 14-13s14 5 14 13z" fill="currentColor" />
+              </svg>
+            </div>
+            <p aria-live="polite" className="mt-14 text-center text-body text-muted">
+              {kyc === "ok" ? t.kycBerhasil(dokumenWajah) : kyc === "proses" ? t.kycProses : t.kycPetunjuk(dokumenWajah)}
+            </p>
+            <button
+              type="button"
+              disabled={kyc === "proses"}
+              onClick={() => (kyc === "ok" ? setBukaKyc(false) : setKyc("proses"))}
+              className="mt-16 w-full rounded-input bg-green-700 py-11 text-panel text-white transition-colors duration-160 ease-base hover:bg-green-800 disabled:bg-surface-2 disabled:text-muted"
+            >
+              {kyc === "ok" ? t.kycSelesai : kyc === "proses" ? t.kycProses : t.kycMulai}
+            </button>
+            <p className="mt-8 text-micro text-muted">{t.kycSimulasi}</p>
+          </div>
+        </Modal>
+      )}
+
+      {!asal && (
+        <Modal judul={TANYA_ASAL.judul} onTutup={() => router.back()} lebar="max-w-[400px]" latar="pekat">
+          <div className="mt-16 grid gap-10">
+            {(["wni", "wna"] as const).map((pilihan) => (
+              <button
+                key={pilihan}
+                type="button"
+                onClick={() => pilihAsal(pilihan)}
+                className="rounded-input border border-line bg-white px-16 py-14 text-left text-nav-strong text-ink transition-colors duration-160 ease-base hover:border-green-700 hover:bg-green-100"
+              >
+                {TANYA_ASAL[pilihan]}
+              </button>
+            ))}
+          </div>
+        </Modal>
       )}
     </form>
   );

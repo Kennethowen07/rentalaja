@@ -12,11 +12,12 @@
 // tanggalnya jatuh ke besok selama 3 hari dan ringkasannya memakai contoh
 // di lib/mock/pemesanan.ts.
 
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BookingForm, { type PeriodeSewa } from "@/components/pemesanan/BookingForm";
-import { desimal, kamus, lokal, type Bahasa } from "@/lib/i18n";
+import { desimal, jalur, kamus, lokal, type Bahasa } from "@/lib/i18n";
 import { bahasaAktif } from "@/lib/i18n-server";
 import { pesanan, type RingkasanPesanan } from "@/lib/mock/pemesanan";
 import { detailUnit, type DetailUnit } from "@/lib/mock/unit-detail";
@@ -103,6 +104,14 @@ export default async function PemesananPage({
   const sewa = sewaDariParams(params, Date.now());
   const slug = typeof params.unit === "string" ? params.unit : "";
   const detail = slug ? detailUnit(slug, sewa, bahasa) : null;
+  // WNI atau wisatawan asing, dipilih di pop-up pertama halaman ini.
+  const asal = params.asal === "wni" || params.asal === "wna" ? params.asal : null;
+  // Halaman wisatawan asing selalu berbahasa Inggris.
+  if (asal === "wna" && bahasa === "id") {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (typeof v === "string") q.set(k, v);
+    redirect(`${jalur("en", "/pemesanan")}?${q}`);
+  }
 
   return (
     <>
@@ -111,6 +120,7 @@ export default async function PemesananPage({
         <BookingForm
           periode={periodeSewa(sewa, bahasa)}
           ringkasan={detail ? ringkasanDari(detail, bahasa) : pesanan[bahasa]}
+          asal={asal}
         />
       </main>
       <Footer />
