@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import CalloutPesanan from "@/components/mitra/CalloutPesanan";
-import KeteranganPesananHariIni from "@/components/mitra/KeteranganPesananHariIni";
 import { HeaderHalaman, ThumbnailUnit, TitikStatus, TombolLink } from "@/components/mitra/ui";
 import { jalur, kamus } from "@/lib/i18n";
 import { bahasaAktif } from "@/lib/i18n-server";
@@ -22,11 +21,9 @@ const TEKS = kamus({
     blokir: "Blokir tanggal",
     tambah: "Tambah unit",
     ringkasan: "Ringkasan hari ini",
-    masukHariIni: "Pesanan masuk hari ini",
-    sedangKeluar: "Unit sedang keluar",
-    telat: (n: number) => `${n} lewat jadwal kembali`,
-    sesuai: "Semua sesuai jadwal kembali",
-    pendapatan: (b: string) => `Pendapatan ${b}`,
+    masukHariIni: "Pesanan Masuk Hari Ini",
+    sedangKeluar: "Unit Sedang Keluar",
+    pendapatan: (b: string) => `Pendapatan Bersih ${b}`,
     unitKeluar: "Unit yang lagi keluar",
     lihatSemua: "Lihat semua",
     mingguIni: "Minggu ini",
@@ -41,11 +38,9 @@ const TEKS = kamus({
     blokir: "Block dates",
     tambah: "Add vehicle",
     ringkasan: "Today at a glance",
-    masukHariIni: "Bookings in today",
-    sedangKeluar: "Vehicles out",
-    telat: (n: number) => `${n} past the return time`,
-    sesuai: "All on schedule",
-    pendapatan: (b: string) => `Earnings, ${b}`,
+    masukHariIni: "Bookings In Today",
+    sedangKeluar: "Vehicles Out",
+    pendapatan: (b: string) => `Net Earnings, ${b}`,
     unitKeluar: "Vehicles out right now",
     lihatSemua: "See all",
     mingguIni: "This week",
@@ -83,7 +78,6 @@ export default async function BerandaMitra() {
     ...u,
     status: statusKembali(u.kembaliPada, d.sekarang, bahasa),
   }));
-  const jumlahTelat = unitKeluar.filter((u) => u.status.telat).length;
 
   const maks = Math.max(...d.mingguIni.map((h) => h.jumlah));
   const tersibuk = d.mingguIni.find((h) => h.jumlah === maks)!;
@@ -112,26 +106,19 @@ export default async function BerandaMitra() {
         className="mt-36 grid rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:grid-cols-3 min-[640px]:p-24"
       >
         <div className="border-b border-mitra-hairline pb-20 min-[640px]:border-r min-[640px]:border-b-0 min-[640px]:pb-0 min-[640px]:pr-30">
-          <p className="text-m-label text-mitra-faint">{t.masukHariIni}</p>
+          <p className="text-m-judul-baris text-mitra-ink">{t.masukHariIni}</p>
           <p className="mt-6 text-m-metrik text-mitra-ink">{d.pesananHariIni.masuk}</p>
-          <p className="mt-2 text-m-label text-mitra-muted">
-            <KeteranganPesananHariIni dikonfirmasi={d.pesananHariIni.dikonfirmasi} />
-          </p>
         </div>
         <div className="border-b border-mitra-hairline py-20 min-[640px]:border-r min-[640px]:border-b-0 min-[640px]:px-30 min-[640px]:py-0">
-          <p className="text-m-label text-mitra-faint">{t.sedangKeluar}</p>
+          <p className="text-m-judul-baris text-mitra-ink">{t.sedangKeluar}</p>
           <p className="mt-6 text-m-metrik text-mitra-ink">
             {d.unitKeluar.jumlah}{" "}
             <span className="text-m-penyebut text-mitra-faint">/ {d.unitKeluar.totalUnit}</span>
           </p>
-          <p className="mt-2 text-m-label text-mitra-muted">
-            {jumlahTelat > 0 ? t.telat(jumlahTelat) : t.sesuai}
-          </p>
         </div>
         <div className="pt-20 min-[640px]:pt-0 min-[640px]:pl-30">
-          <p className="text-m-label text-mitra-faint">{t.pendapatan(d.pendapatan.bulan)}</p>
+          <p className="text-m-judul-baris text-mitra-ink">{t.pendapatan(d.pendapatan.bulan)}</p>
           <p className="mt-6 text-m-metrik text-mitra-ink">{d.pendapatan.nilai}</p>
-          <p className="mt-2 text-m-label text-mitra-muted">{d.pendapatan.keterangan}</p>
         </div>
       </section>
 

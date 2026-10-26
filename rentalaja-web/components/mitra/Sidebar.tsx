@@ -13,7 +13,7 @@ import { usePesanan } from "./PesananProvider";
 
 const TEKS = kamus({
   id: {
-    menu: ["Beranda", "Pesanan", "Unit kendaraan", "Kalender", "Serah terima", "Pendapatan", "Ulasan"],
+    menu: ["Beranda", "Pesanan", "Chat", "Unit kendaraan", "Kalender", "Serah terima", "Pendapatan", "Ulasan"],
     panel: "Panel mitra",
     tutup: "Tutup menu",
     buka: "Buka menu",
@@ -24,7 +24,7 @@ const TEKS = kamus({
     keSitus: "← Kembali ke situs",
   },
   en: {
-    menu: ["Home", "Bookings", "Vehicles", "Calendar", "Handovers", "Earnings", "Reviews"],
+    menu: ["Home", "Bookings", "Chat", "Vehicles", "Calendar", "Handovers", "Earnings", "Reviews"],
     panel: "Partner panel",
     tutup: "Close menu",
     buka: "Open menu",
@@ -39,6 +39,7 @@ const TEKS = kamus({
 const menu = [
   "/mitra",
   "/mitra/pesanan",
+  "/mitra/chat",
   "/mitra/unit",
   "/mitra/kalender",
   "/mitra/serah-terima",

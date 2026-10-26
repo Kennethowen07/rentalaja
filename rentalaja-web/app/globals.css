@@ -255,6 +255,7 @@
   --color-mitra-tint: #f1f5f2; /* latar callout */
   --color-mitra-callout: #3a4a42; /* body copy di dalam callout */
   --color-mitra-plum: #6d3b52; /* telat / lewat jadwal, pengganti merah */
+  --color-mitra-merah: #c62828; /* umur pesanan menunggu, 5,6:1 di atas putih */
   --color-mitra-ink: #1a1a18;
   --color-mitra-ink-2: #3a3a35; /* label status normal */
   --color-mitra-muted: #6b6b63;

@@ -1,16 +1,22 @@
 "use client";
 
-// Layar Pendapatan (#4e). Dua hal yang benar-benar berfungsi: pilih periode
-// mengganti seluruh angka di layar, dan unduh laporan menghasilkan CSV dari
-// transaksi periode yang sedang dilihat.
+// Layar Pendapatan (#4e). Tiga hal yang benar-benar berfungsi: pilih periode
+// mengganti seluruh angka di layar, unduh laporan menghasilkan CSV dari
+// transaksi periode yang sedang dilihat, dan tarik saldo mengosongkan saldo
+// lalu mencatat pencairannya. Penarikan hidup di state client, jadi hilang
+// saat refresh, sesuai status prototype tanpa backend.
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { useBahasa } from "@/components/BahasaProvider";
 import { kamus } from "@/lib/i18n";
 import { rupiah, rupiahSingkat } from "@/lib/mitra/format";
-import type { Periode } from "@/lib/mitra/tipe";
+import type { Periode, Transaksi } from "@/lib/mitra/tipe";
+import { tanggalSingkat } from "@/lib/mitra/waktu";
 import { HeaderHalaman, kelasTombol, kelasTombolBaris } from "./ui";
+
+/** Rekening contoh untuk prototype, bukan rekening asli. */
+const REKENING = "BCA ···4471";
 
 function warnaBar(persen: number) {
   if (persen >= 75) return "bg-mitra-bar-pekat";
@@ -21,7 +27,7 @@ function warnaBar(persen: number) {
 const TEKS = kamus({
   id: {
     csv: {
-      kepala: ["Tanggal dan keterangan", "Transaksi", "Nilai"],
+      kepala: ["Tanggal", "Transaksi", "Nilai"],
       kotor: "Pendapatan kotor",
       biaya: "Biaya layanan rentalaja",
       bersih: "Bersih diterima",
@@ -31,16 +37,20 @@ const TEKS = kamus({
     pilihPeriode: "Pilih periode",
     diunduh: (label: string) => `Laporan ${label} diunduh sebagai CSV.`,
     unduh: "Unduh laporan",
-    bersihLabel: (label: string) => `Pendapatan bersih ${label}`,
-    bersih: "Bersih diterima",
-    dari: (kotor: string, biaya: string) =>
-      `Dari nilai sewa ${kotor}, setelah biaya layanan rentalaja 5% sebesar ${biaya}.`,
-    ditahan: "Dana penyewa ditahan rentalaja dan dilepas 1x24 jam setelah unit kembali.",
+    saldoLabel: (label: string) => `Saldo ${label}`,
+    saldo: "Saldo Kamu",
+    ditahan: "Saldo Ditahan",
+    tarik: "Tarik Saldo",
+    tarikJudul: "Tarik saldo ke rekening?",
+    tarikIsi: (nilai: string, rek: string) => `${nilai} dikirim ke ${rek}, biasanya masuk dalam 1 hari kerja.`,
+    tarikKonfirmasi: "Tarik sekarang",
+    batal: "Batal",
+    pencairan: "Pencairan ke rekening",
+    ditarik: (nilai: string) => `${nilai} sedang dikirim ke rekening.`,
     transaksi: "Transaksi terbaru",
     ringkas: "Ringkas",
     lihatSemua: "Lihat semua",
     sumber: "Sumber pendapatan",
-    tambahan: "Tambahan mencakup antar-jemput unit, helm ekstra, dan denda keterlambatan.",
     periodeLaporan: "Periode laporan",
     diganti: (label: string) => `Periode diganti ke ${label}.`,
     kotor: (r: string) => `kotor ${r}`,
@@ -48,7 +58,7 @@ const TEKS = kamus({
   },
   en: {
     csv: {
-      kepala: ["Date and details", "Transaction", "Amount"],
+      kepala: ["Date", "Transaction", "Amount"],
       kotor: "Gross earnings",
       biaya: "rentalaja service fee",
       bersih: "Net received",
@@ -58,16 +68,20 @@ const TEKS = kamus({
     pilihPeriode: "Choose period",
     diunduh: (label: string) => `${label} report downloaded as CSV.`,
     unduh: "Download report",
-    bersihLabel: (label: string) => `Net earnings, ${label}`,
-    bersih: "Net received",
-    dari: (kotor: string, biaya: string) =>
-      `From ${kotor} in rentals, after the 5% rentalaja service fee of ${biaya}.`,
-    ditahan: "Renters' payments are held by rentalaja and released 24 hours after the vehicle is returned.",
+    saldoLabel: (label: string) => `Balance, ${label}`,
+    saldo: "Your Balance",
+    ditahan: "On Hold",
+    tarik: "Withdraw",
+    tarikJudul: "Withdraw to your bank account?",
+    tarikIsi: (nilai: string, rek: string) => `${nilai} goes to ${rek}, usually within 1 working day.`,
+    tarikKonfirmasi: "Withdraw now",
+    batal: "Cancel",
+    pencairan: "Payout to bank account",
+    ditarik: (nilai: string) => `${nilai} is on its way to your bank account.`,
     transaksi: "Recent transactions",
     ringkas: "Show less",
     lihatSemua: "See all",
     sumber: "Earnings by source",
-    tambahan: "Extras cover vehicle delivery and pick-up, extra helmets, and late fees.",
     periodeLaporan: "Report period",
     diganti: (label: string) => `Period changed to ${label}.`,
     kotor: (r: string) => `gross ${r}`,
@@ -75,9 +89,6 @@ const TEKS = kamus({
   },
 });
 type TeksCsv = (typeof TEKS)["id"]["csv"];
-
-/** Huruf pertama kapital: keterangan bandingan di data diawali huruf kecil. */
-const kapital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function unduhCsv(periode: Periode, csv: TeksCsv) {
   const baris = [
@@ -112,9 +123,24 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
   const [pilihPeriode, setPilihPeriode] = useState(false);
   const [semuaTransaksi, setSemuaTransaksi] = useState(false);
   const [kabar, setKabar] = useState("");
+  const [tarik, setTarik] = useState(false);
+  /** Pencairan yang dibuat di sesi ini, per periode. */
+  const [pencairan, setPencairan] = useState<Record<string, Transaksi>>({});
 
-  const p = periode.find((x) => x.kunci === kunci)!;
+  const asli = periode.find((x) => x.kunci === kunci)!;
+  const cair = pencairan[kunci];
+  const p = cair ? { ...asli, transaksi: [cair, ...asli.transaksi] } : asli;
+  const saldo = cair ? 0 : p.bersih;
   const transaksi = semuaTransaksi ? p.transaksi : p.transaksi.slice(0, 3);
+
+  function tarikSaldo() {
+    setPencairan((c) => ({
+      ...c,
+      [kunci]: { id: `tarik-${kunci}`, judul: t.pencairan, meta: tanggalSingkat(Date.now(), bahasa), nilai: saldo, arah: "keluar" },
+    }));
+    setKabar(t.ditarik(rupiah(saldo)));
+    setTarik(false);
+  }
   const maksSumber = Math.max(...p.sumber.map((s) => s.nilai));
 
   return (
@@ -145,19 +171,27 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
         }
       />
 
-      {/* Satu angka saja: yang benar-benar diterima penyedia. Kotor dan biaya
-          layanan tetap disebut, tapi sebagai keterangan, bukan tiga kartu
-          yang saling bersaing. */}
-      <section
-        aria-label={t.bersihLabel(p.label)}
-        className="mt-36 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24"
-      >
-        <p className="text-m-label text-mitra-faint">{t.bersih}</p>
-        <p className="mt-6 text-m-metrik text-mitra-primer">{rupiahSingkat(p.bersih, bahasa)}</p>
-        <p className="mt-6 max-w-620 text-m-body text-mitra-muted">
-          {t.dari(rupiahSingkat(p.kotor, bahasa), rupiahSingkat(p.biaya, bahasa))} {kapital(p.bandingan)}.
-        </p>
-        <p className="mt-4 max-w-620 text-m-body text-mitra-muted">{t.ditahan}</p>
+      {/* Saldo yang sudah diterima penyedia dan dana yang masih ditahan escrow
+          sampai unitnya kembali. Kotor dan biaya layanan ada di laporan CSV. */}
+      <section aria-label={t.saldoLabel(p.label)} className="mt-36 grid gap-20 min-[640px]:grid-cols-2">
+        <div className="flex flex-wrap items-end justify-between gap-16 rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
+          <div>
+            <p className="text-m-label text-mitra-faint">{t.saldo}</p>
+            <p className="mt-6 text-m-metrik text-mitra-primer">{rupiah(saldo)}</p>
+          </div>
+          <button
+            type="button"
+            disabled={saldo === 0}
+            onClick={() => setTarik(true)}
+            className={`${kelasTombol.primer} px-19 py-11 disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            {t.tarik}
+          </button>
+        </div>
+        <div className="rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
+          <p className="text-m-label text-mitra-faint">{t.ditahan}</p>
+          <p className="mt-6 text-m-metrik text-mitra-ink">{rupiah(p.ditahan)}</p>
+        </div>
       </section>
 
       <div className="mt-44 grid items-start gap-44 min-[1100px]:grid-cols-[1.55fr_1fr] min-[1100px]:gap-64">
@@ -229,15 +263,27 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
               })}
             </ul>
           </div>
-          <p className="mt-20 text-m-body text-mitra-muted">
-            {t.tambahan}
-          </p>
         </section>
       </div>
 
       <p aria-live="polite" className="sr-only">
         {kabar}
       </p>
+
+      {tarik && (
+        <Modal judul={t.tarikJudul} onTutup={() => setTarik(false)} lebar="max-w-[420px]">
+          <p className="mt-10 text-m-metrik text-mitra-primer">{rupiah(saldo)}</p>
+          <p className="mt-8 text-m-body text-mitra-muted">{t.tarikIsi(rupiah(saldo), REKENING)}</p>
+          <div className="mt-20 flex justify-end gap-8">
+            <button type="button" onClick={() => setTarik(false)} className={kelasTombolBaris.sekunder}>
+              {t.batal}
+            </button>
+            <button type="button" onClick={tarikSaldo} className={kelasTombolBaris.primer}>
+              {t.tarikKonfirmasi}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {pilihPeriode && (
         <Modal judul={t.pilihPeriode} onTutup={() => setPilihPeriode(false)} lebar="max-w-[420px]">

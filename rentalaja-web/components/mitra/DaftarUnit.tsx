@@ -31,8 +31,6 @@ const TEKS = kamus({
     diperbarui: (nama: string, plat: string) => `Unit ${nama} ${plat} diperbarui.`,
     saring: "Saring unit",
     kosongSaringan: "Tidak ada unit di saringan ini.",
-    perHari: "per hari",
-    jatuhTempo: "Jatuh tempo",
     kembali: "Kembali",
     edit: "Edit",
     menampilkan: (a: number, b: number) => `Menampilkan ${a} dari ${b} unit.`,
@@ -55,9 +53,7 @@ const TEKS = kamus({
     diperbarui: (nama: string, plat: string) => `${nama} ${plat} updated.`,
     saring: "Filter vehicles",
     kosongSaringan: "No vehicles match this filter.",
-    perHari: "per day",
-    jatuhTempo: "Was due",
-    kembali: "Returns",
+    kembali: "Due back",
     edit: "Edit",
     menampilkan: (a: number, b: number) => `Showing ${a} of ${b} vehicles.`,
     editUnit: "Edit vehicle",
@@ -78,8 +74,9 @@ type StatusTampil = {
   label: string;
   telat: boolean;
   netral: boolean;
-  /** Jadwal kembali, hanya untuk unit yang sedang keluar. */
+  /** Jadwal kembali dan total dibayar penyewa, hanya untuk unit yang sedang keluar. */
   kembali?: number;
+  total?: string;
 };
 
 function statusUnit(u: Unit, berjalan: Pesanan[], sekarang: number, bahasa: Bahasa, t: Teks): StatusTampil {
@@ -93,6 +90,7 @@ function statusUnit(u: Unit, berjalan: Pesanan[], sekarang: number, bahasa: Baha
       telat: s.telat,
       netral: false,
       kembali,
+      total: sewa.total,
     };
   }
   if (u.status === "service") {
@@ -171,14 +169,14 @@ export default function DaftarUnit({
                 <ThumbnailUnit foto={u.foto} nama={u.nama} />
                 <div className="min-w-0 flex-1 basis-220">
                   <p className="text-m-judul-baris text-mitra-ink">{u.nama}</p>
-                  <p className="mt-5 text-m-meta text-mitra-muted">
-                    {u.plat} · {u.spesifikasi}
-                  </p>
+                  <p className="mt-5 text-m-meta text-mitra-muted">{u.plat}</p>
                 </div>
 
+                {/* Total yang dibayar penyewa untuk sewa yang sedang berjalan. Unit
+                    kosong dan servis tidak punya tagihan, tapi kolomnya tetap
+                    selebar 190px supaya kolom status sejajar di semua baris. */}
                 <div className="shrink-0 min-[900px]:w-190">
-                  <p className="text-m-total text-mitra-ink">{rupiah(u.hargaPerHari)}</p>
-                  <p className="mt-4 text-m-label text-mitra-faint">{t.perHari}</p>
+                  {status.total && <p className="text-m-total text-mitra-ink">{status.total}</p>}
                 </div>
 
                 <div className="shrink-0 min-[900px]:w-190">
@@ -187,7 +185,7 @@ export default function DaftarUnit({
                       teks label di atasnya, bukan dengan titiknya. */}
                   {status.kembali !== undefined && (
                     <p className="mt-4 pl-16 text-m-label text-mitra-faint">
-                      {status.telat ? t.jatuhTempo : t.kembali} {tanggalLengkap(status.kembali, bahasa)}
+                      {t.kembali} {tanggalLengkap(status.kembali, bahasa)}
                     </p>
                   )}
                 </div>
@@ -257,9 +255,7 @@ function FormEdit({
   return (
     <Modal judul={t.editUnit} onTutup={onTutup} lebar="max-w-[440px]">
       <p className="mt-10 text-m-judul-baris text-mitra-ink">{unit.nama}</p>
-      <p className="mt-4 text-m-meta text-mitra-muted">
-        {unit.plat} · {unit.spesifikasi}
-      </p>
+      <p className="mt-4 text-m-meta text-mitra-muted">{unit.plat}</p>
 
       <form
         onSubmit={(e) => {

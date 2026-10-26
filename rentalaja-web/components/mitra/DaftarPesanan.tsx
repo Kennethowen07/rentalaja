@@ -10,7 +10,7 @@
 // fokus kembali ke pemicu.
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Modal from "@/components/ui/Modal";
 import { useBahasa } from "@/components/BahasaProvider";
 import { kamus, type Bahasa } from "@/lib/i18n";
@@ -32,10 +32,10 @@ import { ThumbnailUnit, kelasTombolBaris } from "./ui";
 const TEKS = kamus({
   id: {
     hari: (n: number) => `${n} hari`,
-    baruMasuk: "baru saja masuk",
-    masukMenit: (m: number) => `masuk ${m} menit lalu`,
-    antarKe: "antar ke",
-    ambilDi: "ambil di",
+    antarKe: "Diantar ke",
+    ambilDi: "Ambil di",
+    baruMasuk: "Baru saja",
+    masukMenit: (m: number) => `${m} Menit`,
     kembaliHariIni: (jam: string) => `kembali hari ini ${jam}`,
     kembali: (w: string) => `kembali ${w}`,
     selesai: (w: string) => `selesai ${w}`,
@@ -53,16 +53,13 @@ const TEKS = kamus({
     batal: "Batal",
     ditolak: (id: string) => `Pesanan ${id} ditolak.`,
     tolakPesanan: "Tolak pesanan",
-    hubungiPenyewa: "Hubungi penyewa",
-    nomorContoh: "Nomor contoh untuk prototype, bukan nomor asli.",
-    mengerti: "Mengerti",
   },
   en: {
     hari: (n: number) => `${n} ${n === 1 ? "day" : "days"}`,
-    baruMasuk: "just came in",
-    masukMenit: (m: number) => `came in ${m} ${m === 1 ? "minute" : "minutes"} ago`,
-    antarKe: "deliver to",
-    ambilDi: "pick up at",
+    antarKe: "Delivered to",
+    ambilDi: "Pick-up at",
+    baruMasuk: "Just now",
+    masukMenit: (m: number) => `${m} ${m === 1 ? "Minute" : "Minutes"}`,
     kembaliHariIni: (jam: string) => `returns today ${jam}`,
     kembali: (w: string) => `returns ${w}`,
     selesai: (w: string) => `completed ${w}`,
@@ -80,41 +77,53 @@ const TEKS = kamus({
     batal: "Cancel",
     ditolak: (id: string) => `Booking ${id} declined.`,
     tolakPesanan: "Decline booking",
-    hubungiPenyewa: "Contact renter",
-    nomorContoh: "Sample number for the prototype, not a real one.",
-    mengerti: "Got it",
   },
 });
 type Teks = (typeof TEKS)["id"];
 
-/** Baris meta di bawah judul, bentuknya beda per status. */
-function meta(p: Pesanan, sekarang: number, bahasa: Bahasa, t: Teks) {
-  const rentang = rentangTanggal(p.mulai, p.selesai, bahasa);
+/** Keterangan di bawah nama unit, tiga baris:
+ *  1. penyewa | waktu yang relevan dengan statusnya; umur pesanan menunggu
+ *     ditebalkan merah karena batas balasnya 1 jam
+ *  2. rentang sewa (jumlah hari), plus plat untuk unit yang sudah keluar
+ *  3. titik serah terima, kalau tercatat */
+function meta(p: Pesanan, sekarang: number, bahasa: Bahasa, t: Teks): ReactNode {
+  const rentang = rentangTanggal(p.mulai, p.selesai, bahasa).replace(/\s*–\s*/, " – ");
+  const sewa = `${rentang} (${t.hari(jumlahHari(p.mulai, p.selesai))})`;
+  const titik = p.titik ? `${p.diantar ? t.antarKe : t.ambilDi} ${p.titik}` : null;
 
+  let waktu: ReactNode;
+  let plat = false;
   if (p.status === "pending") {
     const menit = Math.floor((sekarang - (p.masukPada ?? sekarang)) / MENIT);
-    const masuk = menit < 1 ? t.baruMasuk : t.masukMenit(menit);
-    const titik = `${p.diantar ? t.antarKe : t.ambilDi} ${p.titik}`;
-    return `${rentang} · ${t.hari(jumlahHari(p.mulai, p.selesai))} · ${titik} · ${masuk}`;
-  }
-
-  if (p.status === "active") {
+    waktu = (
+      <span className="font-semibold text-mitra-merah">
+        {menit < 1 ? t.baruMasuk : t.masukMenit(menit)}
+      </span>
+    );
+  } else if (p.status === "active") {
     const kembali = p.kembaliPada ?? p.selesai;
     const status = statusKembali(kembali, sekarang, bahasa);
-    if (status.telat) {
-      return `${rentang} · ${status.label.toLowerCase()}${p.denda ? ` · ${p.denda}` : ""}`;
-    }
-    const teks = hariSama(kembali, sekarang)
-      ? t.kembaliHariIni(jamSaja(kembali, bahasa))
-      : t.kembali(tanggalJam(kembali, bahasa));
-    return `${rentang} · ${teks} · ${p.plat}`;
+    waktu = status.telat
+      ? `${status.label.toLowerCase()}${p.denda ? ` | ${p.denda}` : ""}`
+      : hariSama(kembali, sekarang)
+        ? t.kembaliHariIni(jamSaja(kembali, bahasa))
+        : t.kembali(tanggalJam(kembali, bahasa));
+    plat = true;
+  } else if (p.status === "completed") {
+    waktu = t.selesai(tanggalSingkat(p.selesaiPada ?? p.selesai, bahasa));
+    plat = true;
+  } else {
+    waktu = p.alasan ?? t.dibatalkan;
   }
 
-  if (p.status === "completed") {
-    return `${rentang} · ${t.selesai(tanggalSingkat(p.selesaiPada ?? p.selesai, bahasa))} · ${p.plat}`;
-  }
-
-  return `${rentang} · ${p.alasan ?? t.dibatalkan}`;
+  return (
+    <>
+      {p.penyewa} | {waktu}
+      {"\n"}
+      {plat ? `${sewa} | ${p.plat}` : sewa}
+      {titik && `\n${titik}`}
+    </>
+  );
 }
 
 export default function DaftarPesanan({ tabAwal }: { tabAwal: KunciTab }) {
@@ -123,7 +132,6 @@ export default function DaftarPesanan({ tabAwal }: { tabAwal: KunciTab }) {
   const t = TEKS[bahasa];
   const [aktif, setAktif] = useState<KunciTab>(tabAwal);
   const [konfirmasi, setKonfirmasi] = useState<Pesanan | null>(null);
-  const [kontak, setKontak] = useState<Pesanan | null>(null);
   const [kabar, setKabar] = useState("");
 
   const status = tabPesanan.find((tab) => tab.kunci === aktif)!.status;
@@ -194,15 +202,14 @@ export default function DaftarPesanan({ tabAwal }: { tabAwal: KunciTab }) {
               >
                 <ThumbnailUnit foto={p.foto} nama={p.unit} />
                 <div className="min-w-0 flex-1 basis-220">
-                  <p className="text-m-judul-baris text-mitra-ink">
-                    {p.unit} · {p.penyewa}
+                  <p className="text-m-judul-baris text-mitra-ink">{p.unit}</p>
+                  <p className="mt-5 whitespace-pre-line text-m-meta text-mitra-ink-2/85">
+                    {meta(p, sekarang, bahasa, t)}
                   </p>
-                  <p className="mt-5 text-m-meta text-mitra-muted">{meta(p, sekarang, bahasa, t)}</p>
                 </div>
 
                 <div className="shrink-0 min-[900px]:w-150 min-[900px]:text-right">
                   <p className="text-m-total text-mitra-ink">{p.total}</p>
-                  <p className="mt-4 text-m-label text-mitra-faint">{p.statusBayar}</p>
                 </div>
 
                 <div className="flex shrink-0 gap-8 min-[900px]:w-190 min-[900px]:justify-end">
@@ -230,13 +237,12 @@ export default function DaftarPesanan({ tabAwal }: { tabAwal: KunciTab }) {
 
                   {p.status === "active" &&
                     (statusKembali(p.kembaliPada ?? p.selesai, sekarang, bahasa).telat ? (
-                      <button
-                        type="button"
-                        onClick={() => setKontak(p)}
+                      <Link
+                        href={jalur(`/mitra/chat?dengan=${p.id}`)}
                         className={kelasTombolBaris.sekunder}
                       >
                         {t.hubungi}
-                      </button>
+                      </Link>
                     ) : (
                       <Link href={jalur("/mitra/serah-terima")} className={kelasTombolBaris.sekunder}>
                         {t.buka}
@@ -298,27 +304,6 @@ export default function DaftarPesanan({ tabAwal }: { tabAwal: KunciTab }) {
         </Modal>
       )}
 
-      {kontak && (
-        <Modal judul={t.hubungiPenyewa} onTutup={() => setKontak(null)} lebar="max-w-[420px]">
-          <p className="mt-10 text-m-judul-baris text-mitra-ink">{kontak.penyewa}</p>
-          <p className="mt-4 text-m-meta text-mitra-muted">
-            {kontak.unit} · {kontak.plat} · {meta(kontak, sekarang, bahasa, t)}
-          </p>
-          <p className="mt-14 text-m-total text-mitra-ink">{kontak.telepon}</p>
-          <p className="mt-6 text-m-body text-mitra-faint">
-            {t.nomorContoh}
-          </p>
-          <div className="mt-20 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setKontak(null)}
-              className={kelasTombolBaris.primer}
-            >
-              {t.mengerti}
-            </button>
-          </div>
-        </Modal>
-      )}
     </>
   );
 }

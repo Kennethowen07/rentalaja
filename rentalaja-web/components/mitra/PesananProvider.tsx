@@ -1,7 +1,7 @@
 "use client";
 
-// Keadaan pesanan untuk seluruh panel: badge sidebar, callout Beranda,
-// keterangan metrik, dan daftar di layar Pesanan membaca sumber yang sama,
+// Keadaan pesanan untuk seluruh panel: badge sidebar, callout Beranda, dan
+// daftar di layar Pesanan membaca sumber yang sama,
 // jadi angka di sidebar tidak mungkin berbeda dengan isi tabel.
 //
 // Jamnya berangkat dari timestamp server, lalu maju memakai jam browser yang
@@ -14,7 +14,6 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useBahasa } from "@/components/BahasaProvider";
-import { teksStatusBayar } from "@/lib/mitra/data-teks";
 import { BATAS_BALAS_MS, type Pesanan } from "@/lib/mitra/tipe";
 
 type Nilai = {
@@ -22,10 +21,6 @@ type Nilai = {
   /** Seluruh pesanan, kedaluwarsa sudah ditandai cancelled. */
   pesanan: Pesanan[];
   menunggu: Pesanan[];
-  /** Pesanan yang tadinya menunggu lalu diterima penyedia di sesi ini. */
-  jumlahDiterima: number;
-  /** Ditolak penyedia atau batal otomatis di sesi ini. */
-  jumlahBatal: number;
   terima: (id: string) => void;
   tolak: (id: string) => void;
 };
@@ -45,7 +40,6 @@ export function PesananProvider({
   // identik.
   const { bahasa } = useBahasa();
   const en = bahasa === "en";
-  const dikembalikan = teksStatusBayar(bahasa).dikembalikan;
   const [sekarang, setSekarang] = useState(sekarangServer);
   const [daftar, setDaftar] = useState(pesanan);
 
@@ -75,13 +69,12 @@ export function PesananProvider({
               ...p,
               status: "cancelled" as const,
               masukPada: undefined,
-              statusBayar: dikembalikan,
               alasan: en ? "Declined by the provider" : "Ditolak penyedia",
             }
           : p,
       ),
     );
-  }, [dikembalikan, en]);
+  }, [en]);
 
   const nilai = useMemo<Nilai>(() => {
     const sesudahBatas = daftar.map((p) =>
@@ -89,27 +82,19 @@ export function PesananProvider({
         ? {
             ...p,
             status: "cancelled" as const,
-            statusBayar: dikembalikan,
             alasan: en ? "Cancelled automatically, past the 1-hour limit" : "Batal otomatis, lewat batas 1 jam",
           }
         : p,
     );
 
-    const idAwalMenunggu = new Set(
-      pesanan.filter((p) => p.status === "pending").map((p) => p.id),
-    );
-    const bekasMenunggu = sesudahBatas.filter((p) => idAwalMenunggu.has(p.id));
-
     return {
       sekarang,
       pesanan: sesudahBatas,
       menunggu: sesudahBatas.filter((p) => p.status === "pending"),
-      jumlahDiterima: bekasMenunggu.filter((p) => p.status === "active").length,
-      jumlahBatal: bekasMenunggu.filter((p) => p.status === "cancelled").length,
       terima,
       tolak,
     };
-  }, [daftar, pesanan, sekarang, terima, tolak, dikembalikan, en]);
+  }, [daftar, sekarang, terima, tolak, en]);
 
   return <Konteks.Provider value={nilai}>{children}</Konteks.Provider>;
 }

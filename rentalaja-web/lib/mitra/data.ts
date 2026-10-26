@@ -12,7 +12,6 @@
 import { cache } from "react";
 import { connection } from "next/server";
 import type { Bahasa } from "@/lib/i18n";
-import { teksStatusBayar } from "./data-teks";
 import type {
   DataBeranda,
   Mitra,
@@ -25,7 +24,8 @@ import type {
   Unit,
   UnitKeluar,
 } from "./tipe";
-import { MENIT, jamSaja, namaBulan, pukulWita, tanggalSingkat } from "./waktu";
+import { rupiahSingkat } from "./format";
+import { MENIT, namaBulan, pukulWita, tanggalSingkat } from "./waktu";
 
 /** Waktu server satu request. Di-cache per request supaya layout dan halaman
  *  memakai milidetik yang sama, dan `connection()` membuat halaman dirender
@@ -54,7 +54,6 @@ export async function ambilMitra(): Promise<Mitra> {
 // Nomor telepon memakai awalan contoh, bukan nomor asli siapa pun.
 function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
   const p = t(bahasa);
-  const bayar = teksStatusBayar(bahasa);
   const kantor = p("Kantor rental", "Rental office");
 
   return [
@@ -68,7 +67,6 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       mulai: pukulWita(sekarang, 0, 13),
       selesai: pukulWita(sekarang, 2, 13),
       total: "Rp 285.000",
-      statusBayar: bayar.escrow,
       status: "pending",
       masukPada: sekarang - 18 * MENIT,
       titik: "Villa Canggu, Jl. Pantai Batu Bolong",
@@ -84,7 +82,6 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       mulai: pukulWita(sekarang, 2, 9),
       selesai: pukulWita(sekarang, 5, 9),
       total: "Rp 1.140.000",
-      statusBayar: bayar.escrow,
       status: "pending",
       masukPada: sekarang - 41 * MENIT,
       titik: kantor,
@@ -102,9 +99,9 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       selesai: pukulWita(sekarang, 2, 9),
       kembaliPada: pukulWita(sekarang, 2, 9),
       total: "Rp 215.000",
-      statusBayar: bayar.ditahan,
       status: "active",
       titik: "Villa Canggu, Jl. Pantai Batu Bolong",
+      diantar: true,
     },
     {
       id: "RA-284077",
@@ -117,9 +114,9 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       selesai: pukulWita(sekarang, 0, 17),
       kembaliPada: pukulWita(sekarang, 0, 17),
       total: "Rp 330.000",
-      statusBayar: bayar.ditahan,
       status: "active",
       titik: "Villa Berawa",
+      diantar: true,
     },
     {
       id: "RA-283998",
@@ -132,10 +129,10 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       selesai: pukulWita(sekarang, -1, 9),
       kembaliPada: pukulWita(sekarang, -1, 9),
       total: "Rp 480.000",
-      statusBayar: bayar.ditahan,
       status: "active",
       denda: p("denda berjalan Rp 120.000", "late fee so far Rp 120.000"),
       titik: kantor,
+      diantar: false,
     },
     {
       id: "RA-284150",
@@ -148,9 +145,9 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       selesai: pukulWita(sekarang, 3, 8),
       kembaliPada: pukulWita(sekarang, 3, 8),
       total: "Rp 300.000",
-      statusBayar: bayar.ditahan,
       status: "active",
       titik: "Villa Tiying Tutul",
+      diantar: true,
     },
     {
       id: "RA-284166",
@@ -163,9 +160,9 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       selesai: pukulWita(sekarang, 4, 10),
       kembaliPada: pukulWita(sekarang, 4, 10),
       total: "Rp 520.000",
-      statusBayar: bayar.ditahan,
       status: "active",
       titik: "Hotel Pererenan",
+      diantar: true,
     },
     {
       id: "RA-284181",
@@ -178,9 +175,9 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       selesai: pukulWita(sekarang, 1, 11),
       kembaliPada: pukulWita(sekarang, 1, 11),
       total: "Rp 190.000",
-      statusBayar: bayar.ditahan,
       status: "active",
       titik: kantor,
+      diantar: false,
     },
 
     {
@@ -194,7 +191,6 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       selesai: pukulWita(sekarang, -6, 9),
       selesaiPada: pukulWita(sekarang, -6, 9),
       total: "Rp 215.000",
-      statusBayar: bayar.dilepas,
       status: "completed",
     },
     {
@@ -208,7 +204,6 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       selesai: pukulWita(sekarang, -8, 8),
       selesaiPada: pukulWita(sekarang, -8, 8),
       total: "Rp 1.140.000",
-      statusBayar: bayar.dilepas,
       status: "completed",
     },
     {
@@ -222,7 +217,6 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       selesai: pukulWita(sekarang, -5, 10),
       selesaiPada: pukulWita(sekarang, -5, 10),
       total: "Rp 150.000",
-      statusBayar: bayar.dilepas,
       status: "completed",
     },
 
@@ -236,7 +230,6 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
       mulai: pukulWita(sekarang, -3, 9),
       selesai: pukulWita(sekarang, -1, 9),
       total: "Rp 330.000",
-      statusBayar: bayar.dikembalikan,
       status: "cancelled",
       alasan: p("Dibatalkan penyewa", "Cancelled by the renter"),
     },
@@ -249,50 +242,39 @@ function semuaPesanan(sekarang: number, bahasa: Bahasa): Pesanan[] {
 // disewa sengaja sama dengan plat di daftar pesanan, karena status "sedang
 // keluar" diturunkan dari pesanan berjalan, bukan disimpan dua kali.
 function semuaUnit(sekarang: number, bahasa: Bahasa): Unit[] {
-  const en = bahasa === "en";
-  // Spesifikasi ditulis sekali dalam bahasa Indonesia lalu diterjemahkan.
-  const spek = (s: string) =>
-    en
-      ? s
-          .replace("matic", "automatic")
-          .replace("2 helm", "2 helmets")
-          .replace("1 helm", "1 helmet")
-          .replace("MPV 7 kursi · bensin", "7-seat MPV · petrol")
-      : s;
   const motor = (
     id: string,
     nama: string,
     plat: string,
     foto: string | null,
-    spesifikasi: string,
     hargaPerHari: number,
     status: Unit["status"] = "available",
     servisSampai?: number,
-  ): Unit => ({ id, nama, plat, foto, spesifikasi: spek(spesifikasi), hargaPerHari, status, servisSampai });
+  ): Unit => ({ id, nama, plat, foto, hargaPerHari, status, servisSampai });
 
   return [
     // Enam unit di bawah platnya cocok dengan pesanan berstatus active.
-    motor("u-01", "Honda Scoopy 2023", "DK 4821 XY", "/units/honda-scoopy-2023.webp", "matic 110cc · 2 helm", 70_000),
-    motor("u-02", "Yamaha NMAX 155", "DK 1902 CD", "/units/yamaha-nmax-2022.webp", "matic 155cc · 2 helm", 110_000),
-    motor("u-03", "Honda PCX 160", "DK 5127 AB", "/units/honda-pcx-160-2023.webp", "matic 160cc · 2 helm", 120_000),
-    motor("u-04", "Honda Beat 2022", "DK 7734 EF", "/units/honda-beat-2022.webp", "matic 110cc · 1 helm", 65_000),
-    motor("u-05", "Vespa Sprint 2021", "DK 2251 MN", "/units/vespa-sprint-2021.webp", "matic 150cc · 2 helm", 150_000),
-    motor("u-06", "Yamaha Fino 2021", "DK 6043 PQ", "/units/yamaha-fino-2021.webp", "matic 125cc · 2 helm", 75_000),
+    motor("u-01", "Honda Scoopy 2023", "DK 4821 XY", "/units/honda-scoopy-2023.webp", 70_000),
+    motor("u-02", "Yamaha NMAX 155", "DK 1902 CD", "/units/yamaha-nmax-2022.webp", 110_000),
+    motor("u-03", "Honda PCX 160", "DK 5127 AB", "/units/honda-pcx-160-2023.webp", 120_000),
+    motor("u-04", "Honda Beat 2022", "DK 7734 EF", "/units/honda-beat-2022.webp", 65_000),
+    motor("u-05", "Vespa Sprint 2021", "DK 2251 MN", "/units/vespa-sprint-2021.webp", 150_000),
+    motor("u-06", "Yamaha Fino 2021", "DK 6043 PQ", "/units/yamaha-fino-2021.webp", 75_000),
 
-    motor("u-07", "Toyota Avanza 2021", "DK 8890 GH", "/units/toyota-avanza-2021.webp", "MPV 7 kursi · bensin", 285_000),
-    motor("u-08", "Toyota Avanza 2021", "DK 8912 GH", "/units/toyota-avanza-2021.webp", "MPV 7 kursi · bensin", 285_000),
-    motor("u-09", "Honda Scoopy 2023", "DK 4835 XY", "/units/honda-scoopy-2023.webp", "matic 110cc · 2 helm", 70_000),
-    motor("u-10", "Honda Scoopy 2022", "DK 4102 TR", "/units/honda-scoopy-2023.webp", "matic 110cc · 2 helm", 65_000),
-    motor("u-11", "Honda Beat 2022", "DK 7740 EF", "/units/honda-beat-2022.webp", "matic 110cc · 1 helm", 65_000),
-    motor("u-12", "Honda Beat 2021", "DK 7128 LM", "/units/honda-beat-2022.webp", "matic 110cc · 1 helm", 60_000),
-    motor("u-13", "Yamaha NMAX 155", "DK 1955 CD", "/units/yamaha-nmax-2022.webp", "matic 155cc · 2 helm", 110_000),
-    motor("u-14", "Yamaha Fino 2021", "DK 6077 PQ", "/units/yamaha-fino-2021.webp", "matic 125cc · 2 helm", 75_000),
-    motor("u-15", "Vespa Sprint 2021", "DK 2260 MN", "/units/vespa-sprint-2021.webp", "matic 150cc · 2 helm", 150_000),
-    motor("u-16", "Honda PCX 160", "DK 5130 AB", "/units/honda-pcx-160-2023.webp", "matic 160cc · 2 helm", 120_000),
+    motor("u-07", "Toyota Avanza 2021", "DK 8890 GH", "/units/toyota-avanza-2021.webp", 285_000),
+    motor("u-08", "Toyota Avanza 2021", "DK 8912 GH", "/units/toyota-avanza-2021.webp", 285_000),
+    motor("u-09", "Honda Scoopy 2023", "DK 4835 XY", "/units/honda-scoopy-2023.webp", 70_000),
+    motor("u-10", "Honda Scoopy 2022", "DK 4102 TR", "/units/honda-scoopy-2023.webp", 65_000),
+    motor("u-11", "Honda Beat 2022", "DK 7740 EF", "/units/honda-beat-2022.webp", 65_000),
+    motor("u-12", "Honda Beat 2021", "DK 7128 LM", "/units/honda-beat-2022.webp", 60_000),
+    motor("u-13", "Yamaha NMAX 155", "DK 1955 CD", "/units/yamaha-nmax-2022.webp", 110_000),
+    motor("u-14", "Yamaha Fino 2021", "DK 6077 PQ", "/units/yamaha-fino-2021.webp", 75_000),
+    motor("u-15", "Vespa Sprint 2021", "DK 2260 MN", "/units/vespa-sprint-2021.webp", 150_000),
+    motor("u-16", "Honda PCX 160", "DK 5130 AB", "/units/honda-pcx-160-2023.webp", 120_000),
     // Plat ini dipakai pesanan yang masih menunggu konfirmasi.
-    motor("u-17", "Honda Vario 160", "DK 3390 GH", "/units/honda-vario-160-2022.webp", "matic 160cc · 2 helm", 95_000),
+    motor("u-17", "Honda Vario 160", "DK 3390 GH", "/units/honda-vario-160-2022.webp", 95_000),
 
-    motor("u-18", "Honda Vario 160", "DK 3312 JK", "/units/honda-vario-160-2022.webp", "matic 160cc · 2 helm", 95_000, "service", pukulWita(sekarang, 2, 17)),
+    motor("u-18", "Honda Vario 160", "DK 3312 JK", "/units/honda-vario-160-2022.webp", 95_000, "service", pukulWita(sekarang, 2, 17)),
   ];
 }
 
@@ -319,50 +301,19 @@ export async function ambilPesanan(bahasa: Bahasa = "id"): Promise<{
 // kecil daripada di Beranda.
 function semuaPeriode(sekarang: number, bahasa: Bahasa): Periode[] {
   const p = t(bahasa);
-  /** "12 Sep 09.24" (id) atau "12 Sep 09:24" (en). */
-  const waktu = (geserHari: number, jam: number, menit = 0) => {
-    const w = pukulWita(sekarang, geserHari, jam, menit);
-    return `${tanggalSingkat(w, bahasa)} ${jamSaja(w, bahasa)}`;
-  };
-  const masukEscrow = p("Dana masuk escrow", "Funds into escrow");
+  // Hanya dana yang sudah benar-benar diterima penyedia. Dana yang masih
+  // ditahan escrow belum dihitung sampai unitnya kembali.
+  const tanggal = (geserHari: number) => tanggalSingkat(pukulWita(sekarang, geserHari, 12), bahasa);
+  const danaMasuk = p("Dana masuk", "Funds received");
+  const biayaLayanan = p("Biaya layanan", "Service fee");
   const pencairan = p("Pencairan ke rekening", "Payout to bank account");
 
   const transaksiTerbaru: Transaksi[] = [
-    {
-      id: "tr-01",
-      judul: `${masukEscrow} · Honda Vario 160`,
-      meta: `${waktu(0, 9, 24)} · Dewi Anggraini · BCA VA`,
-      nilai: 85_500,
-      arah: "masuk",
-    },
-    {
-      id: "tr-02",
-      judul: `${p("Dana dilepas", "Funds released")} · Honda Scoopy 2023`,
-      meta: `${waktu(0, 9, 5)} · Adi Prasetyo · ${p("unit sudah kembali", "vehicle returned")}`,
-      nilai: 147_000,
-      arah: "masuk",
-    },
-    {
-      id: "tr-03",
-      judul: p("Biaya layanan · pesanan #RA-284102", "Service fee · booking #RA-284102"),
-      meta: `${waktu(0, 9, 5)} · ${p("dipotong otomatis", "deducted automatically")}`,
-      nilai: 10_750,
-      arah: "keluar",
-    },
-    {
-      id: "tr-04",
-      judul: `${masukEscrow} · Toyota Avanza 2021`,
-      meta: `${waktu(-1, 20, 14)} · Michael Lim · BCA VA`,
-      nilai: 342_000,
-      arah: "masuk",
-    },
-    {
-      id: "tr-05",
-      judul: pencairan,
-      meta: `${waktu(-3, 10)} · BCA ···4471`,
-      nilai: 6_200_000,
-      arah: "keluar",
-    },
+    { id: "tr-01", judul: `${danaMasuk} · Honda Scoopy 2023`, meta: tanggal(0), nilai: 147_000, arah: "masuk" },
+    { id: "tr-02", judul: biayaLayanan, meta: tanggal(0), nilai: 10_750, arah: "keluar" },
+    { id: "tr-03", judul: `${danaMasuk} · Yamaha Fino 2021`, meta: tanggal(-1), nilai: 171_000, arah: "masuk" },
+    { id: "tr-04", judul: biayaLayanan, meta: tanggal(-1), nilai: 9_000, arah: "keluar" },
+    { id: "tr-05", judul: pencairan, meta: tanggal(-3), nilai: 6_200_000, arah: "keluar" },
   ];
 
   const bulanIni = namaBulan(sekarang, 0, bahasa);
@@ -386,7 +337,8 @@ function semuaPeriode(sekarang: number, bahasa: Bahasa): Periode[] {
       kotor: 24_800_000,
       biaya: 1_240_000,
       bersih: 23_560_000,
-      bandingan: p(`naik 18% dari ${bulanLalu}`, `up 18% from ${bulanLalu}`),
+      // Enam sewa yang sedang berjalan, setelah dipotong biaya layanan 5%.
+      ditahan: 1_933_250,
       transaksi: transaksiTerbaru,
       sumber: sumber(15_800_000, 7_400_000, 1_600_000),
     },
@@ -397,26 +349,14 @@ function semuaPeriode(sekarang: number, bahasa: Bahasa): Periode[] {
       kotor: 21_000_000,
       biaya: 1_050_000,
       bersih: 19_950_000,
-      bandingan: p("naik 9% dari bulan sebelumnya", "up 9% from the month before"),
+      ditahan: 0,
       transaksi: [
-        {
-          id: "tr-11",
-          judul: pencairan,
-          meta: `${waktu(-24, 10)} · BCA ···4471`,
-          nilai: 8_400_000,
-          arah: "keluar",
-        },
-        {
-          id: "tr-12",
-          judul: `${masukEscrow} · Yamaha NMAX 155`,
-          meta: `${waktu(-26, 15, 40)} · Tom Becker · BCA VA`,
-          nilai: 99_000,
-          arah: "masuk",
-        },
+        { id: "tr-11", judul: pencairan, meta: tanggal(-24), nilai: 8_400_000, arah: "keluar" },
+        { id: "tr-12", judul: `${danaMasuk} · Yamaha NMAX 155`, meta: tanggal(-26), nilai: 99_000, arah: "masuk" },
         {
           id: "tr-13",
           judul: `${p("Denda keterlambatan", "Late fee")} · Honda Beat 2022`,
-          meta: `${waktu(-28, 11)} · Gede Surya`,
+          meta: tanggal(-28),
           nilai: 60_000,
           arah: "masuk",
         },
@@ -430,7 +370,7 @@ function semuaPeriode(sekarang: number, bahasa: Bahasa): Periode[] {
       kotor: 62_400_000,
       biaya: 3_120_000,
       bersih: 59_280_000,
-      bandingan: p("rata-rata Rp 20,8jt per bulan", "average Rp 20.8M per month"),
+      ditahan: 0,
       transaksi: transaksiTerbaru,
       sumber: sumber(39_500_000, 18_700_000, 4_200_000),
     },
@@ -620,7 +560,6 @@ export async function ambilUlasan(bahasa: Bahasa = "id"): Promise<{
 
 export async function ambilBeranda(bahasa: Bahasa = "id"): Promise<DataBeranda> {
   const sekarang = await waktuServer();
-  const p = t(bahasa);
   const berjalan = semuaPesanan(sekarang, bahasa).filter((x) => x.status === "active");
 
   const daftar: UnitKeluar[] = berjalan.slice(0, 4).map((x) => ({
@@ -633,16 +572,14 @@ export async function ambilBeranda(bahasa: Bahasa = "id"): Promise<DataBeranda> 
   }));
 
   const unitKeluarPerHari = [6, 8, 3, 2, 4, 4, 7];
-  const bulanLalu = namaBulan(sekarang, -1, bahasa);
 
   return {
     sekarang,
-    pesananHariIni: { masuk: 7, dikonfirmasi: 5 },
+    pesananHariIni: { masuk: 7 },
     unitKeluar: { jumlah: berjalan.length, totalUnit: 18, daftar },
     pendapatan: {
       bulan: namaBulan(sekarang, 0, bahasa),
-      nilai: p("Rp 24,8jt", "Rp 24.8M"),
-      keterangan: p(`naik 18% dari ${bulanLalu}`, `up 18% from ${bulanLalu}`),
+      nilai: rupiahSingkat(semuaPeriode(sekarang, bahasa)[0].bersih, bahasa),
     },
     mingguIni: unitKeluarPerHari.map((jumlah, i) => ({
       tanggal: pukulWita(sekarang, i, 12),

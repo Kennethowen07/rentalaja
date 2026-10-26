@@ -26,9 +26,6 @@ export type Pesanan = {
   mulai: number;
   selesai: number;
   total: string;
-  /** Perjalanan dana di escrow: "Dibayar penuh · di escrow", "Ditahan
-   *  escrow", "Dana dilepas", "Dana dikembalikan". */
-  statusBayar: string;
   status: StatusPesanan;
   /** pending: createdAt dari server, dasar hitungan batas 1 jam. */
   masukPada?: number;
@@ -51,8 +48,6 @@ export type Unit = {
   nama: string;
   plat: string;
   foto: string | null;
-  /** "matic 110cc · 2 helm" */
-  spesifikasi: string;
   hargaPerHari: number;
   /** Status dasar. "out" tidak disimpan di sini: unit dianggap keluar kalau
    *  platnya cocok dengan pesanan berjalan, jadi sumbernya tetap satu. */
@@ -95,10 +90,13 @@ export type JadwalSerah = CatatanSerah & {
   plat: string;
   foto: string | null;
   penyewa: string;
-  telepon: string;
   waktu: number;
+  /** Rentang sewa pesanannya, untuk baris tanggal di keterangan. */
+  mulai: number;
+  selesai: number;
   titik: string;
-  catatan?: string;
+  /** true = unit diantar dan dijemput di titik penyewa, false = di kantor. */
+  diantar: boolean;
   telat: boolean;
   status: StatusSerah;
 };
@@ -106,7 +104,7 @@ export type JadwalSerah = CatatanSerah & {
 export type Transaksi = {
   id: string;
   judul: string;
-  /** "12 Sep 09.24 · Dewi Anggraini · BCA VA" */
+  /** Tanggal saja, mis. "12 Sep". */
   meta: string;
   nilai: number;
   /** keluar = biaya layanan dan pencairan, ditulis dengan tanda minus. */
@@ -121,7 +119,8 @@ export type Periode = {
   kotor: number;
   biaya: number;
   bersih: number;
-  bandingan: string;
+  /** Dana sewa yang masih ditahan escrow, dilepas setelah unit kembali. */
+  ditahan: number;
   transaksi: Transaksi[];
   sumber: { label: string; nilai: number }[];
 };
@@ -146,8 +145,8 @@ export type RingkasanUlasan = {
 
 export type DataBeranda = {
   sekarang: number;
-  pesananHariIni: { masuk: number; dikonfirmasi: number };
+  pesananHariIni: { masuk: number };
   unitKeluar: { jumlah: number; totalUnit: number; daftar: UnitKeluar[] };
-  pendapatan: { nilai: string; keterangan: string; bulan: string };
+  pendapatan: { nilai: string; bulan: string };
   mingguIni: { tanggal: number; jumlah: number }[];
 };
