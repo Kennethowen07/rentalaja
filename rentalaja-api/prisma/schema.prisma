@@ -49,9 +49,10 @@ model Pengguna {
   peran         Peran
   dibuatPada    DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
 
-  mitra   Mitra?
-  pesanan Pesanan[]
-  ulasan  Ulasan[]
+  mitra     Mitra?
+  pesanan   Pesanan[]
+  ulasan    Ulasan[]
+  pesanChat PesanChat[]
 
   @@map("pengguna")
 }
@@ -63,11 +64,32 @@ model Mitra {
   pemilik    Pengguna @relation(fields: [pemilikId], references: [id])
   nama       String
   area       String
+  /// Tujuan tarik saldo, mis. "BCA ···4471". Kosong = belum bisa menarik.
+  rekening   String?
   dibuatPada DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
 
-  unit Unit[]
+  unit      Unit[]
+  pencairan Pencairan[]
 
   @@map("mitra")
+}
+
+/// Tarik saldo penyedia ke rekeningnya. Saldo TIDAK disimpan: ia diturunkan
+/// dari dana yang sudah dilepas dikurangi semua pencairan. Agar dua tarikan
+/// bersamaan tidak bisa melebihi saldo, service mengunci baris mitra
+/// (FOR UPDATE) sebelum menghitung dan menulis.
+model Pencairan {
+  id          String   @id @default(cuid())
+  mitraId     String   @map("mitra_id")
+  mitra       Mitra    @relation(fields: [mitraId], references: [id])
+  jumlah      Int
+  /// Disalin dari Mitra.rekening saat ditarik, supaya riwayat tidak ikut
+  /// berubah kalau rekeningnya diganti.
+  rekening    String
+  dimintaPada DateTime @default(now()) @map("diminta_pada") @db.Timestamptz(3)
+
+  @@index([mitraId])
+  @@map("pencairan")
 }
 
 // ---------------------------------------------------------------------------
@@ -198,6 +220,15 @@ model Pesanan {
   /// Titik temu, tempatnya saja.
   titik   String
 
+  /// WNI menyerahkan IDENTITAS (KTP) dan SIM; WNA menyerahkan IDENTITAS
+  /// (paspor), IDP, dan SIM negara asal. Kelengkapannya dijaga service.
+  asal                   AsalPenyewa @default(WNI)
+  /// Wajib untuk WNA, kosong untuk WNI. Dijaga CHECK di migration.sql.
+  kewarganegaraan        String?
+  /// Verifikasi wajah (KYC) selesai. Masih simulasi: belum ada penyedia KYC,
+  /// yang dicatat hanya waktunya.
+  wajahTerverifikasiPada DateTime?   @map("wajah_terverifikasi_pada") @db.Timestamptz(3)
+
   dibuatPada     DateTime  @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
   diterimaPada   DateTime? @map("diterima_pada") @db.Timestamptz(3)
   ditolakPada    DateTime? @map("ditolak_pada") @db.Timestamptz(3)
@@ -210,10 +241,36 @@ model Pesanan {
   serahTerima SerahTerima[]
   klaim       KlaimKerusakan?
   ulasan      Ulasan?
+  pesanChat   PesanChat[]
 
   @@index([unitId])
   @@index([penyewaId])
   @@map("pesanan")
+}
+
+enum AsalPenyewa {
+  WNI
+  WNA
+
+  @@map("asal_penyewa")
+}
+
+/// Chat penyewa dan penyedia, satu percakapan per pesanan. Hanya penyewa
+/// pemesan dan pemilik unitnya yang boleh membaca dan menulis (dijaga
+/// service).
+model PesanChat {
+  id          String    @id @default(cuid())
+  pesananId   String    @map("pesanan_id")
+  pesanan     Pesanan   @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  pengirimId  String    @map("pengirim_id")
+  pengirim    Pengguna  @relation(fields: [pengirimId], references: [id])
+  isi         String
+  dikirimPada DateTime  @default(now()) @map("dikirim_pada") @db.Timestamptz(3)
+  /// Dibaca lawan bicara. Kosong = belum dibaca.
+  dibacaPada  DateTime? @map("dibaca_pada") @db.Timestamptz(3)
+
+  @@index([pesananId, dikirimPada])
+  @@map("pesan_chat")
 }
 
 // ---------------------------------------------------------------------------
@@ -242,8 +299,11 @@ model Pembayaran {
 }
 
 enum JenisDokumen {
+  /// KTP untuk WNI, paspor untuk WNA.
   IDENTITAS
   SIM
+  /// International Driving Permit, hanya untuk WNA.
+  IDP
 
   @@map("jenis_dokumen")
 }

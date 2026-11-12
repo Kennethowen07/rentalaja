@@ -80,6 +80,46 @@ export function statusDana(p: DataPesanan, klaim: DataKlaim, sekarang: number): 
   return 'ditahan';
 }
 
+type DataDenda = Pick<DataPesanan, 'status' | 'selesai' | 'kembaliPada'> & {
+  /** Harga per hari yang DIBEKUKAN di pesanan, bukan harga unit saat ini. */
+  hargaPerHari: number;
+};
+
+/**
+ * Hari keterlambatan, dibulatkan ke atas: telat satu menit dihitung satu
+ * hari. Dihitung dari jadwal selesai sampai unit tercatat kembali, atau
+ * sampai sekarang kalau belum kembali. 0 untuk pesanan yang tidak pernah
+ * keluar (menunggu, ditolak, dibatalkan) dan yang kembali tepat waktu.
+ */
+export function hariTelat(p: DataDenda, sekarang: number): number {
+  if (p.status !== 'BERJALAN' && p.status !== 'SELESAI') return 0;
+  if (p.kembaliPada === null) {
+    // SELESAI tanpa kembaliPada tidak seharusnya ada; dianggap tidak telat
+    // daripada menghitung denda yang terus bertambah untuk unit yang sudah selesai.
+    if (p.status !== 'BERJALAN') return 0;
+    // Batasnya sama persis dengan statusTurunan (selesai <= sekarang = telat),
+    // jadi tepat di jam jadwal pun sudah satu hari: tidak pernah ada status
+    // "telat" dengan denda 0.
+    const lewat = sekarang - p.selesai.getTime();
+    return lewat >= 0 ? Math.max(1, Math.ceil(lewat / HARI)) : 0;
+  }
+  // Sudah kembali: kembali tepat di jam jadwal tidak telat.
+  const lewat = p.kembaliPada.getTime() - p.selesai.getTime();
+  return lewat > 0 ? Math.ceil(lewat / HARI) : 0;
+}
+
+/**
+ * Denda keterlambatan berjalan, dalam rupiah: hargaPerHari x hari telat.
+ *
+ * Keputusan pemilik proyek: denda DICATAT SAJA. Angka ini hanya ditampilkan,
+ * tidak ditagih ke siapa pun dan tidak mengubah dana (statusDana,
+ * bersihPenyedia, dan pembayaran tidak membacanya), karena deposit tunai
+ * sudah dihapus dan sumber penagihannya belum diputuskan.
+ */
+export function dendaBerjalan(p: DataDenda, sekarang: number): number {
+  return p.hargaPerHari * hariTelat(p, sekarang);
+}
+
 /** Yang diterima penyedia dari satu pesanan: nilai sewa dipotong komisi.
  *  Biaya layanan yang dibayar penyewa milik platform, tidak ikut di sini. */
 export function bersihPenyedia(subtotal: number): number {

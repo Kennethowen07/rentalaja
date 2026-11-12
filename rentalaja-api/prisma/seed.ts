@@ -41,6 +41,15 @@
  *    frontend (contoh isian form pemesanan) dan pemilik pesanan Scoopy yang
  *    sedang berjalan.
  *
+ * 5. Fitur lanjutan (12 Nov 2026). Bali Motor Rent punya rekening
+ *    "BCA ···4471" dan satu pencairan lama, jadi tarik saldo bisa dicoba.
+ *    Setiap pesanan membawa dokumen dan verifikasi wajah, sama dengan yang
+ *    diwajibkan POST /pesanan. Sarah Miller satu-satunya WNA (Australia):
+ *    paspor, IDP, dan SIM negara asal. Ada chat untuk pesanan Kevin Tan yang
+ *    telat, Sarah Miller, dan Dewi Anggraini yang masih menunggu, serta
+ *    catatan serah terima mengikuti ambilCatatanSerah() di data mitra.
+ *    RA-283905 punya klaim kerusakan terbuka, jadi dananya masih ditahan.
+ *
  * Pesanan MENUNGGU dibuat 18 dan 41 menit sebelum seed dijalankan, jadi
  * dalam satu jam keduanya kedaluwarsa. Itu perilaku yang benar, bukan bug:
  * berbeda dari mock frontend yang menghitung ulang waktunya di setiap
@@ -112,6 +121,11 @@ const PENYEWA: Record<string, string> = {
   'Tom Becker': '+62 812-0000-0112',
 };
 const PENYEWA_DEMO = 'Adi Prasetyo';
+
+/** Penyewa WNA dan kewarganegaraannya. Selain ini semuanya WNI. */
+const WNA: Record<string, string> = { 'Sarah Miller': 'Australia' };
+
+const REKENING_BMR = 'BCA ···4471';
 
 type UnitSeed = {
   slug: string;
@@ -240,7 +254,8 @@ const ULASAN: UlasanSeed[] = [
   { penyewa: 'Sarah Miller', plat: 'DK 1902 CD', sewa: [-6, -3], skor: '5', tanggal: pukulWita(-1, 18),
     isi: 'Unit bersih, diantar tepat jam 9. Foto serah terima bikin tenang, jadi tidak ada debat waktu kembalikan.' },
   { penyewa: 'Kevin Tan', plat: 'DK 5127 AB', sewa: [-8, -5], skor: '4', tanggal: pukulWita(-3, 11),
-    isi: 'Motor oke, tapi jas hujan cuma satu padahal disewa berdua.' },
+    isi: 'Motor oke, tapi jas hujan cuma satu padahal disewa berdua.',
+    balasan: 'Maaf ya Kevin, jas hujan kedua sudah kami tambahkan di semua unit sejak minggu ini.' },
   { penyewa: 'Putu Andika', plat: 'DK 7734 EF', sewa: [-11, -9], skor: '5', tanggal: pukulWita(-4, 9),
     isi: 'Harga jelas di depan, tidak ada biaya tambahan waktu ambil unit.' },
   { penyewa: 'Michael Lim', plat: 'DK 8912 GH', sewa: [-16, -13], skor: '3.5', tanggal: pukulWita(-6, 16),
@@ -257,6 +272,101 @@ const ULASAN: UlasanSeed[] = [
     isi: 'Vespa terawat, pemiliknya ramah dan balas cepat sebelum saya pesan.',
     balasan: 'Terima kasih Nicolas, titip salam buat rombongannya.' },
 ];
+
+type Kondisi = { label: string; nilai: string }[];
+
+/** Baris kondisi yang selalu dikirim form serah terima frontend. */
+const kondisi = (odometer: string, bensin: string, kelengkapan: string, goresan: string): Kondisi => [
+  { label: 'Odometer', nilai: odometer },
+  { label: 'Bensin', nilai: bensin },
+  { label: 'Helm', nilai: kelengkapan },
+  { label: 'Goresan tercatat', nilai: goresan },
+];
+const HELM = '2 · jas hujan 1';
+
+type SerahSeed = {
+  kode: string;
+  jenis: 'ANTAR' | 'AMBIL';
+  kondisi: Kondisi;
+  /** false = kondisi sudah dicatat, foto belum ("menunggu foto"). */
+  foto: boolean;
+  catatan?: string;
+  klaim?: { nominal: number; keterangan: string };
+};
+
+/**
+ * Catatan serah terima. Dua yang pertama sama dengan ambilCatatanSerah() di
+ * mock mitra. Pesanan berjalan yang mulai sebelum hari ini dicatat antarnya
+ * (kalau tidak, jadwal antarnya muncul lagi sebagai tugas tertinggal), dan
+ * pesanan selesai dicatat antar dan ambilnya. RA-284166 sengaja belum
+ * dicatat supaya tab "Hari ini" punya satu jadwal antar.
+ */
+const SERAH: SerahSeed[] = [
+  { kode: 'RA-284102', jenis: 'ANTAR', foto: true, kondisi: kondisi('18.204 km', 'Setengah', HELM, 'Spakbor kanan') },
+  { kode: 'RA-284077', jenis: 'AMBIL', foto: false, kondisi: kondisi('24.910 km', 'Seperempat', HELM, 'Tidak ada') },
+  { kode: 'RA-284077', jenis: 'ANTAR', foto: true, kondisi: kondisi('24.655 km', 'Penuh', HELM, 'Tidak ada') },
+  { kode: 'RA-283998', jenis: 'ANTAR', foto: true, kondisi: kondisi('9.120 km', 'Penuh', HELM, 'Baret kecil bodi kiri') },
+  { kode: 'RA-284150', jenis: 'ANTAR', foto: true, kondisi: kondisi('31.402 km', 'Setengah', '1 · jas hujan 1', 'Tidak ada') },
+  { kode: 'RA-284181', jenis: 'ANTAR', foto: true, kondisi: kondisi('15.877 km', 'Penuh', HELM, 'Tidak ada') },
+  { kode: 'RA-283812', jenis: 'ANTAR', foto: true, kondisi: kondisi('17.950 km', 'Penuh', HELM, 'Spakbor kanan') },
+  { kode: 'RA-283812', jenis: 'AMBIL', foto: true, kondisi: kondisi('18.204 km', 'Setengah', HELM, 'Spakbor kanan') },
+  { kode: 'RA-283744', jenis: 'ANTAR', foto: true, kondisi: kondisi('48.310 km', 'Penuh', 'STNK · ban serep', 'Tidak ada') },
+  { kode: 'RA-283744', jenis: 'AMBIL', foto: true, kondisi: kondisi('48.995 km', 'Setengah', 'STNK · ban serep', 'Tidak ada') },
+  { kode: 'RA-283905', jenis: 'ANTAR', foto: true, kondisi: kondisi('30.880 km', 'Penuh', '1 · jas hujan 1', 'Tidak ada') },
+  {
+    kode: 'RA-283905', jenis: 'AMBIL', foto: true,
+    kondisi: kondisi('31.020 km', 'Seperempat', '1 · jas hujan 1', 'Spion kiri retak'),
+    catatan: 'Spion kiri retak waktu unit kembali.',
+    klaim: { nominal: 150_000, keterangan: 'Ganti spion kiri yang retak.' },
+  },
+];
+
+type ChatSeed = {
+  kode: string;
+  /** true = penyedia (Pak Wayan), false = penyewa pesanan itu. */
+  dariPenyedia: boolean;
+  isi: string;
+  dikirimPada: Date;
+  /** false = belum dibaca lawan bicara. */
+  dibaca?: boolean;
+};
+
+/** Chat per pesanan. Pesan terakhir Kevin dan Dewi belum dibaca penyedia,
+ *  jadi panel mitra punya percakapan berlabel belum dibaca. */
+const CHAT: ChatSeed[] = [
+  // Kevin Tan, PCX yang seharusnya kembali kemarin 09.00 (telat).
+  { kode: 'RA-283998', dariPenyedia: true, dikirimPada: pukulWita(-1, 10),
+    isi: 'Halo Kevin, jadwal kembali PCX-nya tadi jam 09.00. Masih dipakai? Kabari ya kalau mau diperpanjang.' },
+  { kode: 'RA-283998', dariPenyedia: false, dikirimPada: pukulWita(-1, 12),
+    isi: 'Maaf Pak, saya masih di Ubud. Besok saya kembalikan ke kantor.' },
+  { kode: 'RA-283998', dariPenyedia: true, dikirimPada: pukulWita(-1, 12.5),
+    isi: 'Baik, kami tunggu. Keterlambatannya tetap tercatat di sistem, ya.' },
+  { kode: 'RA-283998', dariPenyedia: false, dikirimPada: new Date(sekarang - 25 * MENIT), dibaca: false,
+    isi: 'Pak, saya sedang jalan ke kantor, kira-kira 30 menit lagi sampai.' },
+  // Sarah Miller (WNA), NMAX yang diantar ke Villa Berawa.
+  { kode: 'RA-284077', dariPenyedia: false, dikirimPada: pukulWita(-3, 18),
+    isi: 'Hi! Could you deliver the NMAX to Villa Berawa at 5 pm? Thank you.' },
+  { kode: 'RA-284077', dariPenyedia: true, dikirimPada: pukulWita(-3, 18.25),
+    isi: 'Hi Sarah, yes. We will be there at 17.00 with two helmets.' },
+  { kode: 'RA-284077', dariPenyedia: true, dikirimPada: new Date(sekarang - 2 * JAM),
+    isi: 'Hi Sarah, we will pick up the NMAX today at 17.00 at Villa Berawa. Is that still okay?' },
+  { kode: 'RA-284077', dariPenyedia: false, dikirimPada: new Date(sekarang - 90 * MENIT),
+    isi: 'Yes, see you at 5. Thanks!' },
+  // Dewi Anggraini, pesanan Vario yang masih menunggu konfirmasi.
+  { kode: 'RA-284207', dariPenyedia: false, dikirimPada: new Date(sekarang - 15 * MENIT), dibaca: false,
+    isi: 'Halo Pak, Vario-nya bisa diantar ke Villa Canggu sesuai jadwal? Pembayaran sudah lunas.' },
+];
+
+/** Satu pencairan lama, tiga hari lalu. Jumlahnya lebih kecil dari dana yang
+ *  sudah dilepas saat itu, jadi saldo setelahnya tetap positif. */
+const PENCAIRAN_LAMA = { jumlah: 2_500_000, dimintaPada: pukulWita(-3, 12) };
+
+/** Foto serah terima. Hanya Scoopy yang punya berkas foto di
+ *  rentalaja-web/public/serah-terima; unit lain memakai foto unitnya sebagai
+ *  pengganti, karena upload sungguhan belum ada. */
+const SISI = ['DEPAN', 'BELAKANG', 'KIRI', 'KANAN'] as const;
+const fotoSerah = (fotoUnit: string, scoopy: boolean, sisi: (typeof SISI)[number]) =>
+  scoopy ? `/serah-terima/scoopy-${sisi.toLowerCase()}.webp` : fotoUnit;
 
 // ---------------------------------------------------------------------------
 // Penulisan
@@ -275,8 +385,9 @@ async function main() {
   await db.$transaction(
     async (tx) => {
       await tx.$executeRawUnsafe(
-        `TRUNCATE pengguna, mitra, unit, blokir_unit, pesanan, pembayaran,
-                  dokumen_penyewa, serah_terima, foto_serah, klaim_kerusakan, ulasan
+        `TRUNCATE pengguna, mitra, pencairan, unit, blokir_unit, pesanan, pembayaran,
+                  dokumen_penyewa, serah_terima, foto_serah, klaim_kerusakan, ulasan,
+                  pesan_chat
          RESTART IDENTITY CASCADE`,
       );
 
@@ -304,7 +415,7 @@ async function main() {
         },
       });
       const bmr = await tx.mitra.create({
-        data: { pemilikId: pakWayan.id, nama: 'Bali Motor Rent', area: 'Canggu, Badung' },
+        data: { pemilikId: pakWayan.id, nama: 'Bali Motor Rent', area: 'Canggu, Badung', rekening: REKENING_BMR },
       });
 
       const idUnit = new Map<string, string>();
@@ -360,6 +471,7 @@ async function main() {
         [...UNIT_BMR, ...MITRA_LAIN.map((m) => m.unit)].map((u) => [u.plat, u.hargaPerHari]),
       );
       let urut = 0;
+      const pesananDibuat = new Map<string, { id: string; penyewaId: string; unitId: string; kembaliPada: Date | null; mulai: Date }>();
       const buatPesanan = async (p: PesananSeed) => {
         const hargaPerHari = hargaUnit.get(p.plat)!;
         const jumlahHari = Math.ceil((p.selesai.getTime() - p.mulai.getTime()) / HARI);
@@ -367,6 +479,7 @@ async function main() {
         // Pesanan yang sudah berjalan atau lewat dipesan sehari sebelum mulai.
         const dibuatPada = p.dibuatPada ?? new Date(p.mulai.getTime() - HARI);
         const dibalas = new Date(dibuatPada.getTime() + 20 * MENIT);
+        const kewarganegaraan = WNA[p.penyewa] ?? null;
 
         const pesanan = await tx.pesanan.create({
           data: {
@@ -386,8 +499,29 @@ async function main() {
             alasanBatal: p.status === 'DIBATALKAN' ? 'DIBATALKAN_PENYEWA' : null,
             dibatalkanPada:
               p.status === 'DIBATALKAN' ? new Date(dibuatPada.getTime() + 2 * JAM) : null,
+            // KYC masih simulasi: yang dicatat hanya waktunya, sesaat sebelum pesan.
+            asal: kewarganegaraan ? 'WNA' : 'WNI',
+            kewarganegaraan,
+            wajahTerverifikasiPada: new Date(dibuatPada.getTime() - 3 * MENIT),
           },
         });
+        // Dokumen pengganti deposit, sama dengan yang diwajibkan POST /pesanan:
+        // WNI KTP + SIM, WNA paspor + IDP + SIM negara asal. Berkasnya belum
+        // ada (upload sungguhan belum dibuat), yang disimpan hanya alamatnya.
+        const berkas = (nama: string) => `/dokumen/${p.kode.toLowerCase()}/${nama}.webp`;
+        await tx.dokumenPenyewa.createMany({
+          data: kewarganegaraan
+            ? [
+                { pesananId: pesanan.id, jenis: 'IDENTITAS', url: berkas('paspor'), diunggahPada: dibuatPada },
+                { pesananId: pesanan.id, jenis: 'IDP', url: berkas('idp'), diunggahPada: dibuatPada },
+                { pesananId: pesanan.id, jenis: 'SIM', url: berkas('sim'), diunggahPada: dibuatPada },
+              ]
+            : [
+                { pesananId: pesanan.id, jenis: 'IDENTITAS', url: berkas('ktp'), diunggahPada: dibuatPada },
+                { pesananId: pesanan.id, jenis: 'SIM', url: berkas('sim'), diunggahPada: dibuatPada },
+              ],
+        });
+        pesananDibuat.set(p.kode, pesanan);
         // Bayar penuh saat memesan, termasuk yang kemudian batal: dananya
         // dikembalikan, dan status dana itu diturunkan, tidak disimpan.
         await tx.pembayaran.create({
@@ -428,21 +562,83 @@ async function main() {
           },
         });
       }
+
+      // Serah terima. Antar dicatat saat unit diserahkan (jam mulai, atau
+      // sekarang kalau jamnya belum tiba), ambil saat unit kembali.
+      const unitDariId = new Map([...idUnit].map(([plat, id]) => [id, plat]));
+      const fotoUnit = new Map(
+        [...UNIT_BMR, ...MITRA_LAIN.map((m) => m.unit)].map((u) => [u.plat, { foto: u.foto, nama: u.nama }]),
+      );
+      for (const s of SERAH) {
+        const p = pesananDibuat.get(s.kode)!;
+        const unit = fotoUnit.get(unitDariId.get(p.unitId)!)!;
+        const dicatatPada =
+          s.jenis === 'ANTAR'
+            ? new Date(Math.min(p.mulai.getTime(), sekarang))
+            : (p.kembaliPada ?? new Date(sekarang - 10 * MENIT));
+        await tx.serahTerima.create({
+          data: {
+            pesananId: p.id,
+            jenis: s.jenis,
+            kondisi: s.kondisi,
+            catatan: s.catatan ?? null,
+            dicatatPada,
+            foto: s.foto
+              ? {
+                  create: SISI.map((sisi) => ({
+                    sisi,
+                    url: fotoSerah(unit.foto, unit.nama.startsWith('Honda Scoopy'), sisi),
+                  })),
+                }
+              : undefined,
+          },
+        });
+        if (s.klaim) {
+          await tx.klaimKerusakan.create({
+            data: { pesananId: p.id, ...s.klaim, diajukanPada: dicatatPada },
+          });
+        }
+      }
+
+      // Chat. Pesan yang sudah dibaca ditandai dibaca 5 menit setelah dikirim.
+      for (const c of CHAT) {
+        const p = pesananDibuat.get(c.kode)!;
+        await tx.pesanChat.create({
+          data: {
+            pesananId: p.id,
+            pengirimId: c.dariPenyedia ? pakWayan.id : p.penyewaId,
+            isi: c.isi,
+            dikirimPada: c.dikirimPada,
+            dibacaPada: c.dibaca === false ? null : new Date(c.dikirimPada.getTime() + 5 * MENIT),
+          },
+        });
+      }
+
+      await tx.pencairan.create({
+        data: { mitraId: bmr.id, rekening: REKENING_BMR, ...PENCAIRAN_LAMA },
+      });
     },
     { timeout: 60_000 },
   );
 
-  const [pengguna, mitra, unit, pesanan, ulasan, blokir] = await Promise.all([
-    db.pengguna.count(),
-    db.mitra.count(),
-    db.unit.count(),
-    db.pesanan.count(),
-    db.ulasan.count(),
-    db.blokirUnit.count(),
-  ]);
+  const [pengguna, mitra, unit, pesanan, ulasan, blokir, dokumen, serah, klaim, chat, pencairan] =
+    await Promise.all([
+      db.pengguna.count(),
+      db.mitra.count(),
+      db.unit.count(),
+      db.pesanan.count(),
+      db.ulasan.count(),
+      db.blokirUnit.count(),
+      db.dokumenPenyewa.count(),
+      db.serahTerima.count(),
+      db.klaimKerusakan.count(),
+      db.pesanChat.count(),
+      db.pencairan.count(),
+    ]);
   console.log(
     `Seed selesai: ${pengguna} pengguna, ${mitra} mitra, ${unit} unit, ` +
-      `${pesanan} pesanan, ${ulasan} ulasan, ${blokir} blokir.`,
+      `${pesanan} pesanan, ${ulasan} ulasan, ${blokir} blokir, ${dokumen} dokumen, ` +
+      `${serah} serah terima, ${klaim} klaim, ${chat} pesan chat, ${pencairan} pencairan.`,
   );
   console.log('Akun demo: mitra.demo@rentalaja.test dan penyewa.demo@rentalaja.test');
   console.log('Kata sandi keduanya: nilai PASSWORD_DEMO di .env');

@@ -35,7 +35,8 @@ let nomor = 0;
 
 async function kosongkanSemua() {
   await db.$executeRawUnsafe(
-    'TRUNCATE pengguna, mitra, unit, blokir_unit, pesanan, pembayaran, ulasan RESTART IDENTITY CASCADE',
+    'TRUNCATE pengguna, mitra, pencairan, unit, blokir_unit, pesanan, pembayaran, dokumen_penyewa, ' +
+      'serah_terima, foto_serah, klaim_kerusakan, ulasan, pesan_chat RESTART IDENTITY CASCADE',
   );
 }
 
@@ -378,5 +379,30 @@ describe('Ulasan', () => {
     await expect(tulis('1')).resolves.toBeDefined();
     await harapDitolak(tulis('4.3'), SQLSTATE.ATURAN_DILANGGAR, 'ulasan_skor_setengah_bintang');
     await harapDitolak(tulis('5.5'), SQLSTATE.ATURAN_DILANGGAR, 'ulasan_skor_setengah_bintang');
+  });
+});
+
+describe('Penyewa WNA', () => {
+  it('kewarganegaraan wajib untuk WNA dan hanya untuk WNA', async () => {
+    const p = await pesan({ a: 0, b: 1 });
+    const ubah = (data: { asal: 'WNI' | 'WNA'; kewarganegaraan: string | null }) =>
+      db.pesanan.update({ where: { id: p.id }, data });
+
+    await expect(ubah({ asal: 'WNA', kewarganegaraan: 'Australia' })).resolves.toBeDefined();
+    await harapDitolak(ubah({ asal: 'WNA', kewarganegaraan: null }), SQLSTATE.ATURAN_DILANGGAR, 'pesanan_kewarganegaraan_konsisten');
+    await harapDitolak(ubah({ asal: 'WNI', kewarganegaraan: 'Australia' }), SQLSTATE.ATURAN_DILANGGAR, 'pesanan_kewarganegaraan_konsisten');
+  });
+});
+
+describe('Chat', () => {
+  it('pesan kosong, spasi saja, atau lebih dari 2000 karakter ditolak', async () => {
+    const p = await pesan({ a: 0, b: 1 });
+    const tulis = (isi: string) => db.pesanChat.create({ data: { pesananId: p.id, pengirimId: penyewaId, isi } });
+
+    await expect(tulis('Halo, helmnya dua ya?')).resolves.toBeDefined();
+    await expect(tulis('x'.repeat(2000))).resolves.toBeDefined();
+    await harapDitolak(tulis(''), SQLSTATE.ATURAN_DILANGGAR, 'pesan_chat_isi_valid');
+    await harapDitolak(tulis('    '), SQLSTATE.ATURAN_DILANGGAR, 'pesan_chat_isi_valid');
+    await harapDitolak(tulis('x'.repeat(2001)), SQLSTATE.ATURAN_DILANGGAR, 'pesan_chat_isi_valid');
   });
 });

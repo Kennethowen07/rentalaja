@@ -18,10 +18,12 @@ import { rincianHarga } from '../umum/harga.js';
 import { bacaRentangSewa } from '../umum/rentang-sewa.js';
 import {
   BATAS_BALAS_MS,
+  dendaBerjalan,
   statusDana,
   statusTurunan,
   type StatusTampil,
 } from '../umum/status-pesanan.js';
+import { pesananBerkode } from './akses-pesanan.js';
 import type { BuatPesananDto } from './dto/buat-pesanan.dto.js';
 
 const ISI = {
@@ -31,6 +33,8 @@ const ISI = {
   penyewa: { select: { nama: true, telepon: true } },
   pembayaran: { select: { jumlah: true, metode: true, dibayarPada: true } },
   klaim: { select: { diselesaikanPada: true } },
+  // Urutan enum di database: IDENTITAS, SIM, IDP.
+  dokumen: { select: { jenis: true }, orderBy: { jenis: 'asc' } },
 } satisfies Prisma.PesananInclude;
 
 type PesananLengkap = Prisma.PesananGetPayload<{ include: typeof ISI }>;
@@ -45,12 +49,6 @@ const SUDAH: Record<StatusTampil, string> = {
   ditolak: 'Pesanan sudah ditolak penyedia.',
   dibatalkan: 'Pesanan sudah dibatalkan.',
 };
-
-/** Pesanan yang boleh dilihat dan diubah pengguna ini: penyewa hanya
- *  pesanannya sendiri, mitra hanya pesanan untuk unit miliknya. */
-function milik(p: PenggunaToken): Prisma.PesananWhereInput {
-  return p.peran === 'MITRA' ? { unit: { mitra: { pemilikId: p.id } } } : { penyewaId: p.id };
-}
 
 /** "RA-284207". Bentrok dengan kode yang sudah ada ditangani dengan coba ulang. */
 function buatKode(): string {
@@ -71,6 +69,11 @@ export class PesananService {
    * Pembayarannya SIMULASI: belum ada payment gateway, jadi baris pembayaran
    * dicatat langsung dengan jumlah = total. Yang tetap dijaga sungguhan adalah
    * jumlahnya, lewat trigger pembayaran_sesuai_total di database.
+   *
+   * Dokumen jaminan (identitas, SIM, dan IDP untuk WNA) ikut ditulis di
+   * transaksi yang sama: pesanan tanpa dokumen tidak pernah ada, karena
+   * dokumen itulah pengganti deposit tunai. Kelengkapan dokumen sesuai asal
+   * penyewa dijaga DTO; kewarganegaraan juga dijaga CHECK di database.
    */
   async buat(penyewaId: string, dto: BuatPesananDto) {
     const sekarang = Date.now();
@@ -96,6 +99,13 @@ export class PesananService {
       });
     }
 
+    const asal = dto.asal ?? 'WNI';
+    const dokumen: { jenis: 'IDENTITAS' | 'SIM' | 'IDP'; url: string }[] = [
+      { jenis: 'IDENTITAS', url: dto.dokumen.identitas },
+      { jenis: 'SIM', url: dto.dokumen.sim },
+    ];
+    if (asal === 'WNA' && dto.dokumen.idp) dokumen.push({ jenis: 'IDP', url: dto.dokumen.idp });
+
     for (let coba = 1; ; coba++) {
       try {
         const kode = await this.prisma.$transaction(async (tx) => {
@@ -113,7 +123,15 @@ export class PesananService {
               total: harga.total,
               diantar: dto.diantar,
               titik: dto.titik,
+              asal,
+              kewarganegaraan: asal === 'WNA' ? dto.kewarganegaraan : null,
+              // verifikasiWajah: true sudah dipastikan DTO. Belum ada penyedia
+              // KYC, jadi yang dicatat hanya kapan verifikasinya dinyatakan selesai.
+              wajahTerverifikasiPada: new Date(),
             },
+          });
+          await tx.dokumenPenyewa.createMany({
+            data: dokumen.map((d) => ({ pesananId: p.id, ...d })),
           });
           await tx.pembayaran.create({
             data: { pesananId: p.id, jumlah: p.total, metode: dto.metode, dibayarPada: new Date() },
@@ -149,7 +167,7 @@ export class PesananService {
   /** 404, bukan 403, untuk pesanan orang lain: kode pesanan pendek dan
    *  bisa ditebak, jadi jawabannya tidak boleh membocorkan bahwa kode itu ada. */
   async detail(pengguna: PenggunaToken, kode: string) {
-    const p = await this.prisma.pesanan.findFirst({ where: { kode, ...milik(pengguna) }, include: ISI });
+    const p = await this.prisma.pesanan.findFirst({ where: pesananBerkode(pengguna, kode), include: ISI });
     if (!p) throw new NotFoundException(`Pesanan ${kode} tidak ditemukan.`);
     return this.bentuk(p, pengguna.peran, Date.now());
   }
@@ -190,8 +208,7 @@ export class PesananService {
     try {
       const hasil = await this.prisma.pesanan.updateMany({
         where: {
-          kode,
-          ...milik(pengguna),
+          ...pesananBerkode(pengguna, kode),
           status: 'MENUNGGU',
           dibuatPada: { gt: new Date(Date.now() - BATAS_BALAS_MS) },
         },
@@ -205,7 +222,7 @@ export class PesananService {
     }
 
     if (berubah === 0) {
-      const p = await this.prisma.pesanan.findFirst({ where: { kode, ...milik(pengguna) } });
+      const p = await this.prisma.pesanan.findFirst({ where: pesananBerkode(pengguna, kode) });
       if (!p) throw new NotFoundException(`Pesanan ${kode} tidak ditemukan.`);
       const status = statusTurunan(p, Date.now());
       // Masih "menunggu" di jam aplikasi tapi ditolak database: batasnya
@@ -253,6 +270,13 @@ export class PesananService {
       dibatalkanPada: status === 'kedaluwarsa' ? batasBalas : p.dibatalkanPada,
       kembaliPada: p.kembaliPada,
       alasanBatal: status === 'kedaluwarsa' ? 'KEDALUWARSA' : p.alasanBatal,
+      /** Rupiah, dicatat saja: tidak ditagih dan tidak mengubah dana. */
+      denda: dendaBerjalan(p, sekarang),
+      asal: p.asal,
+      kewarganegaraan: p.kewarganegaraan,
+      /** Jenis dokumen yang sudah diserahkan, mis. ["IDENTITAS", "SIM"]. */
+      dokumen: p.dokumen.map((d) => d.jenis),
+      wajahTerverifikasi: p.wajahTerverifikasiPada !== null,
     };
   }
 }

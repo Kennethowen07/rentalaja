@@ -5,10 +5,10 @@ import { urlDatabaseTest } from './url-db-test.js';
 /**
  * globalSetup Vitest untuk test e2e. Berjalan sekali sebelum semua file test.
  *
- * Membuat database rentalaja_test kalau belum ada, lalu menerapkan migrasi
- * dengan `migrate deploy`. Sengaja bukan `migrate reset`: deploy hanya
- * menambahkan migrasi yang belum diterapkan dan tidak pernah menghapus apa
- * pun. Mengosongkan isi tabel adalah tugas tiap file test.
+ * Membuat database test (rentalaja_test, atau NAMA_DB_TEST) kalau belum ada,
+ * lalu menerapkan migrasi dengan `migrate deploy`. Sengaja bukan
+ * `migrate reset`: deploy hanya menambahkan migrasi yang belum diterapkan dan
+ * tidak pernah menghapus apa pun. Mengosongkan isi tabel adalah tugas tiap file test.
  */
 export default async function siapkanDatabaseTest() {
   const url = new URL(urlDatabaseTest());

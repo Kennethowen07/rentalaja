@@ -15,6 +15,8 @@ export const SQLSTATE = {
   /** Aturan data dilanggar: CHECK harga, pesanan beku, batas balas, jumlah bayar. */
   ATURAN_DILANGGAR: '23514',
   UNIK_DILANGGAR: '23505',
+  /** Teks tidak sah untuk UTF-8, mis. karakter NUL dari %00 di URL. */
+  TEKS_TIDAK_SAH: '22021',
 } as const;
 
 type PenyebabDb = {

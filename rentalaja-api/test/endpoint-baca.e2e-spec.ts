@@ -19,7 +19,7 @@ import bcrypt from 'bcryptjs';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
-import { keIsoWita, MENIT, pukulWita } from '../src/umum/waktu-wita.js';
+import { HARI, keIsoWita, MENIT, pukulWita } from '../src/umum/waktu-wita.js';
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 const KATA_SANDI = 'sandi-uji-lokal';
@@ -40,7 +40,8 @@ async function masuk(email: string) {
 
 async function siapkanData() {
   await db.$executeRawUnsafe(
-    'TRUNCATE pengguna, mitra, unit, blokir_unit, pesanan, pembayaran, ulasan RESTART IDENTITY CASCADE',
+    'TRUNCATE pengguna, mitra, pencairan, unit, blokir_unit, pesanan, pembayaran, dokumen_penyewa, ' +
+      'serah_terima, foto_serah, klaim_kerusakan, ulasan, pesan_chat RESTART IDENTITY CASCADE',
   );
   const hash = await bcrypt.hash(KATA_SANDI, 4);
   const pengguna = (email: string, peran: 'MITRA' | 'PENYEWA') =>
@@ -165,6 +166,36 @@ describe('Panel mitra', () => {
     expect(r.body.mingguIni[0]).toEqual({ tanggal: tanggal(0), jumlah: 2 });
   });
 
+  it('denda keterlambatan dicatat untuk unit yang telat, tanpa mengubah dana', async () => {
+    // unit-telat: jadwal kembali kemarin 09.00 WITA, 80.000/hari, dibulatkan ke atas.
+    const harap = 80_000 * Math.ceil((Date.now() - jam9(-1).getTime()) / HARI);
+    const pesanan = await sebagaiA('/mitra/pesanan?status=berjalan');
+    const denda = Object.fromEntries(
+      pesanan.body.map((p: { unit: { plat: string }; denda: number }) => [p.unit.plat, p.denda]),
+    );
+    expect(denda).toEqual({ 'DK unit-keluar': 0, 'DK unit-telat': harap });
+    const telat = pesanan.body.find((p: { status: string }) => p.status === 'telat');
+    expect(telat.statusDana).toBe('ditahan');
+
+    const beranda = await sebagaiA('/mitra/beranda');
+    const keluar = Object.fromEntries(
+      beranda.body.unitKeluar.daftar.map((u: { plat: string; denda: number }) => [u.plat, u.denda]),
+    );
+    expect(keluar).toEqual({ 'DK unit-keluar': 0, 'DK unit-telat': harap });
+
+    const unit = await sebagaiA('/mitra/unit');
+    const dendaUnit = Object.fromEntries(
+      unit.body
+        .filter((u: { keluar?: unknown }) => u.keluar)
+        .map((u: { slug: string; keluar: { denda: number } }) => [u.slug, u.keluar.denda]),
+    );
+    expect(dendaUnit).toEqual({ 'unit-keluar': 0, 'unit-telat': harap });
+
+    const detail = await sebagaiA(`/pesanan/${telat.kode}`);
+    expect(detail.body.denda).toBe(harap);
+    expect(detail.body.statusDana).toBe('ditahan');
+  });
+
   it('kalender memakai urutan menang yang benar', async () => {
     const r = await sebagaiA(`/mitra/kalender?mulai=${tanggal(0)}&hari=8`);
     const sel = (slug: string, geser: number) =>
@@ -237,5 +268,131 @@ describe('Detail unit', () => {
 
   it('404 untuk slug yang tidak ada', async () => {
     expect((await minta().get(`/unit/tidak-ada?mulai=${tanggal(1)}&durasi=1`)).status).toBe(404);
+  });
+});
+
+describe('Unit dengan dua pesanan berjalan yang belum kembali', () => {
+  // Sewa beruntun: penyewa pertama telat, padahal pesanan berikutnya sudah
+  // diterima dan jam mulainya sudah lewat. Database mengizinkan keadaan ini
+  // (rentangnya tidak tumpang tindih). Unitnya masih di tangan penyewa
+  // pertama, jadi panel mitra harus menampilkan unit itu TELAT beserta
+  // dendanya, bukan pesanan berikutnya, dan hasilnya tidak boleh bergantung
+  // pada urutan baris di database.
+  let tokenMitraC: string;
+  const harga = 90_000;
+
+  beforeAll(async () => {
+    const hash = await bcrypt.hash(KATA_SANDI, 4);
+    const pemilik = await db.pengguna.create({
+      data: { email: 'mitra-c@uji.test', kataSandiHash: hash, nama: 'mitra-c', telepon: '0', peran: 'MITRA' },
+    });
+    const penyewa = await db.pengguna.findUniqueOrThrow({ where: { email: 'penyewa@uji.test' } });
+    const mitra = await db.mitra.create({ data: { pemilikId: pemilik.id, nama: 'Rental C', area: 'Ubud' } });
+    const u = await db.unit.create({
+      data: {
+        mitraId: mitra.id, slug: 'unit-beruntun', nama: 'unit-beruntun', plat: 'DK beruntun', kategori: 'MOTOR',
+        jenis: 'Skutik 110cc', spesifikasi: 'matic 110cc', tahun: 2023, hargaPerHari: harga, area: 'Ubud',
+      },
+    });
+    const pesan = (kode: string, a: number, b: number) =>
+      db.pesanan.create({
+        data: {
+          kode, unitId: u.id, penyewaId: penyewa.id, mulai: jam9(a), selesai: jam9(b), status: 'BERJALAN',
+          hargaPerHari: harga, jumlahHari: b - a, subtotal: harga * (b - a), biayaLayanan: 0,
+          total: harga * (b - a), diantar: false, titik: 'Kantor', dibuatPada: new Date(sekarang - 10 * HARI),
+          diterimaPada: new Date(sekarang - 9 * HARI),
+        },
+      });
+    // Pesanan berikutnya ditulis lebih dulu, supaya urutan baris fisik
+    // menaruhnya di depan pesanan yang telat.
+    await pesan('RA-BERIKUT', -2, 1);
+    await pesan('RA-TELAT-DULU', -4, -2);
+    tokenMitraC = await masuk('mitra-c@uji.test');
+  });
+
+  const sebagaiC = (url: string) => minta().get(url).set('Authorization', `Bearer ${tokenMitraC}`);
+
+  it('GET /mitra/unit menampilkan pesanan yang telat beserta dendanya', async () => {
+    const harap = harga * Math.ceil((Date.now() - jam9(-2).getTime()) / HARI);
+    const r = await sebagaiC('/mitra/unit');
+    expect(r.status).toBe(200);
+    expect(r.body).toHaveLength(1);
+    expect(r.body[0]).toMatchObject({
+      status: 'telat',
+      keluar: { kodePesanan: 'RA-TELAT-DULU', denda: harap },
+    });
+  });
+
+  it('beranda menghitung unitnya sekali, sebagai telat dengan dendanya', async () => {
+    const harap = harga * Math.ceil((Date.now() - jam9(-2).getTime()) / HARI);
+    const r = await sebagaiC('/mitra/beranda');
+    expect(r.body.unitKeluar).toMatchObject({ jumlah: 1, totalUnit: 1 });
+    expect(r.body.unitKeluar.daftar[0]).toMatchObject({ kodePesanan: 'RA-TELAT-DULU', telat: true, denda: harap });
+  });
+});
+
+describe('Unit yang sedang servis dan juga diblokir manual', () => {
+  // Urutan menang sel kalender (backend.md bagian 4) menaruh blokir manual
+  // di atas servis. Layar Unit harus mengikuti urutan yang sama, dan tidak
+  // boleh bergantung pada blokir mana yang kebetulan terbaca lebih dulu.
+  let tokenMitraD: string;
+
+  beforeAll(async () => {
+    const hash = await bcrypt.hash(KATA_SANDI, 4);
+    const pemilik = await db.pengguna.create({
+      data: { email: 'mitra-d@uji.test', kataSandiHash: hash, nama: 'mitra-d', telepon: '0', peran: 'MITRA' },
+    });
+    const mitra = await db.mitra.create({ data: { pemilikId: pemilik.id, nama: 'Rental D', area: 'Sanur' } });
+    const u = await db.unit.create({
+      data: {
+        mitraId: mitra.id, slug: 'unit-dobel-blokir', nama: 'unit-dobel-blokir', plat: 'DK dobel', kategori: 'MOTOR',
+        jenis: 'Skutik 110cc', spesifikasi: 'matic 110cc', tahun: 2023, hargaPerHari: 50_000, area: 'Sanur',
+      },
+    });
+    // Servis ditulis lebih dulu, supaya urutan baris fisik menaruhnya di depan.
+    await db.blokirUnit.create({ data: { unitId: u.id, jenis: 'SERVIS', mulai: jam9(-1), selesai: jam9(3) } });
+    await db.blokirUnit.create({ data: { unitId: u.id, jenis: 'MANUAL', mulai: jam9(-1), selesai: jam9(2) } });
+    tokenMitraD = await masuk('mitra-d@uji.test');
+  });
+
+  it('GET /mitra/unit dan kalender sama-sama menampilkan "diblokir"', async () => {
+    const unit = await minta().get('/mitra/unit').set('Authorization', `Bearer ${tokenMitraD}`);
+    expect(unit.body[0]).toMatchObject({ status: 'diblokir', sampai: jam9(2).toISOString() });
+
+    const kal = await minta()
+      .get(`/mitra/kalender?mulai=${tanggal(0)}&hari=1`)
+      .set('Authorization', `Bearer ${tokenMitraD}`);
+    expect(kal.body.unit[0].sel[0].keadaan).toBe('diblokir');
+  });
+});
+
+describe('Karakter NUL di parameter URL', () => {
+  // PostgreSQL menolak NUL di parameter teks (SQLSTATE 22021). Filter global
+  // (src/prisma/filter-kesalahan-db.ts) menjawabnya 400, bukan 500, untuk
+  // endpoint mana pun yang meneruskan parameter URL ke query.
+  const sebagai = (token: string) => ({
+    get: (url: string) => minta().get(url).set('Authorization', `Bearer ${token}`),
+    post: (url: string) => minta().post(url).set('Authorization', `Bearer ${token}`),
+    put: (url: string, body: object) => minta().put(url).set('Authorization', `Bearer ${token}`).send(body),
+  });
+
+  it('endpoint publik /unit/:slug', async () => {
+    const r = await minta().get(`/unit/abc%00def?mulai=${tanggal(1)}&durasi=1`);
+    expect(r.status).toBe(400);
+  });
+
+  it('endpoint mitra yang mencari lewat kode atau id dari URL', async () => {
+    const m = sebagai(tokenMitraA);
+    const hasil = [
+      (await m.put('/mitra/serah-terima/RA%00X/antar', { catatan: 'x' })).status,
+      (await m.post('/mitra/klaim/RA%00X/selesai')).status,
+      (await m.post('/mitra/ulasan/ab%00c/balas').send({ balasan: 'Terima kasih.' })).status,
+    ];
+    for (const s of hasil) expect(s).toBe(400);
+  });
+
+  it('kode biasa yang tidak ada tetap 404', async () => {
+    const r = await sebagai(tokenMitraA).post('/mitra/klaim/RA-TIDAK-ADA/selesai');
+    expect(r.status).toBe(404);
   });
 });

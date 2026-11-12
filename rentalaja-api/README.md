@@ -28,6 +28,11 @@ Dibuat oleh `npm run db:seed`, kata sandinya nilai `PASSWORD_DEMO` di `.env`:
 | `mitra.demo@rentalaja.test` | Mitra, pemilik Bali Motor Rent (18 unit) |
 | `penyewa.demo@rentalaja.test` | Penyewa, Adi Prasetyo |
 
+Data contoh juga berisi rekening dan satu pencairan lama untuk Bali Motor
+Rent, chat untuk tiga pesanan, catatan serah terima, satu klaim kerusakan
+terbuka (RA-283905), ulasan dengan dan tanpa balasan, serta dokumen penyewa
+(Sarah Miller satu-satunya WNA, Australia).
+
 Pesanan menunggu di data contoh kedaluwarsa satu jam setelah seed. Jalankan
 `npm run db:seed` lagi untuk mendapat yang baru.
 
@@ -38,7 +43,13 @@ npm test             # unit test, tanpa database
 npm run test:e2e     # pakai database sungguhan: rentalaja_test, dibuat otomatis
 ```
 
-Test e2e tidak pernah menyentuh database pengembangan.
+Test e2e tidak pernah menyentuh database pengembangan. Nama database test bisa
+diganti lewat env `NAMA_DB_TEST` (mis. `NAMA_DB_TEST=rentalaja_test_a npm run test:e2e`)
+supaya beberapa proses test bisa berjalan bersamaan tanpa saling mengosongkan.
+Setiap file e2e mengosongkan tabel di awal, jadi dua proses test yang memakai
+database yang sama akan saling merusak; di dalam satu proses, file dijalankan
+berurutan (`fileParallelism: false`). Database test tambahan tidak dihapus
+otomatis: `docker exec rentalaja-db psql -U rentalaja -d postgres -c 'DROP DATABASE rentalaja_test_a'`.
 
 ## Di mana aturan bisnisnya
 
@@ -53,31 +64,81 @@ tidak bisa merusak data. Letaknya di
 - harga dihitung, dan dibekukan setelah dipesan (CHECK + trigger)
 - jumlah bayar harus sama dengan total
 
+Migrasi `20261112104507_fitur_lanjutan` menambah CHECK untuk fitur lanjutan:
+pencairan selalu positif, isi chat 1 sampai 2000 karakter (tanpa spasi
+saja), dan kewarganegaraan wajib ada untuk WNA dan hanya untuk WNA.
+
 Buktinya `test/aturan-database.e2e-spec.ts`. `src/prisma/kesalahan-db.ts`
 membaca kode SQLSTATE dari error yang dibungkus Prisma.
 
 ## Endpoint
 
+Semua endpoint di bawah `/mitra` hanya untuk peran MITRA dan hanya melihat
+data usaha rental miliknya sendiri: milik mitra lain dijawab 404, penyewa
+dijawab 403, tanpa token 401.
+
 | Endpoint | Siapa | Isi |
 |---|---|---|
+| `GET /kesehatan` | publik | cek server hidup |
 | `POST /auth/masuk`, `GET /auth/saya` | semua | login, profil |
 | `GET /pencarian?mulai=&durasi=` | publik | semua unit + kosong/terisi + harga final |
 | `GET /unit/:slug?mulai=&durasi=` | publik | detail unit + kalender 7 hari |
-| `POST /pesanan` | penyewa | pesan + bayar penuh dalam satu langkah |
-| `GET /pesanan`, `GET /pesanan/:kode` | penyewa / mitra pemilik | daftar dan detail |
+| `POST /pesanan` | penyewa | pesan + bayar penuh dalam satu langkah; wajib `dokumen`, `verifikasiWajah: true`, dan `kewarganegaraan` kalau `asal: "WNA"` |
+| `GET /pesanan`, `GET /pesanan/:kode` | penyewa / mitra pemilik | daftar dan detail, termasuk `denda` berjalan |
 | `POST /pesanan/:kode/batal` | penyewa | hanya selama masih menunggu |
+| `POST /pesanan/:kode/ulasan` | penyewa | `{skor, isi}`, satu kali per pesanan SELESAI (409 kalau belum selesai atau sudah diulas) |
+| `GET /chat` | penyewa / mitra | daftar percakapan (satu per pesanan) + jumlah belum dibaca |
+| `GET /chat/:kode`, `POST /chat/:kode` | penyewa pemesan / mitra pemilik | buka (menandai dibaca) dan kirim `{isi}`; 409 kalau pesanan ditolak, batal, atau kedaluwarsa |
 | `POST /mitra/pesanan/:kode/terima`, `/tolak` | mitra pemilik unit | dalam 1 jam |
-| `GET /mitra/saya`, `/beranda`, `/unit`, `/pesanan`, `/kalender` | mitra | panel mitra |
+| `GET /mitra/saya`, `/beranda`, `/unit`, `/pesanan`, `/kalender` | mitra | panel mitra; sel kalender membawa `blokirId` untuk blokir manual/servis |
+| `PATCH /mitra/unit/:id` | mitra | `{hargaPerHari?, servis?, sampai?}`; 409 kalau servis bentrok pesanan atau unit sedang disewa |
+| `POST /mitra/kalender/blokir`, `DELETE /mitra/kalender/blokir/:id` | mitra | blokir manual `{unitId, mulai, selesai, catatan?}`; 409 kalau menimpa pesanan |
+| `GET /mitra/serah-terima?tab=hari-ini\|menunggu-foto\|selesai` | mitra | jadwal antar/ambil (diturunkan dari pesanan) + catatannya |
+| `PUT /mitra/serah-terima/:kode/antar\|ambil` | mitra | `{kondisi?, foto?, catatan?, klaim?}`, idempoten; 409 sebelum hari sewa, sebelum antar lengkap (untuk ambil), atau setelah catatan lengkap |
+| `POST /mitra/klaim/:kode/selesai` | mitra | tandai klaim kerusakan selesai; dana lalu dilepas sesuai jadwalnya |
+| `GET /mitra/ulasan`, `POST /mitra/ulasan/:id/balas` | mitra | ulasan unit sendiri + rata-rata; balasan `{balasan}` boleh ditimpa |
+| `GET /mitra/pendapatan?periode=bulan-ini\|bulan-lalu\|tiga-bulan` | mitra | dana dilepas, komisi, transaksi per periode |
+| `GET /mitra/saldo`, `POST /mitra/saldo/tarik` | mitra | saldo turunan + rekening; tarik `{jumlah?}` (kosong = seluruh saldo); 400 kalau saldo kurang atau rekening belum diisi |
+
+Kode atau id di URL yang berisi karakter NUL (`%00`) dijawab 400 oleh filter
+global `src/prisma/filter-kesalahan-db.ts`, bukan 500.
 
 **Harga.** Biaya layanan penyewa 3% dari harga sewa, dibulatkan ke rupiah
 terdekat (`src/umum/harga.ts`, satu-satunya rumus). `POST /pesanan` wajib
 mengirim `totalDisetujui`, yaitu total yang dilihat penyewa. Server tetap
 menghitung sendiri dan menjawab 409 beserta harga baru kalau angkanya beda.
+Komisi platform 5% dipotong saat dana dilepas ke penyedia.
 
 **Pembayaran masih simulasi.** Belum ada payment gateway: baris pembayaran
 dicatat langsung saat pesan. Yang dijaga sungguhan hanya jumlahnya (trigger
 `pembayaran_sesuai_total`). Status dana (ditahan, dilepas, dikembalikan)
 diturunkan dari status pesanan, tidak disimpan.
+
+## Keputusan pemilik proyek (12 Nov 2026)
+
+- **Denda keterlambatan dicatat saja.** Server menghitung denda berjalan =
+  `hargaPerHari` beku x jumlah hari telat (dibulatkan ke atas, dari jadwal
+  selesai sampai sekarang atau `kembaliPada`). Angkanya ditampilkan di
+  pesanan, panel unit, beranda, dan serah terima, tetapi TIDAK ditagih ke
+  siapa pun dan tidak mengubah dana. Rumusnya satu, di
+  `src/umum/status-pesanan.ts` (`hariTelat`, `dendaBerjalan`). Tepat di jam
+  jadwal selesai pesanan sudah "telat" dan dendanya sudah satu hari.
+- **Klaim kerusakan ditandai selesai oleh mitra.** Klaim diajukan saat
+  mencatat unit kembali (`PUT .../ambil` dengan `klaim`). Selama
+  `diselesaikanPada` kosong, dana ditahan. Mitra pemilik unit menandainya
+  selesai lewat `POST /mitra/klaim/:kode/selesai`, lalu aturan pelepasan
+  dana 1x24 jam berlaku. Nominal klaim tidak memindahkan dana. Penyewa belum
+  bisa melihat atau membantah klaim.
+- **KYC masih simulasi.** `POST /pesanan` mewajibkan dokumen (WNI: KTP +
+  SIM; WNA: paspor + IDP + SIM negara asal, plus `kewarganegaraan`) dan
+  `verifikasiWajah: true`. Yang disimpan hanya alamat berkas dan waktu
+  verifikasi (`wajahTerverifikasiPada`). Belum ada upload maupun penyedia KYC
+  sungguhan, dan mitra hanya melihat jenis dokumennya.
+- **Saldo tidak disimpan.** Saldo = dana bersih yang sudah dilepas dikurangi
+  semua pencairan. Tarik saldo mengunci baris mitra (`FOR UPDATE`) supaya
+  dua tarikan bersamaan tidak bisa melebihi saldo. Rekening tujuan
+  (`Mitra.rekening`) belum punya endpoint untuk diubah; di data contoh diisi
+  seed (`BCA ···4471`).
 
 ## Hal yang perlu diketahui
 

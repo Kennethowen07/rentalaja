@@ -4,6 +4,7 @@ import { okupansi } from '../umum/ketersediaan.js';
 import {
   BATAS_BALAS_MS,
   bersihPenyedia,
+  dendaBerjalan,
   statusDana,
   statusTurunan,
   waktuPelepasan,
@@ -60,6 +61,7 @@ export class MitraService {
 
     const hasil = baris.map((p) => {
       const status = statusTurunan(p, sekarang);
+      const batasBalas = new Date(p.dibuatPada.getTime() + BATAS_BALAS_MS);
       return {
         id: p.id,
         kode: p.kode,
@@ -75,13 +77,18 @@ export class MitraService {
         statusDana: statusDana(p, p.klaim, sekarang),
         dibuatPada: p.dibuatPada,
         /** Hanya untuk status menunggu: setelah ini pesanan batal otomatis. */
-        batasBalasPada: status === 'menunggu' ? new Date(p.dibuatPada.getTime() + BATAS_BALAS_MS) : null,
+        batasBalasPada: status === 'menunggu' ? batasBalas : null,
         titik: p.titik,
         diantar: p.diantar,
         diterimaPada: p.diterimaPada,
         kembaliPada: p.kembaliPada,
-        dibatalkanPada: p.dibatalkanPada,
+        // Sama dengan detail pesanan: baris kedaluwarsa masih MENUNGGU dengan
+        // dibatalkanPada null (tidak ada cron), jadi waktu batalnya diturunkan.
+        dibatalkanPada: status === 'kedaluwarsa' ? batasBalas : p.dibatalkanPada,
         alasanBatal: status === 'kedaluwarsa' ? 'KEDALUWARSA' : p.alasanBatal,
+        /** Denda keterlambatan berjalan (rupiah). Dicatat saja: tidak ditagih
+         *  ke siapa pun dan tidak mengubah dana. */
+        denda: dendaBerjalan(p, sekarang),
       };
     });
     return kelompok ? hasil.filter((p) => KELOMPOK[kelompok].includes(p.status)) : hasil;
@@ -103,6 +110,12 @@ export class MitraService {
           mulai: { lte: new Date(sekarang) },
         },
         include: { penyewa: { select: { nama: true } } },
+        // Sewa beruntun: kalau penyewa sebelumnya telat, pesanan berikutnya
+        // bisa sudah BERJALAN juga. Unitnya masih di tangan penyewa yang
+        // paling awal, jadi pesanan itulah yang ditampilkan (find() di bawah
+        // mengambil yang pertama). Tanpa urutan ini hasilnya bergantung pada
+        // urutan baris di database dan unit telat bisa tampil "keluar" tanpa denda.
+        orderBy: [{ mulai: 'asc' }, { id: 'asc' }],
       }),
       this.prisma.blokirUnit.findMany({
         where: {
@@ -115,7 +128,13 @@ export class MitraService {
 
     return units.map((u) => {
       const sewa = keluar.find((p) => p.unitId === u.id);
-      const blok = blokir.find((b) => b.unitId === u.id);
+      // Kalau servis dan blokir manual berlaku bersamaan, yang tampil blokir
+      // manual: urutan menang yang sama dengan sel kalender (backend.md
+      // bagian 4: ... blokir manual, servis, kosong). Tanpa urutan ini hasilnya
+      // bergantung pada urutan baris di database, dan layar Unit bisa
+      // berbeda dengan kalender untuk hari yang sama.
+      const blokUnit = blokir.filter((b) => b.unitId === u.id);
+      const blok = blokUnit.find((b) => b.jenis === 'MANUAL') ?? blokUnit[0];
       const dasar = {
         id: u.id,
         slug: u.slug,
@@ -126,11 +145,16 @@ export class MitraService {
         hargaPerHari: u.hargaPerHari,
       };
       if (sewa) {
-        const telat = sewa.selesai.getTime() <= sekarang;
+        const telat = statusTurunan(sewa, sekarang) === 'telat';
         return {
           ...dasar,
           status: telat ? ('telat' as const) : ('keluar' as const),
-          keluar: { kodePesanan: sewa.kode, penyewa: sewa.penyewa.nama, kembaliPada: sewa.selesai },
+          keluar: {
+            kodePesanan: sewa.kode,
+            penyewa: sewa.penyewa.nama,
+            kembaliPada: sewa.selesai,
+            denda: dendaBerjalan(sewa, sekarang),
+          },
         };
       }
       if (blok) {
@@ -201,6 +225,7 @@ export class MitraService {
           kodePesanan: u.keluar.kodePesanan,
           kembaliPada: u.keluar.kembaliPada,
           telat: u.status === 'telat',
+          denda: u.keluar.denda,
         })),
       },
       pendapatan: {
