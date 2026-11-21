@@ -4,7 +4,9 @@
 // membuka kotak teks di tempat, dan begitu terkirim chip "Belum dibalas" serta
 // ringkasan di kanan ikut berkurang.
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { balasUlasan } from "@/app/actions/mitra";
 import Modal from "@/components/ui/Modal";
 import { useBahasa } from "@/components/BahasaProvider";
 import { kamus, type Bahasa } from "@/lib/i18n";
@@ -131,14 +133,22 @@ export default function UlasanPanel({
   daftar,
   ringkasan,
   filterAwal,
+  nyata = false,
 }: {
   daftar: Ulasan[];
   ringkasan: RingkasanUlasan;
   filterAwal: KunciFilterUlasan;
+  /** true = data dari rentalaja-api: balasan dikirim ke server. */
+  nyata?: boolean;
 }) {
   const { bahasa } = useBahasa();
   const t = TEKS[bahasa];
   const [items, setItems] = useState(daftar);
+  const router = useRouter();
+  // Data baru dari server (setelah router.refresh()) menggantikan state lokal.
+  useEffect(() => {
+    setItems(daftar);
+  }, [daftar]);
   const [saring, setSaring] = useState<KunciFilterUlasan>(filterAwal);
   const [urutan, setUrutan] = useState<Urutan>("terbaru");
   const [formFilter, setFormFilter] = useState(false);
@@ -159,6 +169,16 @@ export default function UlasanPanel({
     setSedangBalas(null);
     setDraf("");
     setKabar(t.terkirim(u.nama, belumDibalas - 1));
+    if (!nyata) return;
+    // Mode API: tampil langsung, lalu dikirim. Kalau ditolak, dikembalikan.
+    const sebelum = u.balasan;
+    void balasUlasan(u.id, teks)
+      .catch(() => ({ ok: false as const, pesan: bahasa === "en" ? "The server can't be reached right now." : "Server sedang tidak bisa dihubungi." }))
+      .then((h) => {
+        if (h.ok) return router.refresh();
+        setItems((d) => d.map((x) => (x.id === u.id ? { ...x, balasan: sebelum } : x)));
+        window.alert(h.pesan);
+      });
   }
 
   return (

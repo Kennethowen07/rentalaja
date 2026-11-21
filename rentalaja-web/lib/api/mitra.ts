@@ -8,7 +8,17 @@ import { ambilApi, apiAktif, GalatApi } from "@/lib/api/klien";
 import { tokenSesi } from "@/lib/api/sesi";
 import type { Bahasa } from "@/lib/i18n";
 import { rupiah, rupiahSingkat } from "@/lib/mitra/format";
-import type { DataBeranda, Dompet, Mitra, Periode, Pesanan, StatusPesanan, Unit } from "@/lib/mitra/tipe";
+import type {
+  DataBeranda,
+  Dompet,
+  Mitra,
+  Periode,
+  Pesanan,
+  RingkasanUlasan,
+  StatusPesanan,
+  Ulasan,
+  Unit,
+} from "@/lib/mitra/tipe";
 import { namaBulan, pukulWita, tanggalSingkat } from "@/lib/mitra/waktu";
 
 const ms = (iso: string) => new Date(iso).getTime();
@@ -280,5 +290,34 @@ export async function dompetMitra(token: string): Promise<Dompet> {
           bisaTarikPada: ms(r.rekening.bisaTarikPada),
         }
       : null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Ulasan
+
+type UlasanApi = {
+  id: string;
+  nama: string;
+  unit: string;
+  skor: number;
+  tanggal: string;
+  isi: string;
+  balasan: string | null;
+};
+
+export async function ulasanMitra(token: string): Promise<{ daftar: Ulasan[]; ringkasan: RingkasanUlasan }> {
+  const r = await ambilApi<{ daftar: UlasanApi[]; ringkasan: RingkasanUlasan }>("/mitra/ulasan", { token });
+  return {
+    daftar: r.daftar.map((u) => ({
+      id: u.id,
+      nama: u.nama,
+      unit: u.unit,
+      skor: u.skor,
+      tanggal: ms(u.tanggal),
+      isi: u.isi,
+      ...(u.balasan ? { balasan: u.balasan } : {}),
+    })),
+    ringkasan: r.ringkasan,
   };
 }

@@ -2,6 +2,7 @@
 // jadi seluruh isinya ada di UlasanPanel.
 
 import UlasanPanel from "@/components/mitra/UlasanPanel";
+import { apiAktif } from "@/lib/api/klien";
 import { bahasaAktif } from "@/lib/i18n-server";
 import { ambilUlasan } from "@/lib/mitra/data";
 import { kunciFilterUlasanValid } from "@/lib/mitra/filter-ulasan";
@@ -15,6 +16,7 @@ export default async function UlasanMitra({ searchParams }: PageProps<"/[lang]/m
       daftar={daftar}
       ringkasan={ringkasan}
       filterAwal={kunciFilterUlasanValid(typeof saring === "string" ? saring : undefined)}
+      nyata={apiAktif()}
     />
   );
 }

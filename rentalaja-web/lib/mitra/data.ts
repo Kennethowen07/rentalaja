@@ -26,7 +26,7 @@ import type {
   UnitKeluar,
 } from "./tipe";
 import { apiAktif } from "@/lib/api/klien";
-import { berandaMitra, dompetMitra, pendapatanMitra, pesananMitra, sesiMitra, unitMitra } from "@/lib/api/mitra";
+import { berandaMitra, dompetMitra, pendapatanMitra, pesananMitra, sesiMitra, ulasanMitra, unitMitra } from "@/lib/api/mitra";
 import { rupiahSingkat } from "./format";
 
 /** Mode API tanpa sesi mitra: layout menampilkan gerbang masuk, jadi angka
@@ -571,6 +571,12 @@ export async function ambilUlasan(bahasa: Bahasa = "id"): Promise<{
   ringkasan: RingkasanUlasan;
 }> {
   const sekarang = await waktuServer();
+  if (apiAktif()) {
+    const sesi = await sesiMitra();
+    return sesi
+      ? ulasanMitra(sesi.token)
+      : { daftar: [], ringkasan: { rata: 0, total: 0, distribusi: [5, 4, 3, 2, 1].map((bintang) => ({ bintang, jumlah: 0 })) } };
+  }
   return {
     daftar: semuaUlasan(sekarang, bahasa),
     ringkasan: {

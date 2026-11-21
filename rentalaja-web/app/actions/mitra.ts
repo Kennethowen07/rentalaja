@@ -55,3 +55,9 @@ export async function ubahRekening(isian: IsianRekening): Promise<HasilAksi> {
   };
   return jalankan("/mitra/rekening", body, "PUT");
 }
+
+/** Balas (atau ubah balasan) ulasan untuk unit milik mitra ini. */
+export async function balasUlasan(id: string, balasan: string): Promise<HasilAksi> {
+  if (typeof id !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return { ok: false, pesan: "Ulasan tidak sah." };
+  return jalankan(`/mitra/ulasan/${encodeURIComponent(id)}/balas`, { balasan: String(balasan ?? "") });
+}
