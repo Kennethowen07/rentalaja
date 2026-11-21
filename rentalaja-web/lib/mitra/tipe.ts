@@ -150,3 +150,20 @@ export type DataBeranda = {
   pendapatan: { nilai: string; bulan: string };
   mingguIni: { tanggal: number; jumlah: number }[];
 };
+
+/** Saldo penyedia dari API (GET /mitra/saldo dan /mitra/rekening). Tidak
+ *  terikat periode: saldo = dana yang sudah dilepas dikurangi semua
+ *  pencairan, ditahan = dana sewa yang belum dilepas escrow. */
+export type Dompet = {
+  saldo: number;
+  ditahan: number;
+  rekening: {
+    /** "BCA ···4471" */
+    label: string;
+    bank: string;
+    namaPemilik: string;
+    /** Tarik saldo dikunci 24 jam setelah rekening diubah. */
+    terkunci: boolean;
+    bisaTarikPada: number;
+  } | null;
+};

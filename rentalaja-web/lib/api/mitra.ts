@@ -8,8 +8,8 @@ import { ambilApi, apiAktif, GalatApi } from "@/lib/api/klien";
 import { tokenSesi } from "@/lib/api/sesi";
 import type { Bahasa } from "@/lib/i18n";
 import { rupiah, rupiahSingkat } from "@/lib/mitra/format";
-import type { DataBeranda, Mitra, Pesanan, StatusPesanan, Unit } from "@/lib/mitra/tipe";
-import { namaBulan, pukulWita } from "@/lib/mitra/waktu";
+import type { DataBeranda, Dompet, Mitra, Periode, Pesanan, StatusPesanan, Unit } from "@/lib/mitra/tipe";
+import { namaBulan, pukulWita, tanggalSingkat } from "@/lib/mitra/waktu";
 
 const ms = (iso: string) => new Date(iso).getTime();
 
@@ -170,5 +170,115 @@ export async function berandaMitra(token: string, bahasa: Bahasa): Promise<DataB
     // API mengirim tanggal WITA ("2026-11-21") untuk 7 hari mulai hari ini;
     // grafik memakai epoch siang hari itu, sama dengan mock.
     mingguIni: b.mingguIni.map((h, i) => ({ tanggal: pukulWita(sekarang, i, 12), jumlah: h.jumlah })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Pendapatan dan saldo
+
+type PeriodeApi = "bulan-ini" | "bulan-lalu" | "tiga-bulan";
+
+type PendapatanApi = {
+  rentang: { dari: string; sampai: string };
+  kotor: number;
+  biaya: number;
+  bersih: number;
+  ditahan: number;
+  sumber: { kategori: "MOTOR" | "MOBIL"; nilai: number }[];
+  transaksi: { id: string; judul: string; tanggal: string; nilai: number; arah: "masuk" | "keluar" }[];
+};
+
+/** Kunci periode di panel. "90-hari" dipertahankan dari mock (dipakai nama
+ *  berkas CSV); API menyebutnya tiga-bulan. */
+const PERIODE: { api: PeriodeApi; kunci: string }[] = [
+  { api: "bulan-ini", kunci: "bulan-ini" },
+  { api: "bulan-lalu", kunci: "bulan-lalu" },
+  { api: "tiga-bulan", kunci: "90-hari" },
+];
+
+/** Judul transaksi dari API selalu berbahasa Indonesia. */
+function judulTransaksi(judul: string, en: boolean): string {
+  if (!en) return judul;
+  return judul
+    .replace(/^Dana masuk/, "Funds in")
+    .replace(/^Biaya layanan$/, "Service fee")
+    .replace(/^Pencairan ke rekening$/, "Payout to bank account");
+}
+
+/** "2026-11-21" (tanggal WITA dari API) jadi epoch siang WITA hari itu, supaya
+ *  formatter WITA tidak bergeser ke hari sebelah. */
+const dariTanggal = (iso: string) => new Date(`${iso}T12:00:00+08:00`).getTime();
+
+function rentangPeriode(kunci: PeriodeApi, dari: number, sampai: number, bahasa: Bahasa): string {
+  const f = (t: number, o: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(bahasa === "en" ? "en-GB" : "id-ID", { timeZone: "Asia/Makassar", ...o }).format(t);
+  if (kunci === "bulan-lalu") return f(dari, { month: "long", year: "numeric" });
+  if (kunci === "bulan-ini") return `1 – ${f(sampai, { day: "numeric", month: "long", year: "numeric" })}`;
+  return `${f(dari, { day: "numeric", month: "short" })} – ${f(sampai, { day: "numeric", month: "short", year: "numeric" })}`;
+}
+
+export async function pendapatanMitra(token: string, bahasa: Bahasa): Promise<Periode[]> {
+  const en = bahasa === "en";
+  const sekarang = Date.now();
+  const bulanIni = namaBulan(sekarang, 0, bahasa);
+  const bulanLalu = namaBulan(sekarang, -1, bahasa);
+  const label: Record<PeriodeApi, string> = {
+    "bulan-ini": en ? `${bulanIni} to date` : `${bulanIni} berjalan`,
+    "bulan-lalu": en ? `All of ${bulanLalu}` : `${bulanLalu} penuh`,
+    "tiga-bulan": en ? "Last 90 days" : "90 hari terakhir",
+  };
+  const hasil = await Promise.all(
+    PERIODE.map((p) => ambilApi<PendapatanApi>(`/mitra/pendapatan?periode=${p.api}`, { token })),
+  );
+  return hasil.map((r, i) => {
+    const { api, kunci } = PERIODE[i];
+    return {
+      kunci,
+      label: label[api],
+      rentang: rentangPeriode(api, dariTanggal(r.rentang.dari), dariTanggal(r.rentang.sampai), bahasa),
+      kotor: r.kotor,
+      biaya: r.biaya,
+      bersih: r.bersih,
+      ditahan: r.ditahan,
+      transaksi: r.transaksi.map((x) => ({
+        id: x.id,
+        judul: judulTransaksi(x.judul, en),
+        meta: tanggalSingkat(dariTanggal(x.tanggal), bahasa),
+        nilai: x.nilai,
+        arah: x.arah,
+      })),
+      sumber: r.sumber.map((s) => ({
+        label: s.kategori === "MOBIL" ? (en ? "Cars" : "Mobil") : en ? "Scooters" : "Motor",
+        nilai: s.nilai,
+      })),
+    };
+  });
+}
+
+type RekeningApi = {
+  label: string;
+  bank: string;
+  namaPemilik: string;
+  terkunci: boolean;
+  bisaTarikPada: string;
+} | null;
+
+export async function dompetMitra(token: string): Promise<Dompet> {
+  const [s, r] = await Promise.all([
+    ambilApi<{ saldo: number; ditahan: number }>("/mitra/saldo", { token }),
+    ambilApi<{ rekening: RekeningApi }>("/mitra/rekening", { token }),
+  ]);
+  return {
+    saldo: s.saldo,
+    ditahan: s.ditahan,
+    rekening: r.rekening
+      ? {
+          label: r.rekening.label,
+          bank: r.rekening.bank,
+          namaPemilik: r.rekening.namaPemilik,
+          terkunci: r.rekening.terkunci,
+          bisaTarikPada: ms(r.rekening.bisaTarikPada),
+        }
+      : null,
   };
 }

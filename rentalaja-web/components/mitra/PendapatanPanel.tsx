@@ -6,16 +6,19 @@
 // lalu mencatat pencairannya. Penarikan hidup di state client, jadi hilang
 // saat refresh, sesuai status prototype tanpa backend.
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { tarikSaldo as tarikSaldoApi } from "@/app/actions/mitra";
 import Modal from "@/components/ui/Modal";
 import { useBahasa } from "@/components/BahasaProvider";
 import { kamus } from "@/lib/i18n";
 import { rupiah, rupiahSingkat } from "@/lib/mitra/format";
-import type { Periode, Transaksi } from "@/lib/mitra/tipe";
-import { tanggalSingkat } from "@/lib/mitra/waktu";
+import type { Dompet, Periode, Transaksi } from "@/lib/mitra/tipe";
+import { tanggalJam, tanggalSingkat } from "@/lib/mitra/waktu";
+import FormRekening from "./FormRekening";
 import { HeaderHalaman, kelasTombol, kelasTombolBaris } from "./ui";
 
-/** Rekening contoh untuk prototype, bukan rekening asli. */
+/** Rekening contoh untuk mode tanpa API, bukan rekening asli. */
 const REKENING = "BCA ···4471";
 
 function warnaBar(persen: number) {
@@ -47,6 +50,12 @@ const TEKS = kamus({
     batal: "Batal",
     pencairan: "Pencairan ke rekening",
     ditarik: (nilai: string) => `${nilai} sedang dikirim ke rekening.`,
+    keRekening: (rek: string) => `Ke ${rek}`,
+    belumRekening: "Belum ada rekening untuk tarik saldo.",
+    aturRekening: "Atur rekening",
+    gantiRekening: "Ganti",
+    terkunci: (w: string) => `Rekening baru diganti. Tarik saldo terbuka ${w}.`,
+    rekeningTersimpan: "Rekening tersimpan. Tarik saldo terbuka 24 jam lagi.",
     transaksi: "Transaksi terbaru",
     ringkas: "Ringkas",
     lihatSemua: "Lihat semua",
@@ -78,6 +87,12 @@ const TEKS = kamus({
     batal: "Cancel",
     pencairan: "Payout to bank account",
     ditarik: (nilai: string) => `${nilai} is on its way to your bank account.`,
+    keRekening: (rek: string) => `To ${rek}`,
+    belumRekening: "No bank account set up for withdrawals yet.",
+    aturRekening: "Set up bank account",
+    gantiRekening: "Change",
+    terkunci: (w: string) => `Bank account just changed. Withdrawals open ${w}.`,
+    rekeningTersimpan: "Bank account saved. Withdrawals open in 24 hours.",
     transaksi: "Recent transactions",
     ringkas: "Show less",
     lihatSemua: "See all",
@@ -116,8 +131,20 @@ function unduhCsv(periode: Periode, csv: TeksCsv) {
   URL.revokeObjectURL(url);
 }
 
-export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
+export default function PendapatanPanel({
+  periode,
+  dompet = null,
+}: {
+  periode: Periode[];
+  /** Mode API: saldo, dana ditahan, dan rekening sungguhan. Tanpa ini layar
+   *  memakai perilaku prototype (saldo = bersih periode, tarik di state). */
+  dompet?: Dompet | null;
+}) {
   const { bahasa } = useBahasa();
+  const router = useRouter();
+  const [formRekening, setFormRekening] = useState(false);
+  const [menarik, setMenarik] = useState(false);
+  const [galatTarik, setGalatTarik] = useState<string | null>(null);
   const t = TEKS[bahasa];
   const [kunci, setKunci] = useState(periode[0].kunci);
   const [pilihPeriode, setPilihPeriode] = useState(false);
@@ -130,10 +157,30 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
   const asli = periode.find((x) => x.kunci === kunci)!;
   const cair = pencairan[kunci];
   const p = cair ? { ...asli, transaksi: [cair, ...asli.transaksi] } : asli;
-  const saldo = cair ? 0 : p.bersih;
+  const saldo = dompet ? dompet.saldo : cair ? 0 : p.bersih;
+  const ditahan = dompet ? dompet.ditahan : p.ditahan;
+  const rekening = dompet ? dompet.rekening : null;
+  const labelRekening = dompet ? (rekening?.label ?? "") : REKENING;
+  const bisaTarik = saldo > 0 && (!dompet || (rekening !== null && !rekening.terkunci));
   const transaksi = semuaTransaksi ? p.transaksi : p.transaksi.slice(0, 3);
 
-  function tarikSaldo() {
+  async function tarikSaldo() {
+    if (dompet) {
+      if (menarik) return;
+      setMenarik(true);
+      setGalatTarik(null);
+      const h = await tarikSaldoApi().catch(() => ({
+        ok: false as const,
+        pesan: bahasa === "en" ? "The server can't be reached right now." : "Server sedang tidak bisa dihubungi.",
+      }));
+      setMenarik(false);
+      if (!h.ok) return setGalatTarik(h.pesan);
+      setKabar(t.ditarik(rupiah(saldo)));
+      setTarik(false);
+      // Saldo, transaksi pencairan, dan dana ditahan dimuat ulang dari server.
+      router.refresh();
+      return;
+    }
     setPencairan((c) => ({
       ...c,
       [kunci]: { id: `tarik-${kunci}`, judul: t.pencairan, meta: tanggalSingkat(Date.now(), bahasa), nilai: saldo, arah: "keluar" },
@@ -181,8 +228,11 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
           </div>
           <button
             type="button"
-            disabled={saldo === 0}
-            onClick={() => setTarik(true)}
+            disabled={!bisaTarik}
+            onClick={() => {
+              setGalatTarik(null);
+              setTarik(true);
+            }}
             className={`${kelasTombol.primer} px-19 py-11 disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {t.tarik}
@@ -190,9 +240,29 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
         </div>
         <div className="rounded-m-callout border border-mitra-border p-20 shadow-m-panel min-[640px]:p-24">
           <p className="text-m-label text-mitra-faint">{t.ditahan}</p>
-          <p className="mt-6 text-m-metrik text-mitra-ink">{rupiah(p.ditahan)}</p>
+          <p className="mt-6 text-m-metrik text-mitra-ink">{rupiah(ditahan)}</p>
         </div>
       </section>
+
+      {/* Mode API: rekening tujuan tarik saldo, bisa diatur dari sini. */}
+      {dompet && (
+        <p className="mt-12 flex flex-wrap items-center gap-x-10 gap-y-4 text-m-meta text-mitra-muted">
+          <span>
+            {rekening
+              ? rekening.terkunci
+                ? t.terkunci(tanggalJam(rekening.bisaTarikPada, bahasa))
+                : t.keRekening(`${rekening.label} · ${rekening.namaPemilik}`)
+              : t.belumRekening}
+          </span>
+          <button
+            type="button"
+            onClick={() => setFormRekening(true)}
+            className="font-semibold text-mitra-primer underline-offset-3 hover:underline"
+          >
+            {rekening ? t.gantiRekening : t.aturRekening}
+          </button>
+        </p>
+      )}
 
       <div className="mt-44 grid items-start gap-44 min-[1100px]:grid-cols-[1.55fr_1fr] min-[1100px]:gap-64">
         <section aria-labelledby="judul-transaksi">
@@ -273,16 +343,38 @@ export default function PendapatanPanel({ periode }: { periode: Periode[] }) {
       {tarik && (
         <Modal judul={t.tarikJudul} onTutup={() => setTarik(false)} lebar="max-w-[420px]">
           <p className="mt-10 text-m-metrik text-mitra-primer">{rupiah(saldo)}</p>
-          <p className="mt-8 text-m-body text-mitra-muted">{t.tarikIsi(rupiah(saldo), REKENING)}</p>
+          <p className="mt-8 text-m-body text-mitra-muted">{t.tarikIsi(rupiah(saldo), labelRekening)}</p>
+          {galatTarik && (
+            <p role="alert" className="mt-10 text-m-meta text-mitra-merah">
+              {galatTarik}
+            </p>
+          )}
           <div className="mt-20 flex justify-end gap-8">
             <button type="button" onClick={() => setTarik(false)} className={kelasTombolBaris.sekunder}>
               {t.batal}
             </button>
-            <button type="button" onClick={tarikSaldo} className={kelasTombolBaris.primer}>
+            <button
+              type="button"
+              disabled={menarik}
+              onClick={tarikSaldo}
+              className={`${kelasTombolBaris.primer} disabled:opacity-50`}
+            >
               {t.tarikKonfirmasi}
             </button>
           </div>
         </Modal>
+      )}
+
+      {formRekening && (
+        <FormRekening
+          adaRekening={rekening !== null}
+          onTutup={() => setFormRekening(false)}
+          onTersimpan={() => {
+            setFormRekening(false);
+            setKabar(t.rekeningTersimpan);
+            router.refresh();
+          }}
+        />
       )}
 
       {pilihPeriode && (

@@ -14,6 +14,7 @@ import { connection } from "next/server";
 import type { Bahasa } from "@/lib/i18n";
 import type {
   DataBeranda,
+  Dompet,
   Mitra,
   Periode,
   Pesanan,
@@ -25,7 +26,7 @@ import type {
   UnitKeluar,
 } from "./tipe";
 import { apiAktif } from "@/lib/api/klien";
-import { berandaMitra, pesananMitra, sesiMitra, unitMitra } from "@/lib/api/mitra";
+import { berandaMitra, dompetMitra, pendapatanMitra, pesananMitra, sesiMitra, unitMitra } from "@/lib/api/mitra";
 import { rupiahSingkat } from "./format";
 
 /** Mode API tanpa sesi mitra: layout menampilkan gerbang masuk, jadi angka
@@ -432,7 +433,19 @@ export async function ambilCatatanSerah(bahasa: Bahasa = "id"): Promise<Record<s
 
 export async function ambilPendapatan(bahasa: Bahasa = "id"): Promise<Periode[]> {
   const sekarang = await waktuServer();
+  if (apiAktif()) {
+    const sesi = await sesiMitra();
+    if (sesi) return pendapatanMitra(sesi.token, bahasa);
+  }
   return semuaPeriode(sekarang, bahasa);
+}
+
+/** Saldo, dana ditahan, dan rekening dari API. null di mode mock: layar
+ *  Pendapatan lalu memakai perilaku lamanya (saldo = bersih periode). */
+export async function ambilDompet(): Promise<Dompet | null> {
+  if (!apiAktif()) return null;
+  const sesi = await sesiMitra();
+  return sesi ? dompetMitra(sesi.token) : null;
 }
 
 // Delapan ulasan terbaru. Ringkasan di kolom kanan tetap memakai angka

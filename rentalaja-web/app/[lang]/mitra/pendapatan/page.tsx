@@ -3,9 +3,10 @@
 
 import PendapatanPanel from "@/components/mitra/PendapatanPanel";
 import { bahasaAktif } from "@/lib/i18n-server";
-import { ambilPendapatan } from "@/lib/mitra/data";
+import { ambilDompet, ambilPendapatan } from "@/lib/mitra/data";
 
 export default async function PendapatanMitra() {
-  const periode = await ambilPendapatan(await bahasaAktif());
-  return <PendapatanPanel periode={periode} />;
+  const bahasa = await bahasaAktif();
+  const [periode, dompet] = await Promise.all([ambilPendapatan(bahasa), ambilDompet()]);
+  return <PendapatanPanel periode={periode} dompet={dompet} />;
 }

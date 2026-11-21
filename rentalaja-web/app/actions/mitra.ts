@@ -13,12 +13,12 @@ export type HasilAksi = { ok: true } | { ok: false; pesan: string };
  *  tidak pernah dirangkai ke path API. */
 const KODE = /^RA-[0-9A-Z-]{1,20}$/;
 
-async function jalankan(path: string, body?: unknown): Promise<HasilAksi> {
+async function jalankan(path: string, body?: unknown, method: "POST" | "PUT" | "DELETE" = "POST"): Promise<HasilAksi> {
   if (!apiAktif()) return { ok: false, pesan: "Panel sungguhan belum aktif di situs ini." };
   const token = await tokenSesi();
   if (!token) return { ok: false, pesan: "Sesi habis. Masuk lagi sebagai mitra." };
   try {
-    await ambilApi(path, { method: "POST", token, body });
+    await ambilApi(path, { method, token, body });
     return { ok: true };
   } catch (e) {
     if (e instanceof GalatApi && e.status < 500) return { ok: false, pesan: e.pesan };
@@ -34,4 +34,24 @@ export async function terimaPesanan(kode: string): Promise<HasilAksi> {
 export async function tolakPesanan(kode: string): Promise<HasilAksi> {
   if (typeof kode !== "string" || !KODE.test(kode)) return { ok: false, pesan: "Kode pesanan tidak sah." };
   return jalankan(`/mitra/pesanan/${encodeURIComponent(kode)}/tolak`);
+}
+
+/** Tarik seluruh saldo ke rekening terdaftar. Batasnya (saldo cukup,
+ *  rekening ada, kunci 24 jam setelah rekening diubah) dijaga API. */
+export async function tarikSaldo(): Promise<HasilAksi> {
+  return jalankan("/mitra/saldo/tarik", {});
+}
+
+export type IsianRekening = { bank: string; nomor: string; namaPemilik: string; kataSandi: string };
+
+/** Isi atau ganti rekening. Kata sandi diteruskan ke API untuk dicek ulang
+ *  dan tidak disimpan di mana pun di sini. */
+export async function ubahRekening(isian: IsianRekening): Promise<HasilAksi> {
+  const body = {
+    bank: String(isian?.bank ?? ""),
+    nomor: String(isian?.nomor ?? ""),
+    namaPemilik: String(isian?.namaPemilik ?? ""),
+    kataSandi: String(isian?.kataSandi ?? ""),
+  };
+  return jalankan("/mitra/rekening", body, "PUT");
 }
