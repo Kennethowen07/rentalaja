@@ -104,3 +104,31 @@ export async function bukaBlokir(id: string): Promise<HasilAksi> {
   if (typeof id !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return { ok: false, pesan: "Blokir tidak sah." };
   return jalankan(`/mitra/kalender/blokir/${encodeURIComponent(id)}`, undefined, "DELETE");
 }
+
+type PesanApi = { isi: string; dariSaya: boolean; dikirimPada: string };
+export type HasilChat =
+  | { ok: true; pesan: { dari: "saya" | "penyewa"; teks: string; waktu: number }[]; bisaKirim: boolean }
+  | { ok: false; pesan: string };
+
+/** Isi satu percakapan. Membukanya menandai pesan dari penyewa sebagai dibaca. */
+export async function ambilPercakapan(kode: string): Promise<HasilChat> {
+  if (typeof kode !== "string" || !KODE.test(kode)) return { ok: false, pesan: "Kode pesanan tidak sah." };
+  const token = await tokenSesi();
+  if (!apiAktif() || !token) return { ok: false, pesan: "Sesi habis. Masuk lagi sebagai mitra." };
+  try {
+    const r = await ambilApi<{ pesan: PesanApi[]; bisaKirim: boolean }>(`/chat/${encodeURIComponent(kode)}`, { token });
+    return {
+      ok: true,
+      bisaKirim: r.bisaKirim,
+      pesan: r.pesan.map((m) => ({ dari: m.dariSaya ? "saya" : "penyewa", teks: m.isi, waktu: new Date(m.dikirimPada).getTime() })),
+    };
+  } catch (e) {
+    if (e instanceof GalatApi && e.status < 500) return { ok: false, pesan: e.pesan };
+    return { ok: false, pesan: "Server sedang tidak bisa dihubungi. Coba lagi sebentar." };
+  }
+}
+
+export async function kirimChat(kode: string, isi: string): Promise<HasilAksi> {
+  if (typeof kode !== "string" || !KODE.test(kode)) return { ok: false, pesan: "Kode pesanan tidak sah." };
+  return jalankan(`/chat/${encodeURIComponent(kode)}`, { isi: String(isi ?? "") });
+}

@@ -8,6 +8,7 @@
 // tidak disimpan dan tidak dikirim ke mana pun.
 
 import { useEffect, useRef, useState } from "react";
+import { ambilPercakapan, kirimChat } from "@/app/actions/mitra";
 import { useBahasa } from "@/components/BahasaProvider";
 import AvatarKosong from "@/components/ui/AvatarKosong";
 import { kamus, type Bahasa } from "@/lib/i18n";
@@ -88,10 +89,19 @@ function waktuPesan(w: number, sekarang: number, bahasa: Bahasa) {
   return hariSama(w, sekarang) ? jamSaja(w, bahasa) : `${tanggalSingkat(w, bahasa)}, ${jamSaja(w, bahasa)}`;
 }
 
-export default function ChatMitra({ dengan }: { dengan?: string }) {
+export default function ChatMitra({
+  dengan,
+  awalApi = null,
+}: {
+  dengan?: string;
+  /** Mode API: pesan terakhir tiap percakapan (kode pesanan -> pesan). Isi
+   *  lengkapnya dimuat saat percakapan dibuka. Tanpa ini memakai CONTOH. */
+  awalApi?: Record<string, Pesan[]> | null;
+}) {
   const { pesanan, sekarang } = usePesanan();
   const { bahasa } = useBahasa();
   const t = TEKS[bahasa];
+  const nyata = awalApi !== null;
 
   // Percakapan: pesanan berjalan dan menunggu, plus pesanan tujuan ?dengan
   // walau statusnya sudah lain.
@@ -99,7 +109,7 @@ export default function ChatMitra({ dengan }: { dengan?: string }) {
     (p) => p.status === "active" || p.status === "pending" || p.id === dengan,
   );
   const [pesan, setPesan] = useState<Record<string, Pesan[]>>(() =>
-    Object.fromEntries(
+    awalApi ?? Object.fromEntries(
       Object.entries(CONTOH).map(([id, isi]) => [
         id,
         isi.map((m) => ({ dari: m.dari, teks: m.teks[bahasa], waktu: sekarang - m.menitLalu * MENIT })),
@@ -124,14 +134,44 @@ export default function ChatMitra({ dengan }: { dengan?: string }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [aktifId, isiAktif.length]);
 
+  // Mode API: isi percakapan dimuat dari server saat dibuka. Membukanya
+  // menandai pesan penyewa sebagai dibaca, karena itu tidak diambil di depan.
+  useEffect(() => {
+    if (!nyata || !aktifId) return;
+    let batal = false;
+    void ambilPercakapan(aktifId).then((h) => {
+      if (batal) return;
+      if (h.ok) setPesan((semua) => ({ ...semua, [aktifId]: h.pesan }));
+    });
+    return () => {
+      batal = true;
+    };
+  }, [nyata, aktifId]);
+
   function kirim() {
     const teks = draf.trim();
     if (!teks || !aktif) return;
+    const baru: Pesan = { dari: "saya", teks, waktu: Date.now() };
     setPesan((semua) => ({
       ...semua,
-      [aktif.id]: [...(semua[aktif.id] ?? []), { dari: "saya", teks, waktu: Date.now() }],
+      [aktif.id]: [...(semua[aktif.id] ?? []), baru],
     }));
     setDraf("");
+    if (!nyata) return;
+    // Tampil langsung, lalu dikirim. Kalau ditolak (mis. pesanan sudah batal),
+    // pesannya ditarik lagi dan drafnya dikembalikan.
+    const id = aktif.id;
+    void kirimChat(id, teks)
+      .catch(() => ({
+        ok: false as const,
+        pesan: bahasa === "en" ? "The server can't be reached right now." : "Server sedang tidak bisa dihubungi.",
+      }))
+      .then((h) => {
+        if (h.ok) return;
+        setPesan((semua) => ({ ...semua, [id]: (semua[id] ?? []).filter((m) => m !== baru) }));
+        setDraf(teks);
+        window.alert(h.pesan);
+      });
   }
 
   return (

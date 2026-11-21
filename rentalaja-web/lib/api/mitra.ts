@@ -404,3 +404,22 @@ export async function blokirKalenderMitra(token: string): Promise<{ kunci: strin
       .map((s) => ({ kunci: `${u.id}|${s.tanggal}`, id: s.blokirId! })),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Chat
+
+export type PesanChat = { dari: "saya" | "penyewa"; teks: string; waktu: number };
+
+type PesanApi = { isi: string; dariSaya: boolean; dikirimPada: string };
+
+export function kePesanChat(m: PesanApi): PesanChat {
+  return { dari: m.dariSaya ? "saya" : "penyewa", teks: m.isi, waktu: ms(m.dikirimPada) };
+}
+
+/** Pesan terakhir tiap percakapan, untuk urutan dan pratinjau daftar. Isi
+ *  lengkapnya dimuat saat percakapan dibuka (GET /chat/:kode menandai pesan
+ *  sebagai dibaca, jadi tidak diambil di depan). */
+export async function chatMitra(token: string): Promise<Record<string, PesanChat[]>> {
+  const daftar = await ambilApi<{ kode: string; pesanTerakhir: PesanApi | null }[]>("/chat", { token });
+  return Object.fromEntries(daftar.map((c) => [c.kode, c.pesanTerakhir ? [kePesanChat(c.pesanTerakhir)] : []]));
+}

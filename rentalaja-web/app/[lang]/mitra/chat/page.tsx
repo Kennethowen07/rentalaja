@@ -5,17 +5,22 @@
 import ChatMitra from "@/components/mitra/ChatMitra";
 import { HeaderHalaman } from "@/components/mitra/ui";
 import { bahasaAktif } from "@/lib/i18n-server";
-import { ambilWaktuServer } from "@/lib/mitra/data";
+import { ambilChatMitra, ambilWaktuServer } from "@/lib/mitra/data";
 import { tanggalPanjang } from "@/lib/mitra/waktu";
 
 export default async function ChatMitraPage({ searchParams }: PageProps<"/[lang]/mitra/chat">) {
-  const [{ dengan }, sekarang, bahasa] = await Promise.all([searchParams, ambilWaktuServer(), bahasaAktif()]);
+  const [{ dengan }, sekarang, bahasa, awalApi] = await Promise.all([
+    searchParams,
+    ambilWaktuServer(),
+    bahasaAktif(),
+    ambilChatMitra(),
+  ]);
 
   return (
     <>
       <HeaderHalaman kicker={tanggalPanjang(sekarang, bahasa)} judul="Chat" />
       {/* key: pindah dari satu ?dengan ke yang lain memasang ulang state. */}
-      <ChatMitra key={String(dengan)} dengan={typeof dengan === "string" ? dengan : undefined} />
+      <ChatMitra key={String(dengan)} dengan={typeof dengan === "string" ? dengan : undefined} awalApi={awalApi} />
     </>
   );
 }

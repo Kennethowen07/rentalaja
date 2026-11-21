@@ -30,6 +30,8 @@ import { apiAktif } from "@/lib/api/klien";
 import {
   berandaMitra,
   blokirKalenderMitra,
+  chatMitra,
+  type PesanChat,
   dompetMitra,
   pendapatanMitra,
   pesananMitra,
@@ -455,6 +457,14 @@ export async function ambilBlokirKalender(): Promise<{ kunci: string; id: string
   if (!apiAktif()) return null;
   const sesi = await sesiMitra();
   return sesi ? blokirKalenderMitra(sesi.token) : [];
+}
+
+/** Pesan terakhir tiap percakapan chat dari API. null di mode mock (chat
+ *  memakai percakapan contoh di komponen). */
+export async function ambilChatMitra(): Promise<Record<string, PesanChat[]> | null> {
+  if (!apiAktif()) return null;
+  const sesi = await sesiMitra();
+  return sesi ? chatMitra(sesi.token) : {};
 }
 
 export async function ambilPendapatan(bahasa: Bahasa = "id"): Promise<Periode[]> {
