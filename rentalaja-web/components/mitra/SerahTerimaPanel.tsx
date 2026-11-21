@@ -13,7 +13,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
+import { simpanSerahTerima, type IsianSerah } from "@/app/actions/mitra";
 import Modal from "@/components/ui/Modal";
 import { useBahasa } from "@/components/BahasaProvider";
 import { kamus, lokal, type Bahasa } from "@/lib/i18n";
@@ -257,25 +259,70 @@ function jadwalDariPesanan(
   return hasil.sort((a, b) => a.waktu - b.waktu);
 }
 
+/** Mode API: baris dari server, ditimpa catatan lokal yang baru disimpan
+ *  (tampil langsung sebelum server mengonfirmasi). Label sisi mengikuti
+ *  bahasa layar; urutannya sama dengan API. */
+function jadwalDariApi(baris: JadwalSerah[], catatan: Record<string, CatatanSerah>, t: Teks): JadwalSerah[] {
+  return baris
+    .map((b) => {
+      const dasar = { ...b, sisi: b.sisi.map((s, i) => ({ label: t.sisi[i] ?? s.label, foto: s.foto })) };
+      const c = catatan[b.id];
+      if (!c) return dasar;
+      const isi = { ...dasar, ...c };
+      return { ...isi, status: statusDari(isi) };
+    })
+    .sort((a, b) => a.waktu - b.waktu);
+}
+
 export default function SerahTerimaPanel({
   catatanAwal,
   tabAwal,
   kicker,
+  jadwalApi = null,
 }: {
   catatanAwal: Record<string, CatatanSerah>;
   tabAwal: KunciTabSerah;
   kicker: string;
+  /** Mode API: baris serah terima dari server. Tanpa ini jadwal diturunkan
+   *  dari pesanan berjalan dan catatan hanya hidup di state (prototype). */
+  jadwalApi?: JadwalSerah[] | null;
 }) {
   const { pesanan, sekarang } = usePesanan();
   const { bahasa, jalur } = useBahasa();
   const t = TEKS[bahasa];
+  const router = useRouter();
   const [catatan, setCatatan] = useState(catatanAwal);
+  // Data baru dari server (setelah router.refresh()) sudah memuat catatan
+  // yang tadi disimpan, jadi timpaan lokal dibuang.
+  useEffect(() => {
+    if (jadwalApi) setCatatan({});
+  }, [jadwalApi]);
+
+  /** Mode API: kirim catatan ke server. Kalau ditolak (mis. ambil sebelum
+   *  antar lengkap), timpaan lokalnya dibuang dan alasannya ditampilkan. */
+  function kirimKeApi(item: JadwalSerah, isian: IsianSerah) {
+    if (!jadwalApi) return;
+    void simpanSerahTerima(item.pesananId, item.jenis, isian)
+      .catch(() => ({
+        ok: false as const,
+        pesan: bahasa === "en" ? "The server can't be reached right now." : "Server sedang tidak bisa dihubungi.",
+      }))
+      .then((h) => {
+        if (h.ok) return router.refresh();
+        setCatatan((lama) => {
+          const sisa = { ...lama };
+          delete sisa[item.id];
+          return sisa;
+        });
+        window.alert(h.pesan);
+      });
+  }
   const [tab, setTab] = useState<KunciTabSerah>(tabAwal);
   const [idTerpilih, setIdTerpilih] = useState<string | null>(null);
   const [formKondisi, setFormKondisi] = useState<JadwalSerah | null>(null);
   const [kabar, setKabar] = useState("");
 
-  const jadwal = jadwalDariPesanan(pesanan, catatan, sekarang, t);
+  const jadwal = jadwalApi ? jadwalDariApi(jadwalApi, catatan, t) : jadwalDariPesanan(pesanan, catatan, sekarang, t);
   const status = tabSerah.find((x) => x.kunci === tab)!.status;
   const isi = jadwal.filter((i) => i.status === status);
 
@@ -315,6 +362,11 @@ export default function SerahTerimaPanel({
       sisi: t.sisi.map((label, i) => ({ label, foto: `/serah-terima/scoopy-${BERKAS_SISI[i]}.webp` })),
     }));
     setKabar(t.fotoTerunggah(item.unit));
+    // Foto masih simulasi (belum ada unggah berkas): yang dikirim alamat foto
+    // contoh per sisi, cukup untuk alur dan aturan kelengkapan di server.
+    kirimKeApi(item, {
+      foto: Object.fromEntries(BERKAS_SISI.map((s) => [s, `/serah-terima/scoopy-${s}.webp`])),
+    });
   }
 
   function simpanKondisi(
@@ -324,6 +376,7 @@ export default function SerahTerimaPanel({
   ) {
     simpanCatatan(item.id, (c) => ({ ...c, kondisi, klaim }));
     setFormKondisi(null);
+    kirimKeApi(item, { kondisi, ...(klaim && item.jenis === "ambil" ? { klaim } : {}) });
     setKabar(
       klaim
         ? t.klaimDiajukan(rupiah(klaim.nominal), item.unit)

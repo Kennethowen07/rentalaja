@@ -61,3 +61,30 @@ export async function balasUlasan(id: string, balasan: string): Promise<HasilAks
   if (typeof id !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return { ok: false, pesan: "Ulasan tidak sah." };
   return jalankan(`/mitra/ulasan/${encodeURIComponent(id)}/balas`, { balasan: String(balasan ?? "") });
 }
+
+export type IsianSerah = {
+  kondisi?: { label: string; nilai: string }[];
+  /** URL foto per sisi. */
+  foto?: { depan?: string; belakang?: string; kiri?: string; kanan?: string };
+  klaim?: { nominal: number; keterangan: string };
+};
+
+/** Catat kondisi, foto, dan (saat ambil) klaim kerusakan satu serah terima.
+ *  Aturannya (urutan antar lalu ambil, catatan lengkap terkunci, kembali
+ *  lebih awal butuh persetujuan dua pihak) dijaga API. */
+export async function simpanSerahTerima(kode: string, jenis: string, isian: IsianSerah): Promise<HasilAksi> {
+  if (typeof kode !== "string" || !KODE.test(kode)) return { ok: false, pesan: "Kode pesanan tidak sah." };
+  if (jenis !== "antar" && jenis !== "ambil") return { ok: false, pesan: "Jenis serah terima tidak sah." };
+  const body: IsianSerah = {};
+  if (Array.isArray(isian?.kondisi)) {
+    body.kondisi = isian.kondisi.map((k) => ({ label: String(k?.label ?? ""), nilai: String(k?.nilai ?? "") }));
+  }
+  if (isian?.foto && typeof isian.foto === "object") {
+    const f = isian.foto;
+    body.foto = Object.fromEntries(
+      (["depan", "belakang", "kiri", "kanan"] as const).filter((s) => typeof f[s] === "string").map((s) => [s, f[s]]),
+    );
+  }
+  if (isian?.klaim) body.klaim = { nominal: Number(isian.klaim.nominal), keterangan: String(isian.klaim.keterangan ?? "") };
+  return jalankan(`/mitra/serah-terima/${encodeURIComponent(kode)}/${jenis}`, body, "PUT");
+}

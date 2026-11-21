@@ -11,6 +11,7 @@ import { rupiah, rupiahSingkat } from "@/lib/mitra/format";
 import type {
   DataBeranda,
   Dompet,
+  JadwalSerah,
   Mitra,
   Periode,
   Pesanan,
@@ -320,4 +321,59 @@ export async function ulasanMitra(token: string): Promise<{ daftar: Ulasan[]; ri
     })),
     ringkasan: r.ringkasan,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Serah terima
+
+type BarisSerahApi = {
+  id: string;
+  pesananId: string;
+  jenis: "antar" | "ambil";
+  status: "jadwal" | "menunggu-foto" | "selesai";
+  unit: string;
+  plat: string;
+  foto: string | null;
+  penyewa: string;
+  waktu: string;
+  mulai: string;
+  selesai: string;
+  titik: string;
+  diantar: boolean;
+  telat: boolean;
+  /** Urutan tetap: depan, belakang, kiri, kanan. */
+  sisi: { sisi: string; foto: string | null }[];
+  kondisi: { label: string; nilai: string }[];
+  klaim: { nominal: number; keterangan: string } | null;
+};
+
+/** Semua baris serah terima: jadwal hari ini, yang menunggu foto, dan
+ *  riwayat yang sudah lengkap. Label sisi diisi panel sesuai bahasanya
+ *  (urutannya sama dengan API). */
+export async function serahTerimaMitra(token: string): Promise<JadwalSerah[]> {
+  const tab = ["hari-ini", "menunggu-foto", "selesai"] as const;
+  const hasil = await Promise.all(
+    tab.map((x) => ambilApi<{ daftar: BarisSerahApi[] }>(`/mitra/serah-terima?tab=${x}`, { token })),
+  );
+  const unik = new Map<string, BarisSerahApi>();
+  for (const r of hasil) for (const b of r.daftar) if (!unik.has(b.id)) unik.set(b.id, b);
+  return [...unik.values()].map((b) => ({
+    id: b.id,
+    pesananId: b.pesananId,
+    jenis: b.jenis,
+    status: b.status,
+    unit: b.unit,
+    plat: b.plat,
+    foto: b.foto,
+    penyewa: b.penyewa,
+    waktu: ms(b.waktu),
+    mulai: ms(b.mulai),
+    selesai: ms(b.selesai),
+    titik: b.titik,
+    diantar: b.diantar,
+    telat: b.telat,
+    sisi: b.sisi.map((s) => ({ label: s.sisi, foto: s.foto })),
+    kondisi: b.kondisi,
+    ...(b.klaim ? { klaim: { nominal: b.klaim.nominal, keterangan: b.klaim.keterangan } } : {}),
+  }));
 }

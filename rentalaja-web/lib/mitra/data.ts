@@ -15,6 +15,7 @@ import type { Bahasa } from "@/lib/i18n";
 import type {
   DataBeranda,
   Dompet,
+  JadwalSerah,
   Mitra,
   Periode,
   Pesanan,
@@ -26,7 +27,16 @@ import type {
   UnitKeluar,
 } from "./tipe";
 import { apiAktif } from "@/lib/api/klien";
-import { berandaMitra, dompetMitra, pendapatanMitra, pesananMitra, sesiMitra, ulasanMitra, unitMitra } from "@/lib/api/mitra";
+import {
+  berandaMitra,
+  dompetMitra,
+  pendapatanMitra,
+  pesananMitra,
+  serahTerimaMitra,
+  sesiMitra,
+  ulasanMitra,
+  unitMitra,
+} from "@/lib/api/mitra";
 import { rupiahSingkat } from "./format";
 
 /** Mode API tanpa sesi mitra: layout menampilkan gerbang masuk, jadi angka
@@ -429,6 +439,14 @@ export async function ambilCatatanSerah(bahasa: Bahasa = "id"): Promise<Record<s
       ],
     },
   };
+}
+
+/** Baris serah terima dari API (mode API saja). null di mode mock: panel lalu
+ *  menurunkan jadwal dari pesanan berjalan seperti sebelumnya. */
+export async function ambilJadwalSerah(): Promise<JadwalSerah[] | null> {
+  if (!apiAktif()) return null;
+  const sesi = await sesiMitra();
+  return sesi ? serahTerimaMitra(sesi.token) : [];
 }
 
 export async function ambilPendapatan(bahasa: Bahasa = "id"): Promise<Periode[]> {
