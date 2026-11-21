@@ -46,6 +46,8 @@ export type DataPesananAktif = {
   penyedia: { nama: string; meta: string };
   titikPengembalian: { alamat: string; waktu: string };
   perluUbah: { aksi: { label: string; bahaya: boolean }[]; catatan: string };
+  /** Kode pesanan untuk /chat?dengan=. Kosong di mock (percakapan contoh). */
+  kodeChat?: string;
 };
 
 const TEKS = kamus({
@@ -211,6 +213,7 @@ export function keDataPesanan(p: PesananApi, bahasa: Bahasa): DataPesananAktif {
       waktu: p.diantar ? t.titikSama(waktuKembali) : t.ambilDiRental(waktuKembali),
     },
     perluUbah: { aksi: t.aksi, catatan: t.catatanUbah },
+    kodeChat: p.kode,
   };
 }
 

@@ -8,16 +8,21 @@ import { useAkun } from "@/components/auth/AkunProvider";
 import { useBahasa } from "@/components/BahasaProvider";
 import { ID_CHAT_PESANAN_AKTIF } from "@/lib/mock/chat";
 
-export default function TombolHubungi() {
+/** `kode`: pesanan sungguhan (mode API). Tanpa itu, percakapan contoh. */
+export default function TombolHubungi({ kode }: { kode?: string }) {
   const router = useRouter();
-  const { akun, mintaMasuk } = useAkun();
+  const { akun, sesiDimuat, mintaMasuk } = useAkun();
   const { bahasa, jalur } = useBahasa();
-  const tujuan = jalur(`/chat?dengan=${ID_CHAT_PESANAN_AKTIF}`);
+  const tujuan = jalur(`/chat?dengan=${encodeURIComponent(kode ?? ID_CHAT_PESANAN_AKTIF)}`);
 
   return (
     <button
       type="button"
-      onClick={() => (akun ? router.push(tujuan) : mintaMasuk("masuk", () => router.push(tujuan)))}
+      // Sesi belum terbaca: jangan menebak "belum masuk". Halaman /chat sendiri
+      // yang meminta masuk kalau memang belum.
+      onClick={() =>
+        akun || !sesiDimuat ? router.push(tujuan) : mintaMasuk("masuk", () => router.push(tujuan))
+      }
       className="mt-13 w-full rounded-input bg-green-700 py-11 text-panel text-white transition-colors duration-160 ease-base hover:bg-green-800"
     >
       {bahasa === "en" ? "Contact provider" : "Hubungi penyedia"}

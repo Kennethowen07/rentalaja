@@ -5,12 +5,14 @@
 //
 // Pesan baru hanya ditambahkan ke state halaman ini (lihat lib/mock/chat.ts).
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { isiChat, kirimPesan } from "@/app/actions/chat";
 import { useAkun } from "@/components/auth/AkunProvider";
 import { useBahasa } from "@/components/BahasaProvider";
 import AvatarKosong from "@/components/ui/AvatarKosong";
 import { kamus, lokal, type Bahasa } from "@/lib/i18n";
-import { daftarPercakapan, type Percakapan } from "@/lib/mock/chat";
+import { daftarPercakapan, type Percakapan, waktuChat } from "@/lib/mock/chat";
 
 const TEKS = kamus({
   id: {
@@ -26,6 +28,7 @@ const TEKS = kamus({
     tulisUntuk: (nama: string) => `Tulis pesan untuk ${nama}`,
     tulis: "Tulis pesan",
     kirim: "Kirim",
+    gagal: "Server sedang tidak bisa dihubungi.",
   },
   en: {
     belumMasuk: "Log in to see your chats",
@@ -40,6 +43,7 @@ const TEKS = kamus({
     tulisUntuk: (nama: string) => `Write a message to ${nama}`,
     tulis: "Write a message",
     kirim: "Send",
+    gagal: "The server can't be reached right now.",
   },
 });
 
@@ -74,16 +78,57 @@ function BelumMasuk({ t }: { t: (typeof TEKS)["id"] }) {
   );
 }
 
-export default function RiwayatChat({ dengan }: { dengan?: string }) {
+export default function RiwayatChat({
+  dengan,
+  awalApi = null,
+}: {
+  dengan?: string;
+  /** Mode API: percakapan sungguhan (id = kode pesanan), masing-masing baru
+   *  berisi pesan terakhir. Isi lengkap dimuat saat dibuka. */
+  awalApi?: Percakapan[] | null;
+}) {
   const { akun } = useAkun();
   const { bahasa } = useBahasa();
   const t = TEKS[bahasa];
+  const router = useRouter();
+  const nyata = awalApi !== null;
+  const awal = awalApi ?? daftarPercakapan(bahasa);
   const [percakapan, setPercakapan] = useState<Percakapan[]>(() =>
-    daftarPercakapan(bahasa).map((p) => (p.id === dengan ? { ...p, belumDibaca: false } : p)),
+    awal.map((p) => (p.id === dengan ? { ...p, belumDibaca: false } : p)),
   );
-  const [aktifId, setAktifId] = useState<string | null>(
-    daftarPercakapan(bahasa).some((p) => p.id === dengan) ? dengan! : null,
-  );
+  const [aktifId, setAktifId] = useState<string | null>(awal.some((p) => p.id === dengan) ? dengan! : null);
+  // Masuk dari halaman ini: daftar percakapan akunnya dimuat dari server.
+  // Sekali saja, supaya akun yang memang belum punya chat tidak memicu muat
+  // ulang tanpa henti.
+  const sudahMuatUlang = useRef(false);
+  useEffect(() => {
+    if (!nyata || !akun || awalApi.length > 0 || sudahMuatUlang.current) return;
+    sudahMuatUlang.current = true;
+    router.refresh();
+  }, [nyata, akun, awalApi, router]);
+  useEffect(() => {
+    if (awalApi) setPercakapan(awalApi.map((p) => (p.id === aktifId ? { ...p, belumDibaca: false } : p)));
+    // aktifId sengaja tidak ikut: membuka percakapan tidak perlu menimpa daftar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awalApi]);
+  // Mode API: isi percakapan dimuat dari server saat dibuka (membukanya
+  // menandai pesan penyedia sebagai dibaca).
+  useEffect(() => {
+    if (!nyata || !aktifId) return;
+    let batal = false;
+    void isiChat(aktifId).then((h) => {
+      if (batal || !h.ok) return;
+      const pesan = h.pesan.map((m) => ({
+        dari: m.dariSaya ? ("saya" as const) : ("penyedia" as const),
+        teks: m.teks,
+        waktu: waktuChat(m.waktu, bahasa),
+      }));
+      setPercakapan((semua) => semua.map((p) => (p.id === aktifId ? { ...p, pesan, belumDibaca: false } : p)));
+    });
+    return () => {
+      batal = true;
+    };
+  }, [nyata, aktifId, bahasa]);
   const [draf, setDraf] = useState("");
   const isiRef = useRef<HTMLDivElement>(null);
 
@@ -105,12 +150,21 @@ export default function RiwayatChat({ dengan }: { dengan?: string }) {
   function kirim() {
     const teks = draf.trim();
     if (!teks || !aktifId) return;
-    setPercakapan((semua) =>
-      semua.map((p) =>
-        p.id === aktifId ? { ...p, pesan: [...p.pesan, { dari: "saya", teks, waktu: waktuSekarang(bahasa) }] } : p,
-      ),
-    );
+    const baru = { dari: "saya" as const, teks, waktu: waktuSekarang(bahasa) };
+    setPercakapan((semua) => semua.map((p) => (p.id === aktifId ? { ...p, pesan: [...p.pesan, baru] } : p)));
     setDraf("");
+    if (!nyata) return;
+    // Tampil langsung, lalu dikirim. Kalau ditolak (mis. pesanan sudah batal),
+    // pesannya ditarik dan drafnya dikembalikan.
+    const id = aktifId;
+    void kirimPesan(id, teks)
+      .catch(() => ({ ok: false as const, pesan: t.gagal }))
+      .then((h) => {
+        if (h.ok) return;
+        setPercakapan((semua) => semua.map((p) => (p.id === id ? { ...p, pesan: p.pesan.filter((m) => m !== baru) } : p)));
+        setDraf(teks);
+        window.alert(h.pesan);
+      });
   }
 
   return (
@@ -139,12 +193,12 @@ export default function RiwayatChat({ dengan }: { dengan?: string }) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-8">
                       <span className={`truncate text-panel text-ink ${p.belumDibaca ? "font-bold" : ""}`}>{p.penyedia}</span>
-                      <span className="shrink-0 text-micro text-muted">{terakhir.waktu}</span>
+                      <span className="shrink-0 text-micro text-muted">{terakhir?.waktu ?? ""}</span>
                     </span>
                     <span className="mt-2 flex items-center gap-8">
                       <span className={`truncate text-body-sm ${p.belumDibaca ? "text-ink" : "text-muted"}`}>
-                        {terakhir.dari === "saya" ? t.kamu : ""}
-                        {terakhir.teks}
+                        {terakhir?.dari === "saya" ? t.kamu : ""}
+                        {terakhir?.teks ?? (bahasa === "en" ? "No messages yet" : "Belum ada pesan")}
                       </span>
                       {p.belumDibaca && (
                         <span className="ml-auto size-8 shrink-0 rounded-pill bg-green-700">

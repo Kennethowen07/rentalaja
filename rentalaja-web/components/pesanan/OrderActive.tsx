@@ -167,7 +167,7 @@ export default async function OrderActive({ data }: { data: DataPesananAktif }) 
                 {penyedia.meta && <p className="mt-2 text-micro text-muted">{penyedia.meta}</p>}
               </div>
             </div>
-            <TombolHubungi />
+            <TombolHubungi kode={pesananAktif.kodeChat} />
             <ReturnPointButton titik={pesananAktif.titikPengembalian} />
           </section>
 

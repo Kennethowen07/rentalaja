@@ -105,3 +105,18 @@ export function daftarPercakapan(bahasa: Bahasa): Percakapan[] {
     pesan: p.pesan.map((m) => ({ dari: m.dari, teks: m.teks[bahasa], waktu: m.waktu[bahasa] })),
   }));
 }
+
+/** "25 Okt, 17.43" (id) atau "25 Oct, 17:43" (en), format waktu pesan chat.
+ *  Dipakai data API dan pesan yang baru dikirim, supaya sama dengan mock. */
+export function waktuChat(ms: number, bahasa: Bahasa): string {
+  const format = new Intl.DateTimeFormat(bahasa === "en" ? "en-GB" : "id-ID", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: "Asia/Makassar",
+  });
+  const b = Object.fromEntries(format.formatToParts(ms).map((p) => [p.type, p.value]));
+  return `${b.day} ${b.month}, ${b.hour}${bahasa === "id" ? "." : ":"}${b.minute}`;
+}

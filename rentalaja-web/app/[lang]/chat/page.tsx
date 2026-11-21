@@ -5,6 +5,10 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import RiwayatChat from "@/components/chat/RiwayatChat";
+import { daftarChatPenyewa } from "@/lib/api/chat";
+import { apiAktif } from "@/lib/api/klien";
+import { tokenSesi } from "@/lib/api/sesi";
+import { bahasaAktif } from "@/lib/i18n-server";
 
 // Judulnya sama di kedua bahasa.
 export const metadata = {
@@ -13,6 +17,13 @@ export const metadata = {
 
 export default async function ChatPage({ searchParams }: PageProps<"/[lang]/chat">) {
   const { dengan } = await searchParams;
+  // Mode API: percakapan sungguhan milik akun yang masuk. Belum masuk: daftar
+  // kosong, dan komponen menampilkan ajakan masuk seperti biasa.
+  let awalApi = null;
+  if (apiAktif()) {
+    const token = await tokenSesi();
+    awalApi = (token ? await daftarChatPenyewa(token, await bahasaAktif()) : null) ?? [];
+  }
 
   return (
     <>
@@ -22,7 +33,11 @@ export default async function ChatPage({ searchParams }: PageProps<"/[lang]/chat
           berubah mengikuti panjang pesan di percakapan yang dibuka. */}
       <main className="container-page w-full pt-22 pb-28">
         {/* key: pindah dari satu ?dengan ke yang lain memasang ulang state. */}
-        <RiwayatChat key={String(dengan)} dengan={typeof dengan === "string" ? dengan : undefined} />
+        <RiwayatChat
+          key={String(dengan)}
+          dengan={typeof dengan === "string" ? dengan : undefined}
+          awalApi={awalApi}
+        />
       </main>
       <Footer />
     </>
