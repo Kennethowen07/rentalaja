@@ -9,18 +9,16 @@ import { useBahasa } from "@/components/BahasaProvider";
 import Modal from "@/components/ui/Modal";
 import PetaLokasi from "@/components/ui/PetaLokasi";
 import { kamus } from "@/lib/i18n";
-import { pesananAktif } from "@/lib/mock/pesanan-aktif";
 
 const TEKS = kamus({
   id: { tombol: "Lihat titik pengembalian", judul: "Titik pengembalian", mengerti: "Mengerti" },
   en: { tombol: "View return point", judul: "Return point", mengerti: "Got it" },
 });
 
-export default function ReturnPointButton() {
+export default function ReturnPointButton({ titik }: { titik: { alamat: string; waktu: string } }) {
   const [terbuka, setTerbuka] = useState(false);
   const { bahasa } = useBahasa();
   const t = TEKS[bahasa];
-  const titik = pesananAktif[bahasa].titikPengembalian;
 
   return (
     <>

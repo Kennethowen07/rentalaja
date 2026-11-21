@@ -12,7 +12,7 @@ import TombolHubungi from "@/components/pesanan/TombolHubungi";
 import AvatarKosong from "@/components/ui/AvatarKosong";
 import { kamus } from "@/lib/i18n";
 import { bahasaAktif } from "@/lib/i18n-server";
-import { pesananAktif as dataPesanan } from "@/lib/mock/pesanan-aktif";
+import type { DataPesananAktif } from "@/lib/api/pesanan";
 
 const TEKS = kamus({
   id: {
@@ -35,10 +35,12 @@ const TEKS = kamus({
 
 const KARTU = "rounded-card border border-line p-18";
 
-export default async function OrderActive() {
+/** `data` dari rentalaja-api (lib/api/pesanan.ts) atau dari mock
+ *  lib/mock/pesanan-aktif.ts kalau API tidak aktif. Halaman yang memilih. */
+export default async function OrderActive({ data }: { data: DataPesananAktif }) {
   const bahasa = await bahasaAktif();
   const t = TEKS[bahasa];
-  const pesananAktif = dataPesanan[bahasa];
+  const pesananAktif = data;
   const { unit, serahTerima, penyedia, perluUbah } = pesananAktif;
 
   return (
@@ -109,7 +111,9 @@ export default async function OrderActive() {
             </div>
           </section>
 
-          {/* Serah terima berfoto */}
+          {/* Serah terima berfoto. Pesanan dari API belum membawa fotonya
+              (endpoint penyewa belum ada), jadi bagian ini disembunyikan. */}
+          {serahTerima && (
           <section className={`${KARTU} mt-14`}>
             <h2 className="text-section-sm text-ink">{serahTerima.judul}</h2>
             <ul className="mt-12 grid grid-cols-3 gap-8 sm:grid-cols-5">
@@ -130,6 +134,7 @@ export default async function OrderActive() {
             </ul>
             <p className="mt-8 text-micro text-muted">{serahTerima.catatan}</p>
           </section>
+          )}
 
           {/* Rincian pembayaran */}
           <section className={`${KARTU} mt-14`}>
@@ -159,11 +164,11 @@ export default async function OrderActive() {
               <AvatarKosong className="size-42" />
               <div>
                 <p className="text-panel text-ink">{penyedia.nama}</p>
-                <p className="mt-2 text-micro text-muted">{penyedia.meta}</p>
+                {penyedia.meta && <p className="mt-2 text-micro text-muted">{penyedia.meta}</p>}
               </div>
             </div>
             <TombolHubungi />
-            <ReturnPointButton />
+            <ReturnPointButton titik={pesananAktif.titikPengembalian} />
           </section>
 
           <section className={KARTU}>

@@ -20,10 +20,11 @@ import BookingForm, { type PeriodeSewa } from "@/components/pemesanan/BookingFor
 import { desimal, jalur, kamus, lokal, type Bahasa } from "@/lib/i18n";
 import { bahasaAktif } from "@/lib/i18n-server";
 import { pesanan, type RingkasanPesanan } from "@/lib/mock/pemesanan";
+import { apiAktif } from "@/lib/api/klien";
 import { ambilDetailUnit } from "@/lib/api/unit";
 import type { DetailUnit } from "@/lib/mock/unit-detail";
 import { formatRupiah } from "@/lib/mock/units";
-import { sewaDariParams, tanggalKembali, type Sewa } from "@/lib/sewa";
+import { keIso, sewaDariParams, tanggalKembali, type Sewa } from "@/lib/sewa";
 
 const TEKS = kamus({
   id: {
@@ -122,6 +123,14 @@ export default async function PemesananPage({
           periode={periodeSewa(sewa, bahasa)}
           ringkasan={detail ? ringkasanDari(detail, bahasa) : pesanan[bahasa]}
           asal={asal}
+          // Pemesanan sungguhan hanya kalau unitnya datang dari API. Total yang
+          // dikirim sama dengan yang tampil, supaya server bisa menolak kalau
+          // harganya berubah di antara keduanya.
+          pesanNyata={
+            apiAktif() && detail
+              ? { unit: slug, mulai: keIso(sewa.mulai), durasi: sewa.hari, total: detail.harga.total }
+              : null
+          }
         />
       </main>
       <Footer />

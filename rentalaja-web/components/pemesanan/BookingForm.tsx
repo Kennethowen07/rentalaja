@@ -20,6 +20,8 @@
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
+import { buatPesanan } from "@/app/actions/pesanan";
+import { useAkun } from "@/components/auth/AkunProvider";
 import Modal from "@/components/ui/Modal";
 import PetaLokasi from "@/components/ui/PetaLokasi";
 import { useBahasa } from "@/components/BahasaProvider";
@@ -262,9 +264,15 @@ function ModalPembayaran({
   onBayar,
   onTutup,
   t,
+  mengirim = false,
+  galat = null,
 }: {
   t: Teks;
   tahap: Exclude<Tahap, "form">;
+  /** Mode API: pesanan sedang dikirim ke server. */
+  mengirim?: boolean;
+  /** Mode API: pesan galat dari server, mis. slot baru saja terisi. */
+  galat?: string | null;
   /** Nominal yang dibayar, sudah diformat. Harus sama persis dengan angka di
    *  ringkasan supaya tidak ada dua total berbeda di satu layar. */
   total: string;
@@ -273,7 +281,7 @@ function ModalPembayaran({
 }) {
   const tombolRef = useRef<HTMLButtonElement>(null);
   const judulId = useId();
-  const memproses = tahap === "proses";
+  const memproses = tahap === "proses" || mengirim;
 
   // Fokus langsung ke aksi utama saat modal terbuka.
   useEffect(() => {
@@ -347,8 +355,13 @@ function ModalPembayaran({
           </button>
         )}
 
+        {galat && (
+          <p role="alert" className="mt-10 text-body-sm text-red-700">
+            {galat}
+          </p>
+        )}
         <p aria-live="polite" className="mt-10 text-micro text-muted">
-          {memproses ? t.diterima : t.tidakNyata}
+          {tahap === "proses" ? t.diterima : mengirim ? "" : t.tidakNyata}
         </p>
       </div>
     </div>
@@ -368,11 +381,26 @@ const TANYA_ASAL = {
   wna: "Yes, I'm visiting from abroad",
 };
 
+/** Data pemesanan sungguhan. Hanya diisi halaman kalau API aktif dan unitnya
+ *  datang dari API; tanpa ini tombol bayar tetap simulasi seperti dulu. */
+export type PesanNyata = {
+  unit: string;
+  /** "2026-11-23" */
+  mulai: string;
+  durasi: number;
+  /** Total yang ditampilkan, dikirim sebagai totalDisetujui. */
+  total: number;
+};
+
+const METODE_API = ["BCA_VA", "QRIS", "EWALLET"] as const;
+
 export default function BookingForm({
   periode,
   ringkasan,
   asal,
+  pesanNyata = null,
 }: {
+  pesanNyata?: PesanNyata | null;
   periode: PeriodeSewa;
   /** Unit dan rincian harga, dibangun dari unit yang diklik di layar detail. */
   ringkasan: RingkasanPesanan;
@@ -408,6 +436,11 @@ export default function BookingForm({
   const [tahap, setTahap] = useState<Tahap>("form");
   const bayarRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
+  const { akun, sesiDimuat, mintaMasuk } = useAkun();
+  // Mode API: kode pesanan yang baru dibuat, status kirim, dan galatnya.
+  const [kodeBaru, setKodeBaru] = useState<string | null>(null);
+  const [mengirim, setMengirim] = useState(false);
+  const [galatBayar, setGalatBayar] = useState<string | null>(null);
 
   // Satu langkah hijau hanya kalau SELURUH field miliknya terisi.
   const selesai = [
@@ -430,14 +463,55 @@ export default function BookingForm({
   // navigasi tidak terpicu setelah pengguna meninggalkan halaman.
   useEffect(() => {
     if (tahap !== "proses") return;
-    const timer = setTimeout(() => router.push(halamanPesanan), 3000);
+    const tujuan = kodeBaru ? `${halamanPesanan}?kode=${encodeURIComponent(kodeBaru)}` : halamanPesanan;
+    const timer = setTimeout(() => router.push(tujuan), kodeBaru ? 1500 : 3000);
     return () => clearTimeout(timer);
-  }, [tahap, router, halamanPesanan]);
+  }, [tahap, router, halamanPesanan, kodeBaru]);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!semuaSelesai || tahap !== "form") return;
+    setGalatBayar(null);
+    // Pesanan sungguhan tersimpan di akun penyewa: minta masuk dulu, lalu
+    // langsung lanjut ke pembayaran. Kalau sesi belum selesai dibaca, jangan
+    // menebak: lanjut saja, server menjawab perluMasuk kalau memang belum.
+    if (pesanNyata && sesiDimuat && !akun) return mintaMasuk("masuk", () => setTahap("qr"));
     setTahap("qr");
+  }
+
+  /** Tombol bayar di modal. Mode simulasi: langsung "diterima". Mode API:
+   *  pesanan dibuat dulu lewat POST /pesanan, baru dianggap dibayar. */
+  async function bayar() {
+    if (!pesanNyata) return setTahap("proses");
+    if (mengirim) return;
+    setMengirim(true);
+    setGalatBayar(null);
+    try {
+      const h = await buatPesanan({
+        unit: pesanNyata.unit,
+        mulai: pesanNyata.mulai,
+        durasi: pesanNyata.durasi,
+        diantar: pengambilan === 0,
+        titik: titikAntar.trim(),
+        metode: METODE_API[pembayaran ?? 0],
+        totalDisetujui: pesanNyata.total,
+        asal: asal === "wna" ? "WNA" : "WNI",
+        kewarganegaraan: asal === "wna" ? negara.trim() : undefined,
+        dokumen: { identitas: ktp ?? "", sim: sim ?? "", idp: asal === "wna" ? (idp ?? "") : undefined },
+      });
+      if (h.ok) {
+        setKodeBaru(h.kode);
+        setTahap("proses");
+      } else if (h.perluMasuk) {
+        setTahap("form");
+        mintaMasuk("masuk", () => setTahap("qr"));
+      } else {
+        setGalatBayar(bahasa === "en" ? terjemahGalatPesan(h.pesan) : h.pesan);
+      }
+    } catch {
+      setGalatBayar(bahasa === "en" ? "The server can't be reached right now. Try again shortly." : "Server sedang tidak bisa dihubungi. Coba lagi sebentar.");
+    }
+    setMengirim(false);
   }
 
   /** Pilihan asal disimpan di URL (?asal=), jadi tetap bertahan saat halaman
@@ -774,8 +848,10 @@ export default function BookingForm({
           t={t}
           total={ringkasan.total}
           tahap={tahap}
-          onBayar={() => setTahap("proses")}
+          onBayar={bayar}
           onTutup={tutupModal}
+          mengirim={mengirim}
+          galat={galatBayar}
         />
       )}
 
@@ -831,3 +907,18 @@ export default function BookingForm({
     </form>
   );
 }
+
+/** Pesan galat pemesanan berbahasa Indonesia (dari Server Action atau API)
+ *  untuk halaman /en. Yang tidak dikenal tampil apa adanya. */
+function terjemahGalatPesan(pesan: string): string {
+  const peta: Record<string, string> = {
+    "Akun mitra tidak bisa memesan. Masuk dengan akun penyewa.": "Provider accounts can't book. Log in with a renter account.",
+    "Pemesanan sungguhan belum aktif di situs ini.": "Real booking isn't enabled on this site.",
+    "Server sedang tidak bisa dihubungi. Coba lagi sebentar.": "The server can't be reached right now. Try again shortly.",
+  };
+  if (peta[pesan]) return peta[pesan];
+  if (/sudah dipesan|terisi/i.test(pesan)) return "This vehicle was just booked for these dates. Pick other dates or another vehicle.";
+  if (/jam ambil/i.test(pesan)) return "The pick-up time has already passed. Pick another time or date.";
+  if (/harga/i.test(pesan)) return "The price changed since you opened this page. Reload to see the new total.";
+  return pesan;
+};

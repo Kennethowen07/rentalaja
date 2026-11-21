@@ -65,6 +65,9 @@ type NilaiAkun = {
   akun: string | null;
   /** Hanya di mode nyata; null di mode simulasi atau belum masuk. */
   peran: Akun["peran"] | null;
+  /** Mode nyata: false selama sesi masih dibaca dari server setelah halaman
+   *  dimuat. Selama itu "akun null" belum berarti belum masuk. */
+  sesiDimuat: boolean;
   keluar: () => void;
   /** Buka modal masuk. `lanjut` dijalankan setelah berhasil masuk, mis.
    *  membuka chat yang tadi diklik sebelum login. */
@@ -97,6 +100,7 @@ export default function AkunProvider({
   // Mode nyata: dibaca dari server setelah halaman dimuat. Cookie sengaja
   // tidak dibaca di layout, karena itu membuat semua halaman jadi dinamis.
   const [akunNyata, setAkunNyata] = useState<Akun | null>(null);
+  const [sesiDimuat, setSesiDimuat] = useState(false);
   const [modeAuth, setModeAuth] = useState<ModeAuth | null>(null);
   const lanjutRef = useRef<(() => void) | null>(null);
 
@@ -107,7 +111,10 @@ export default function AkunProvider({
       .then((a) => {
         if (!batal) setAkunNyata(a);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!batal) setSesiDimuat(true);
+      });
     return () => {
       batal = true;
     };
@@ -127,8 +134,8 @@ export default function AkunProvider({
   }, [nyata, router]);
 
   const nilai: NilaiAkun = nyata
-    ? { akun: akunNyata?.nama ?? null, peran: akunNyata?.peran ?? null, keluar, mintaMasuk }
-    : { akun: akunSimulasi, peran: null, keluar, mintaMasuk };
+    ? { akun: akunNyata?.nama ?? null, peran: akunNyata?.peran ?? null, sesiDimuat, keluar, mintaMasuk }
+    : { akun: akunSimulasi, peran: null, sesiDimuat: true, keluar, mintaMasuk };
 
   return (
     <KonteksAkun.Provider value={nilai}>
@@ -147,6 +154,7 @@ export default function AkunProvider({
             if (typeof hasil === "string") tulis(hasil);
             else {
               setAkunNyata(hasil);
+              setSesiDimuat(true);
               router.refresh();
             }
             setModeAuth(null);
