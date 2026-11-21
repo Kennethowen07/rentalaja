@@ -24,5 +24,15 @@ async function bootstrap() {
 
   const port = app.get(ConfigService).get<number>('PORT') ?? 4000;
   await app.listen(port);
+
+  // Klien utama API ini adalah server lain (rentalaja-web), yang memakai ulang
+  // koneksi keep-alive. Bawaan Node menutup koneksi idle setelah 5 detik; kalau
+  // klien memakai ulang soket tepat saat itu, jawabannya putus di tengah
+  // ("other side closed"), padahal permintaannya sudah diproses. Batas yang
+  // lebih panjang dari klien menghilangkan balapan itu. headersTimeout harus
+  // lebih besar dari keepAliveTimeout.
+  const server = app.getHttpServer();
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
 }
 await bootstrap();

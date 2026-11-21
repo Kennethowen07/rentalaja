@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Instrument_Sans } from "next/font/google";
+import GerbangMitra from "@/components/mitra/GerbangMitra";
 import { PesananProvider } from "@/components/mitra/PesananProvider";
+import { apiAktif } from "@/lib/api/klien";
+import { sesiMitra } from "@/lib/api/mitra";
 import Sidebar from "@/components/mitra/Sidebar";
 import { bahasaAktif } from "@/lib/i18n-server";
 import { ambilMitra, ambilPesanan } from "@/lib/mitra/data";
@@ -21,6 +24,16 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function LayoutMitra({ children }: LayoutProps<"/[lang]/mitra">) {
   const bahasa = await bahasaAktif();
+  const nyata = apiAktif();
+  // Mode API: panel hanya untuk akun mitra yang masuk. Halaman di dalamnya
+  // tidak dirender sama sekali, jadi data pelanggan tidak ikut terkirim.
+  if (nyata && !(await sesiMitra())) {
+    return (
+      <div className={`${instrument.variable} panel-mitra flex flex-1 flex-col bg-white font-mitra text-mitra-ink`}>
+        <GerbangMitra />
+      </div>
+    );
+  }
   const [mitra, { sekarangServer, pesanan }] = await Promise.all([
     ambilMitra(),
     ambilPesanan(bahasa),
@@ -30,7 +43,7 @@ export default async function LayoutMitra({ children }: LayoutProps<"/[lang]/mit
     <div
       className={`${instrument.variable} panel-mitra flex flex-1 flex-col bg-white font-mitra text-mitra-ink min-[900px]:flex-row`}
     >
-      <PesananProvider sekarangServer={sekarangServer} pesanan={pesanan}>
+      <PesananProvider sekarangServer={sekarangServer} pesanan={pesanan} nyata={nyata}>
         <Sidebar mitra={mitra} />
         <main className="min-w-0 flex-1 px-20 pt-28 pb-40 min-[640px]:px-32 min-[900px]:pt-40 min-[900px]:pb-44 min-[1100px]:px-48">
           {children}

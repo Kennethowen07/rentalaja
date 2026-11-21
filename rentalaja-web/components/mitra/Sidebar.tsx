@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useAkun } from "@/components/auth/AkunProvider";
 import { useBahasa } from "@/components/BahasaProvider";
 import { kamus } from "@/lib/i18n";
 import type { Mitra } from "@/lib/mitra/tipe";
@@ -21,6 +22,7 @@ const TEKS = kamus({
     menunggu: " menunggu konfirmasi",
     unit: "unit",
     demo: "Mode demo, tanpa login",
+    keluar: "Keluar",
     keSitus: "← Kembali ke situs",
   },
   en: {
@@ -32,6 +34,7 @@ const TEKS = kamus({
     menunggu: " awaiting confirmation",
     unit: "vehicles",
     demo: "Demo mode, no login",
+    keluar: "Log out",
     keSitus: "← Back to the site",
   },
 });
@@ -50,6 +53,7 @@ const menu = [
 export default function Sidebar({ mitra }: { mitra: Mitra }) {
   const pathname = usePathname();
   const { bahasa, jalur } = useBahasa();
+  const { peran, keluar } = useAkun();
   const t = TEKS[bahasa];
   const { menunggu } = usePesanan();
   const [terbuka, setTerbuka] = useState(false);
@@ -139,10 +143,20 @@ export default function Sidebar({ mitra }: { mitra: Mitra }) {
               <br />
               {mitra.area}
             </p>
-            {/* Panel dibuka tanpa login karena prototype belum punya backend.
-                Ditulis terang-terangan supaya tidak terbaca sebagai lubang
-                keamanan. */}
-            <p className="mt-10 text-m-mitra-meta text-mitra-nav-sub">{t.demo}</p>
+            {/* Tanpa API panel dibuka tanpa login (data contoh), dan itu ditulis
+                terang-terangan supaya tidak terbaca sebagai lubang keamanan.
+                Dengan API panel hanya terbuka untuk mitra yang masuk. */}
+            {peran === "MITRA" ? (
+              <button
+                type="button"
+                onClick={keluar}
+                className="mt-10 block text-m-mitra-meta text-mitra-nav-sub underline-offset-3 hover:text-white hover:underline"
+              >
+                {t.keluar}
+              </button>
+            ) : (
+              <p className="mt-10 text-m-mitra-meta text-mitra-nav-sub">{t.demo}</p>
+            )}
             <Link
               href={jalur("/")}
               className="mt-10 inline-block text-m-mitra-meta text-mitra-nav-sub underline-offset-3 hover:text-white hover:underline"

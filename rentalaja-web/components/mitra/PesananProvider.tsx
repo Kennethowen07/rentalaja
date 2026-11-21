@@ -12,7 +12,9 @@
 // lewat batas dihitung sebagai cancelled tanpa mengubah data aslinya. Di
 // produk sungguhan pembatalan itu harus terjadi di server.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { terimaPesanan, tolakPesanan } from "@/app/actions/mitra";
 import { useBahasa } from "@/components/BahasaProvider";
 import { BATAS_BALAS_MS, type Pesanan } from "@/lib/mitra/tipe";
 
@@ -30,10 +32,13 @@ const Konteks = createContext<Nilai | null>(null);
 export function PesananProvider({
   sekarangServer,
   pesanan,
+  nyata = false,
   children,
 }: {
   sekarangServer: number;
   pesanan: Pesanan[];
+  /** true = data dari rentalaja-api: terima/tolak dikirim ke server. */
+  nyata?: boolean;
   children: React.ReactNode;
 }) {
   // Render pertama memakai waktu server supaya HTML server dan hasil hidrasi
@@ -42,6 +47,30 @@ export function PesananProvider({
   const en = bahasa === "en";
   const [sekarang, setSekarang] = useState(sekarangServer);
   const [daftar, setDaftar] = useState(pesanan);
+  const router = useRouter();
+  // Salinan terbaru untuk dikembalikan kalau server menolak aksi.
+  const daftarRef = useRef(daftar);
+  daftarRef.current = daftar;
+
+  // Data baru dari server (router.refresh() setelah aksi) menggantikan state
+  // lokal, termasuk perubahan optimistis yang tadi dibuat di sini.
+  useEffect(() => {
+    setDaftar(pesanan);
+  }, [pesanan]);
+
+  /** Mode API: kirim aksi, lalu muat ulang data dari server. Kalau ditolak
+   *  (mis. batas 1 jam baru saja lewat), tampilan dikembalikan. */
+  const kirim = useCallback(
+    async (aksi: () => Promise<{ ok: true } | { ok: false; pesan: string }>, sebelum: Pesanan[]) => {
+      const h = await aksi().catch(() => ({ ok: false as const, pesan: en ? "The server can't be reached right now." : "Server sedang tidak bisa dihubungi." }));
+      if (!h.ok) {
+        setDaftar(sebelum);
+        window.alert(h.pesan);
+      }
+      router.refresh();
+    },
+    [router, en],
+  );
 
   useEffect(() => {
     const selisih = sekarangServer - Date.now();
@@ -52,6 +81,7 @@ export function PesananProvider({
   }, [sekarangServer]);
 
   const terima = useCallback((id: string) => {
+    if (nyata) void kirim(() => terimaPesanan(id), daftarRef.current);
     setDaftar((d) =>
       d.map((p) =>
         p.id === id
@@ -59,9 +89,10 @@ export function PesananProvider({
           : p,
       ),
     );
-  }, []);
+  }, [nyata, kirim]);
 
   const tolak = useCallback((id: string) => {
+    if (nyata) void kirim(() => tolakPesanan(id), daftarRef.current);
     setDaftar((d) =>
       d.map((p) =>
         p.id === id
@@ -74,7 +105,7 @@ export function PesananProvider({
           : p,
       ),
     );
-  }, [en]);
+  }, [en, nyata, kirim]);
 
   const nilai = useMemo<Nilai>(() => {
     const sesudahBatas = daftar.map((p) =>

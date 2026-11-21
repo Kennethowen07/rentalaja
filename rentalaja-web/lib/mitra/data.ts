@@ -24,7 +24,14 @@ import type {
   Unit,
   UnitKeluar,
 } from "./tipe";
+import { apiAktif } from "@/lib/api/klien";
+import { berandaMitra, pesananMitra, sesiMitra, unitMitra } from "@/lib/api/mitra";
 import { rupiahSingkat } from "./format";
+
+/** Mode API tanpa sesi mitra: layout menampilkan gerbang masuk, jadi angka
+ *  ini tidak pernah terlihat. Yang penting tidak ada data contoh yang bocor
+ *  ke panel sungguhan. */
+const MITRA_KOSONG: Mitra = { nama: "", pemilik: "", jumlahUnit: 0, area: "" };
 import { MENIT, namaBulan, pukulWita, tanggalSingkat } from "./waktu";
 
 /** Waktu server satu request. Di-cache per request supaya layout dan halaman
@@ -43,6 +50,7 @@ export async function ambilWaktuServer(): Promise<number> {
 const t = (bahasa: Bahasa) => (id: string, en: string) => (bahasa === "en" ? en : id);
 
 export async function ambilMitra(): Promise<Mitra> {
+  if (apiAktif()) return (await sesiMitra())?.mitra ?? MITRA_KOSONG;
   return {
     nama: "Bali Motor Rent",
     pemilik: "Pak Wayan",
@@ -279,6 +287,10 @@ function semuaUnit(sekarang: number, bahasa: Bahasa): Unit[] {
 }
 
 export async function ambilUnit(bahasa: Bahasa = "id"): Promise<Unit[]> {
+  if (apiAktif()) {
+    const sesi = await sesiMitra();
+    return sesi ? unitMitra(sesi.token) : [];
+  }
   const sekarang = await waktuServer();
   return semuaUnit(sekarang, bahasa);
 }
@@ -288,6 +300,10 @@ export async function ambilPesanan(bahasa: Bahasa = "id"): Promise<{
   pesanan: Pesanan[];
 }> {
   const sekarang = await waktuServer();
+  if (apiAktif()) {
+    const sesi = await sesiMitra();
+    return { sekarangServer: sekarang, pesanan: sesi ? await pesananMitra(sesi.token, bahasa) : [] };
+  }
   // Mock: dua pesanan menunggu dihitung ulang tiap request (masuk 18 dan 41
   // menit lalu), jadi demo tidak pernah kehabisan pesanan menunggu. API
   // sungguhan mengembalikan createdAt tetap, dan pembatalan otomatis setelah
@@ -560,6 +576,19 @@ export async function ambilUlasan(bahasa: Bahasa = "id"): Promise<{
 
 export async function ambilBeranda(bahasa: Bahasa = "id"): Promise<DataBeranda> {
   const sekarang = await waktuServer();
+  if (apiAktif()) {
+    const sesi = await sesiMitra();
+    if (sesi) return berandaMitra(sesi.token, bahasa);
+    return {
+      sekarang,
+      pesananHariIni: { masuk: 0 },
+      unitKeluar: { jumlah: 0, totalUnit: 0, daftar: [] },
+      pendapatan: { nilai: rupiahSingkat(0, bahasa), bulan: namaBulan(sekarang, 0, bahasa) },
+      // Tujuh hari berisi nol: layar Beranda menghitung hari tersibuk dari
+      // daftar ini dan crash kalau kosong.
+      mingguIni: Array.from({ length: 7 }, (_, i) => ({ tanggal: pukulWita(sekarang, i, 12), jumlah: 0 })),
+    };
+  }
   const berjalan = semuaPesanan(sekarang, bahasa).filter((x) => x.status === "active");
 
   const daftar: UnitKeluar[] = berjalan.slice(0, 4).map((x) => ({
