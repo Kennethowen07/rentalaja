@@ -19,6 +19,7 @@ import { bacaRentangSewa } from '../umum/rentang-sewa.js';
 import {
   BATAS_BALAS_MS,
   dendaBerjalan,
+  infoKembaliAwal,
   statusDana,
   statusTurunan,
   type StatusTampil,
@@ -277,6 +278,8 @@ export class PesananService {
       /** Jenis dokumen yang sudah diserahkan, mis. ["IDENTITAS", "SIM"]. */
       dokumen: p.dokumen.map((d) => d.jenis),
       wajahTerverifikasi: p.wajahTerverifikasiPada !== null,
+      /** Persetujuan kembali lebih awal (POST /pesanan/:kode/kembali-awal). */
+      kembaliAwal: infoKembaliAwal(p),
     };
   }
 }

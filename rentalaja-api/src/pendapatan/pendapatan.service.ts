@@ -2,9 +2,11 @@ import { BadRequestException, ConflictException, Injectable } from '@nestjs/comm
 import type { Prisma } from '../generated/prisma/client.js';
 import { MitraService } from '../mitra/mitra.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { JEDA_REKENING_MS, labelRekening } from '../umum/rekening.js';
 import { bersihPenyedia, statusDana, waktuPelepasan } from '../umum/status-pesanan.js';
 import { awalHariWita, dariIsoWita, HARI, keIsoWita } from '../umum/waktu-wita.js';
 import { MAKS_PENCAIRAN, type Periode, type TarikSaldoDto } from './dto/pendapatan.dto.js';
+import { bentukRekening } from './rekening.service.js';
 
 /** Berapa transaksi terbaru yang dikirim per periode. */
 const BATAS_TRANSAKSI = 20;
@@ -155,7 +157,14 @@ export class PendapatanService {
   async saldo(penggunaId: string) {
     const mitra = await this.mitra.milik(penggunaId);
     const s = await this.hitungSaldo(this.prisma, mitra.id, Date.now());
-    return { ...s, rekening: mitra.rekening };
+    const rekening = bentukRekening(mitra, Date.now());
+    return {
+      ...s,
+      /** Label tersamar, mis. "BCA ···4471". null kalau belum diisi. */
+      rekening: rekening?.label ?? null,
+      /** Kalau rekening baru diubah: tarik saldo baru bisa setelah waktu ini. */
+      bisaTarikPada: rekening?.terkunci ? rekening.bisaTarikPada : null,
+    };
   }
 
   /**
@@ -169,12 +178,23 @@ export class PendapatanService {
     const { id: mitraId } = await this.mitra.milik(penggunaId);
 
     const hasil = await this.prisma.$transaction(async (tx) => {
-      const [kunci] = await tx.$queryRaw<{ rekening: string | null }[]>`
-        SELECT rekening FROM mitra WHERE id = ${mitraId} FOR UPDATE`;
-      const rekening = kunci?.rekening?.trim();
-      if (!rekening) {
+      // Rekening dibaca dari baris yang sama dengan yang dikunci: ganti
+      // rekening yang masuk bersamaan menunggu tarikan ini selesai, jadi
+      // dana tidak bisa lolos ke rekening baru tanpa kena kunci 24 jam.
+      const [kunci] = await tx.$queryRaw<
+        { bank_rekening: string | null; nomor_rekening: string | null; rekening_diubah_pada: Date | null }[]
+      >`
+        SELECT bank_rekening, nomor_rekening, rekening_diubah_pada FROM mitra WHERE id = ${mitraId} FOR UPDATE`;
+      if (!kunci?.bank_rekening || !kunci.nomor_rekening || !kunci.rekening_diubah_pada) {
         throw new BadRequestException('Rekening pencairan belum diisi. Lengkapi rekening dulu.');
       }
+      const bisaTarik = kunci.rekening_diubah_pada.getTime() + JEDA_REKENING_MS;
+      if (Date.now() < bisaTarik) {
+        throw new ConflictException(
+          `Rekening baru diubah. Demi keamanan, tarik saldo baru bisa mulai ${new Date(bisaTarik).toISOString()}.`,
+        );
+      }
+      const rekening = labelRekening(kunci.bank_rekening, kunci.nomor_rekening);
 
       const { saldo } = await this.hitungSaldo(tx, mitraId, Date.now());
       if (saldo <= 0) throw new BadRequestException('Saldo kosong, belum ada yang bisa ditarik.');

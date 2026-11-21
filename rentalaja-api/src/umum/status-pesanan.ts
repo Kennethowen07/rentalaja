@@ -5,7 +5,7 @@
  * perjalanan dana dihitung di sini dari waktu.
  */
 
-import { HARI, MENIT } from './waktu-wita.js';
+import { awalHariWita, HARI, MENIT } from './waktu-wita.js';
 
 /** Batas penyedia membalas. Di database nilainya fungsi batas_balas();
  *  keduanya harus selalu sama. */
@@ -124,4 +124,36 @@ export function dendaBerjalan(p: DataDenda, sekarang: number): number {
  *  Biaya layanan yang dibayar penyewa milik platform, tidak ikut di sini. */
 export function bersihPenyedia(subtotal: number): number {
   return Math.round(subtotal * (1 - KOMISI_PLATFORM));
+}
+
+/**
+ * Pengembalian lebih awal (keputusan pemilik proyek 12 Nov 2026): boleh,
+ * asal penyewa dan mitra sama-sama setuju. "Lebih awal" = sebelum hari jatuh
+ * tempo (WITA); mengembalikan di hari jatuh tempo itu sendiri adalah
+ * pengembalian biasa. Sisa hari sewa tidak dikembalikan ke penyewa, dan
+ * begitu pesanan SELESAI slotnya otomatis terbuka lagi untuk dipesan.
+ * Database menjaga aturan yang sama (trigger pesanan_kembali_awal).
+ */
+export type DataKembaliAwal = {
+  selesai: Date;
+  kembaliAwalPenyewaPada: Date | null;
+  kembaliAwalMitraPada: Date | null;
+};
+
+/** true kalau mencatat unit kembali pada `t` termasuk lebih awal. */
+export function sebelumJatuhTempo(p: { selesai: Date }, t: number): boolean {
+  return t < awalHariWita(p.selesai.getTime());
+}
+
+export function kembaliAwalDisepakati(p: DataKembaliAwal): boolean {
+  return p.kembaliAwalPenyewaPada !== null && p.kembaliAwalMitraPada !== null;
+}
+
+/** Bentuk yang dikirim API, sama di detail pesanan dan jadwal serah terima. */
+export function infoKembaliAwal(p: DataKembaliAwal) {
+  return {
+    penyewaSetujuPada: p.kembaliAwalPenyewaPada,
+    mitraSetujuPada: p.kembaliAwalMitraPada,
+    disepakati: kembaliAwalDisepakati(p),
+  };
 }

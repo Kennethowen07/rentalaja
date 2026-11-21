@@ -39,6 +39,14 @@ let idPenyewa: string;
 const minta = () => request(app.getHttpServer());
 const auth = (siapa: string) => ({ Authorization: `Bearer ${token[siapa]}` });
 
+/** Rekening sah yang diubah lama sekali, jadi kunci tarik 24 jam sudah lewat. */
+const rek = (bankRekening: string, nomorRekening: string, namaRekening: string) => ({
+  bankRekening, nomorRekening, namaRekening, rekeningDiubahPada: new Date(Date.now() - 30 * HARI),
+});
+const TANPA_REKENING = { bankRekening: null, nomorRekening: null, namaRekening: null, rekeningDiubahPada: null };
+const REK_A = rek('BCA', '0281374471', 'mitra-a');
+const REK_B = rek('BRI', '012345678901234', 'mitra-b');
+
 async function siapkanData() {
   await db.$executeRawUnsafe(
     'TRUNCATE pengguna, mitra, pencairan, unit, blokir_unit, pesanan, pembayaran, dokumen_penyewa, ' +
@@ -55,11 +63,11 @@ async function siapkanData() {
   // Akun MITRA yang belum punya baris mitra.
   await pengguna('mitra-tanpa@uji.test', 'MITRA');
   const mitraA = await db.mitra.create({
-    data: { pemilikId: pemilikA.id, nama: 'Rental A', area: 'Canggu', rekening: 'BCA ···4471' },
+    data: { pemilikId: pemilikA.id, nama: 'Rental A', area: 'Canggu', ...REK_A },
   });
   idMitraA = mitraA.id;
   idMitraB = (
-    await db.mitra.create({ data: { pemilikId: pemilikB.id, nama: 'Rental B', area: 'Kuta', rekening: 'BRI ···1234' } })
+    await db.mitra.create({ data: { pemilikId: pemilikB.id, nama: 'Rental B', area: 'Kuta', ...REK_B } })
   ).id;
 
   const unit = (slug: string, kategori: 'MOTOR' | 'MOBIL', hargaPerHari: number) =>
@@ -162,6 +170,7 @@ describe('Saldo', () => {
       totalDilepas: 1_045_000,
       totalDicairkan: 0,
       rekening: 'BCA ···4471',
+      bisaTarikPada: null,
     });
   });
 
@@ -215,9 +224,9 @@ describe('Pendapatan per periode', () => {
 
 describe('Tarik saldo', () => {
   it('400 kalau rekening kosong', async () => {
-    await db.mitra.update({ where: { id: idMitraA }, data: { rekening: null } });
+    await db.mitra.update({ where: { id: idMitraA }, data: TANPA_REKENING });
     const r = await minta().post('/mitra/saldo/tarik').set(auth('mitra-a')).send({});
-    await db.mitra.update({ where: { id: idMitraA }, data: { rekening: 'BCA ···4471' } });
+    await db.mitra.update({ where: { id: idMitraA }, data: REK_A });
     expect(r.status).toBe(400);
     expect(await db.pencairan.count()).toBe(0);
   });
@@ -344,6 +353,7 @@ describe('Aturan waktu dan status (mitra B)', () => {
       totalDilepas: 506_666,
       totalDicairkan: 0,
       rekening: 'BRI ···1234',
+      bisaTarikPada: null,
     });
   });
 
@@ -379,16 +389,16 @@ describe('Aturan waktu dan status (mitra B)', () => {
     expect(tiga.body.rentang).toEqual({ dari: keIsoWita(sekarang - 89 * HARI), sampai: keIsoWita(sekarang) });
   });
 
-  it('jumlah tarik harus angka bulat di body JSON; rekening berisi spasi dianggap kosong', async () => {
+  it('jumlah tarik harus angka bulat di body JSON; rekening kosong ditolak', async () => {
     for (const jumlah of [1.5, 'abc', true, '45000', -5]) {
       const r = await minta().post('/mitra/saldo/tarik').set(auth('mitra-b')).send({ jumlah });
       expect(r.status, `jumlah ${JSON.stringify(jumlah)}`).toBe(400);
     }
     expect((await minta().post('/mitra/saldo/tarik').set(auth('mitra-b')).send({ catatan: 'x' })).status).toBe(400);
 
-    await db.mitra.update({ where: { id: idMitraB }, data: { rekening: '   ' } });
+    await db.mitra.update({ where: { id: idMitraB }, data: TANPA_REKENING });
     const r = await minta().post('/mitra/saldo/tarik').set(auth('mitra-b')).send({});
-    await db.mitra.update({ where: { id: idMitraB }, data: { rekening: 'BRI ···1234' } });
+    await db.mitra.update({ where: { id: idMitraB }, data: REK_B });
     expect(r.status).toBe(400);
     expect(await db.pencairan.count({ where: { mitraId: idMitraB } })).toBe(0);
   });
@@ -431,7 +441,7 @@ describe('QA: tarik saldo', () => {
       data: { email: 'mitra-c@uji.test', kataSandiHash: hash, nama: 'mitra-c', telepon: '0812', peran: 'MITRA' },
     });
     idMitraC = (
-      await db.mitra.create({ data: { pemilikId: pemilik.id, nama: 'Rental C', area: 'Ubud', rekening: 'BNI ···9999' } })
+      await db.mitra.create({ data: { pemilikId: pemilik.id, nama: 'Rental C', area: 'Ubud', ...rek('BNI', '0123459999', 'mitra-c') } })
     ).id;
     // Dua sewa mobil mahal 60 hari: bersih 2 x 1.425.000.000 = 2.850.000.000,
     // melewati batas INTEGER Postgres (2.147.483.647) untuk satu pencairan.
@@ -494,4 +504,93 @@ describe('QA: tarik saldo', () => {
     // Dua puluh transaksi yang antre di satu kunci bisa lewat 5 detik bawaan
     // Vitest saat mesin sibuk.
   }, 60_000);
+});
+
+/**
+ * Rekening tarik saldo ala aplikasi saham/kripto: atas nama pemilik akun,
+ * wajib kata sandi, nomor tersamar, dan tarik saldo dikunci 24 jam setelah
+ * rekening diubah. Memakai mitra A (nama akun "mitra-a", saldo sudah 0).
+ */
+describe('Rekening', () => {
+  const ubah = (siapa: string, body: object) => minta().put('/mitra/rekening').set(auth(siapa)).send(body);
+  const SAH = { bank: 'BNI', nomor: '123 456-7890', namaPemilik: 'Mitra A', kataSandi: KATA_SANDI };
+
+  it('GET menampilkan rekening tersamar, nomor lengkap tidak pernah ikut', async () => {
+    const r = await minta().get('/mitra/rekening').set(auth('mitra-a'));
+    expect(r.status).toBe(200);
+    expect(r.body.rekening).toMatchObject({
+      bank: 'BCA', namaBank: 'BCA', nomorSamar: '···4471', label: 'BCA ···4471', terkunci: false,
+    });
+    expect(JSON.stringify(r.body)).not.toContain('0281374471');
+  });
+
+  it('otorisasi: tanpa login 401, penyewa 403, mitra tanpa usaha 403', async () => {
+    expect((await minta().get('/mitra/rekening')).status).toBe(401);
+    expect((await ubah('penyewa-1', SAH)).status).toBe(403);
+    expect((await minta().get('/mitra/rekening').set(auth('mitra-tanpa'))).status).toBe(403);
+  });
+
+  it('kata sandi salah 403 dan dicek sebelum nama, jadi nama pemilik akun tidak bisa ditebak', async () => {
+    const r = await ubah('mitra-a', { ...SAH, namaPemilik: 'Orang Lain', kataSandi: 'salah' });
+    expect(r.status).toBe(403);
+    const m = await db.mitra.findUniqueOrThrow({ where: { id: idMitraA } });
+    expect(m.nomorRekening).toBe('0281374471');
+  });
+
+  it('validasi: bank tak dikenal, panjang nomor per bank, huruf, nama beda, field kurang -> 400', async () => {
+    const salah = [
+      { ...SAH, bank: 'BANK_X' },
+      { ...SAH, bank: 'BCA', nomor: '123456789' }, // BCA 10 digit
+      { ...SAH, bank: 'BRI', nomor: '1234567890' }, // BRI 15 digit
+      { ...SAH, nomor: '12345abc90' },
+      { ...SAH, nomor: '1234567' },
+      { ...SAH, namaPemilik: 'Orang Lain' },
+      { ...SAH, namaPemilik: 'Mitra' },
+      { bank: SAH.bank, nomor: SAH.nomor, namaPemilik: SAH.namaPemilik },
+      { ...SAH, kataSandi: '' },
+    ];
+    for (const body of salah) expect((await ubah('mitra-a', body)).status, JSON.stringify(body)).toBe(400);
+    const m = await db.mitra.findUniqueOrThrow({ where: { id: idMitraA } });
+    expect(m.bankRekening).toBe('BCA');
+  });
+
+  it('ganti rekening: nomor dirapikan, sapaan di nama diabaikan, tarik saldo terkunci 24 jam', async () => {
+    const r = await ubah('mitra-a', { ...SAH, namaPemilik: 'Pak MITRA A' });
+    expect(r.status).toBe(200);
+    expect(r.body.rekening).toMatchObject({ bank: 'BNI', label: 'BNI ···7890', terkunci: true });
+    const buka = new Date(r.body.rekening.bisaTarikPada).getTime();
+    expect(Math.abs(buka - (Date.now() + HARI))).toBeLessThan(MENIT);
+    expect(JSON.stringify(r.body)).not.toContain('1234567890');
+    expect((await db.mitra.findUniqueOrThrow({ where: { id: idMitraA } })).nomorRekening).toBe('1234567890');
+
+    const saldo = await minta().get('/mitra/saldo').set(auth('mitra-a'));
+    expect(saldo.body).toMatchObject({ rekening: 'BNI ···7890', bisaTarikPada: r.body.rekening.bisaTarikPada });
+
+    const sebelum = await db.pencairan.count({ where: { mitraId: idMitraA } });
+    const tarik = await minta().post('/mitra/saldo/tarik').set(auth('mitra-a')).send({});
+    expect(tarik.status).toBe(409);
+    expect(await db.pencairan.count({ where: { mitraId: idMitraA } })).toBe(sebelum);
+  });
+
+  it('kirim ulang rekening yang sama tidak memperpanjang kunci', async () => {
+    const lama = (await db.mitra.findUniqueOrThrow({ where: { id: idMitraA } })).rekeningDiubahPada;
+    const r = await ubah('mitra-a', { ...SAH, namaPemilik: 'Pak MITRA A' });
+    expect(r.status).toBe(200);
+    expect((await db.mitra.findUniqueOrThrow({ where: { id: idMitraA } })).rekeningDiubahPada).toEqual(lama);
+  });
+
+  it('setelah 24 jam kunci terbuka (saldo mitra A sudah 0, jadi jawabannya 400 saldo kosong, bukan 409)', async () => {
+    await db.mitra.update({
+      where: { id: idMitraA },
+      data: { rekeningDiubahPada: new Date(Date.now() - HARI - MENIT) },
+    });
+    const tarik = await minta().post('/mitra/saldo/tarik').set(auth('mitra-a')).send({});
+    expect(tarik.status).toBe(400);
+    expect((await minta().get('/mitra/saldo').set(auth('mitra-a'))).body.bisaTarikPada).toBeNull();
+  });
+
+  it('database menolak rekening setengah terisi dan nomor bukan angka', async () => {
+    await expect(db.mitra.update({ where: { id: idMitraA }, data: { bankRekening: null } })).rejects.toThrow();
+    await expect(db.mitra.update({ where: { id: idMitraA }, data: { nomorRekening: '12AB5678' } })).rejects.toThrow();
+  });
 });

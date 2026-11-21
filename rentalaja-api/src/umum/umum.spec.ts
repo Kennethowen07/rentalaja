@@ -1,8 +1,11 @@
 import { biayaLayanan, rincianHarga } from './harga.js';
+import { labelRekening, namaCocok, salahNomor } from './rekening.js';
 import {
   bersihPenyedia,
   dendaBerjalan,
   hariTelat,
+  kembaliAwalDisepakati,
+  sebelumJatuhTempo,
   statusDana,
   statusTurunan,
   waktuPelepasan,
@@ -170,5 +173,41 @@ describe('harga', () => {
     expect(biayaLayanan(1_050)).toBe(32); // 31,5
     expect(biayaLayanan(55_000)).toBe(1_650);
     expect(biayaLayanan(1_016)).toBe(30);
+  });
+});
+
+describe('rekening', () => {
+  it('nama dicocokkan tanpa beda huruf besar, tanda baca, aksen, dan sapaan di depan', () => {
+    expect(namaCocok('WAYAN', 'Pak Wayan')).toBe(true);
+    expect(namaCocok('i made  suardana', 'I Made Suardana')).toBe(true);
+    expect(namaCocok('Rene', 'René')).toBe(true);
+    expect(namaCocok('Wayan S.', 'Wayan')).toBe(false);
+    expect(namaCocok('Pak', 'Pak')).toBe(true); // sapaan saja tidak dibuang habis
+    expect(namaCocok('...', 'Wayan')).toBe(false);
+  });
+
+  it('panjang nomor dijaga untuk bank yang pasti, label hanya 4 digit terakhir', () => {
+    expect(salahNomor('BCA', '0281374471')).toBeNull();
+    expect(salahNomor('BCA', '028137447')).toMatch(/10 digit/);
+    expect(salahNomor('BSI', '12345678')).toBeNull();
+    expect(salahNomor('XYZ', '12345678')).toMatch(/tidak dikenal/);
+    expect(labelRekening('MANDIRI', '1234567890123')).toBe('Mandiri ···0123');
+  });
+});
+
+describe('kembali lebih awal', () => {
+  // Jatuh tempo 30 Okt 09.00 WITA.
+  const p = { selesai: new Date(Date.UTC(2026, 9, 30, 1)), kembaliAwalPenyewaPada: null, kembaliAwalMitraPada: null };
+
+  it('lebih awal = sebelum tengah malam WITA hari jatuh tempo, bukan sebelum jamnya', () => {
+    expect(sebelumJatuhTempo(p, Date.UTC(2026, 9, 29, 15, 59))).toBe(true); // 29 Okt 23.59 WITA
+    expect(sebelumJatuhTempo(p, Date.UTC(2026, 9, 29, 16))).toBe(false); // 30 Okt 00.00 WITA
+  });
+
+  it('disepakati hanya kalau kedua pihak setuju', () => {
+    const t = new Date();
+    expect(kembaliAwalDisepakati(p)).toBe(false);
+    expect(kembaliAwalDisepakati({ ...p, kembaliAwalPenyewaPada: t })).toBe(false);
+    expect(kembaliAwalDisepakati({ ...p, kembaliAwalPenyewaPada: t, kembaliAwalMitraPada: t })).toBe(true);
   });
 });

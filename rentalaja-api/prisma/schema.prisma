@@ -64,8 +64,15 @@ model Mitra {
   pemilik    Pengguna @relation(fields: [pemilikId], references: [id])
   nama       String
   area       String
-  /// Tujuan tarik saldo, mis. "BCA ···4471". Kosong = belum bisa menarik.
-  rekening   String?
+  /// Rekening tujuan tarik saldo. Keempat kolom terisi bersamaan atau
+  /// kosong bersamaan (CHECK di migration.sql). Kosong = belum bisa menarik.
+  /// Nomor lengkap hanya ada di database; API selalu mengirimnya tersamar.
+  /// Atas nama pemilik akun (dijaga service), dan tarik saldo dikunci 24 jam
+  /// setelah rekening diubah, seperti aplikasi saham dan kripto.
+  bankRekening       String?   @map("bank_rekening")
+  nomorRekening      String?   @map("nomor_rekening")
+  namaRekening       String?   @map("nama_rekening")
+  rekeningDiubahPada DateTime? @map("rekening_diubah_pada") @db.Timestamptz(3)
   dibuatPada DateTime @default(now()) @map("dibuat_pada") @db.Timestamptz(3)
 
   unit      Unit[]
@@ -235,6 +242,11 @@ model Pesanan {
   dibatalkanPada DateTime? @map("dibatalkan_pada") @db.Timestamptz(3)
   /// Unit tercatat kembali. Dasar hitungan pelepasan dana 1x24 jam.
   kembaliPada    DateTime? @map("kembali_pada") @db.Timestamptz(3)
+  /// Persetujuan pengembalian lebih awal (sebelum hari jatuh tempo, WITA).
+  /// Unit baru boleh dicatat kembali lebih awal kalau KEDUANYA terisi;
+  /// dijaga trigger pesanan_kembali_awal di migration.sql.
+  kembaliAwalPenyewaPada DateTime? @map("kembali_awal_penyewa_pada") @db.Timestamptz(3)
+  kembaliAwalMitraPada   DateTime? @map("kembali_awal_mitra_pada") @db.Timestamptz(3)
 
   pembayaran  Pembayaran?
   dokumen     DokumenPenyewa[]

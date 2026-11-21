@@ -8,9 +8,14 @@ import {
 import type { Prisma } from '../generated/prisma/client.js';
 import type { JenisSerah, SisiFoto } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { PenggunaToken } from '../auth/penjaga.js';
+import { pesananBerkode } from '../pesanan/akses-pesanan.js';
 import {
   dendaBerjalan,
   hariTelat,
+  infoKembaliAwal,
+  kembaliAwalDisepakati,
+  sebelumJatuhTempo,
   statusDana,
   statusTurunan,
   waktuPelepasan,
@@ -158,7 +163,9 @@ export class SerahTerimaService {
       if (awalHariWita(p.mulai.getTime()) === hariIni || !lengkap(antar)) {
         baris.push(this.bentukBaris(p, 'ANTAR', sekarang));
       }
-      if (awalHariWita(p.selesai.getTime()) <= hariIni || ambil) {
+      // Kembali lebih awal yang sudah disepakati kedua pihak langsung
+      // muncul sebagai jadwal ambil, tanpa menunggu hari jatuh tempo.
+      if (awalHariWita(p.selesai.getTime()) <= hariIni || ambil || kembaliAwalDisepakati(p)) {
         baris.push(this.bentukBaris(p, 'AMBIL', sekarang));
       }
       return baris;
@@ -270,6 +277,14 @@ export class SerahTerimaService {
       if (jenis === 'AMBIL' && !lengkap(antar)) {
         throw new ConflictException(
           'Lengkapi catatan antar (empat foto dan kondisi) sebelum mencatat unit kembali.',
+        );
+      }
+      // Kembali sebelum hari jatuh tempo hanya kalau penyewa dan mitra sudah
+      // sama-sama setuju (POST /pesanan/:kode/kembali-awal). Trigger
+      // pesanan_kembali_awal menjaga hal yang sama di database.
+      if (jenis === 'AMBIL' && sebelumJatuhTempo(p, Date.now()) && !kembaliAwalDisepakati(p)) {
+        throw new ConflictException(
+          'Unit belum jatuh tempo. Pengembalian lebih awal butuh persetujuan penyewa dan mitra dulu.',
         );
       }
       if (lengkap(lama)) {
@@ -414,6 +429,74 @@ export class SerahTerimaService {
       /** Denda telat yang dicatat, tidak ditagih. Null kalau tidak telat. */
       denda,
       kembaliPada: p.kembaliPada,
+      /** Persetujuan kembali lebih awal, hanya di baris ambil. */
+      kembaliAwal: jenis === 'AMBIL' ? infoKembaliAwal(p) : null,
     };
+  }
+
+  /**
+   * Penyewa atau mitra menyatakan setuju unit dikembalikan sebelum hari jatuh
+   * tempo. Masing-masing pihak mengisi kolomnya sendiri; begitu keduanya
+   * terisi, mitra boleh mencatat ambil. Kirim ulang tidak mengubah waktu
+   * persetujuan pertama (idempoten).
+   *
+   * Syarat: pesanan berjalan, unit sudah tercatat diserahkan (antar lengkap),
+   * dan belum hari jatuh tempo. Di hari jatuh tempo unit langsung bisa
+   * dicatat kembali tanpa persetujuan.
+   */
+  async setujuKembaliAwal(pengguna: PenggunaToken, kode: string) {
+    const kolom = pengguna.peran === 'MITRA' ? 'kembaliAwalMitraPada' : 'kembaliAwalPenyewaPada';
+    const id = await this.idPesanan(pengguna, kode);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM "pesanan" WHERE "id" = ${id} FOR UPDATE`;
+      const p = await tx.pesanan.findUniqueOrThrow({
+        where: { id },
+        include: { serahTerima: { include: { foto: true } } },
+      });
+      if (p.status !== 'BERJALAN') {
+        throw new ConflictException('Pengembalian lebih awal hanya untuk pesanan yang sedang berjalan.');
+      }
+      if (!sebelumJatuhTempo(p, Date.now())) {
+        throw new ConflictException('Hari ini sudah hari jatuh tempo. Unit bisa langsung dicatat kembali.');
+      }
+      if (!lengkap(p.serahTerima.find((c) => c.jenis === 'ANTAR'))) {
+        throw new ConflictException('Unit belum tercatat diserahkan ke penyewa.');
+      }
+      if (p[kolom] === null) await tx.pesanan.update({ where: { id }, data: { [kolom]: new Date() } });
+    });
+    return this.keadaanKembaliAwal(id);
+  }
+
+  /**
+   * Tarik persetujuan. Hanya selama mitra belum mulai mencatat ambil: setelah
+   * itu kondisi dan foto pengembalian sudah disaksikan kedua pihak.
+   */
+  async batalKembaliAwal(pengguna: PenggunaToken, kode: string) {
+    const kolom = pengguna.peran === 'MITRA' ? 'kembaliAwalMitraPada' : 'kembaliAwalPenyewaPada';
+    const id = await this.idPesanan(pengguna, kode);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM "pesanan" WHERE "id" = ${id} FOR UPDATE`;
+      const p = await tx.pesanan.findUniqueOrThrow({ where: { id }, include: { serahTerima: true } });
+      if (p.status !== 'BERJALAN') {
+        throw new ConflictException('Pesanan sudah tidak berjalan; persetujuan tidak bisa ditarik.');
+      }
+      if (p.serahTerima.some((c) => c.jenis === 'AMBIL')) {
+        throw new ConflictException('Pencatatan unit kembali sudah dimulai; persetujuan tidak bisa ditarik.');
+      }
+      if (p[kolom] !== null) await tx.pesanan.update({ where: { id }, data: { [kolom]: null } });
+    });
+    return this.keadaanKembaliAwal(id);
+  }
+
+  /** id pesanan berkode `kode` yang boleh disentuh pengguna ini, atau 404. */
+  private async idPesanan(pengguna: PenggunaToken, kode: string): Promise<string> {
+    const p = await this.prisma.pesanan.findFirst({ where: pesananBerkode(pengguna, kode), select: { id: true } });
+    if (!p) throw new NotFoundException(`Pesanan ${kode} tidak ditemukan.`);
+    return p.id;
+  }
+
+  private async keadaanKembaliAwal(id: string) {
+    const p = await this.prisma.pesanan.findUniqueOrThrow({ where: { id } });
+    return { kode: p.kode, selesai: p.selesai, kembaliAwal: infoKembaliAwal(p) };
   }
 }

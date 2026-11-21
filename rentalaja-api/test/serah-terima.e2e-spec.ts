@@ -61,6 +61,8 @@ const jadwal = (siapa: string, tab?: string) =>
   minta()
     .get(`/mitra/serah-terima${tab ? `?tab=${tab}` : ''}`)
     .set(auth(siapa));
+const setujuAwal = (siapa: string, kode: string) =>
+  minta().post(`/pesanan/${kode}/kembali-awal`).set(auth(siapa));
 const selesaikan = (siapa: string | null, kode: string) => {
   const r = minta().post(`/mitra/klaim/${kode}/selesai`);
   return siapa ? r.set(auth(siapa)) : r;
@@ -505,6 +507,61 @@ describe('Mencatat serah terima', () => {
   });
 
   describe('unit kembali lebih awal (RA-AWAL)', () => {
+    it('sebelum jatuh tempo, ambil ditolak sampai penyewa DAN mitra setuju', async () => {
+      const tolak = await put('mitra-a', 'RA-AWAL', 'ambil', { kondisi: KONDISI });
+      expect(tolak.status).toBe(409);
+      expect(await db.serahTerima.count({ where: { pesanan: { kode: 'RA-AWAL' }, jenis: 'AMBIL' } })).toBe(0);
+
+      // Penyewa setuju dulu: belum cukup.
+      const penyewa = await setujuAwal('penyewa-1', 'RA-AWAL');
+      expect(penyewa.status).toBe(200);
+      expect(penyewa.body.kembaliAwal).toMatchObject({ mitraSetujuPada: null, disepakati: false });
+      expect(penyewa.body.kembaliAwal.penyewaSetujuPada).not.toBeNull();
+      expect((await put('mitra-a', 'RA-AWAL', 'ambil', { kondisi: KONDISI })).status).toBe(409);
+
+      // Kirim ulang tidak menggeser waktu persetujuan pertama.
+      const ulang = await setujuAwal('penyewa-1', 'RA-AWAL');
+      expect(ulang.body.kembaliAwal.penyewaSetujuPada).toBe(penyewa.body.kembaliAwal.penyewaSetujuPada);
+
+      // Persetujuan bisa ditarik selama ambil belum mulai dicatat, lalu diberikan lagi.
+      const tarik = await minta().delete('/pesanan/RA-AWAL/kembali-awal').set(auth('penyewa-1'));
+      expect(tarik.status).toBe(200);
+      expect(tarik.body.kembaliAwal.penyewaSetujuPada).toBeNull();
+      expect((await setujuAwal('penyewa-1', 'RA-AWAL')).status).toBe(200);
+
+      const mitra = await setujuAwal('mitra-a', 'RA-AWAL');
+      expect(mitra.status).toBe(200);
+      expect(mitra.body.kembaliAwal.disepakati).toBe(true);
+
+      // Sudah disepakati: jadwal ambil langsung muncul hari ini, dan detail
+      // pesanan menunjukkannya ke kedua pihak.
+      const tab = await jadwal('mitra-a');
+      const baris = cari(tab.body.daftar, 'RA-AWAL-ambil') as Baris & { kembaliAwal: { disepakati: boolean } };
+      expect(baris?.kembaliAwal.disepakati).toBe(true);
+      const detail = await minta().get('/pesanan/RA-AWAL').set(auth('penyewa-1'));
+      expect(detail.body.kembaliAwal.disepakati).toBe(true);
+    });
+
+    it('aturan persetujuan: 401 tanpa login, 404 pesanan orang lain, 409 kalau tidak berjalan atau belum diserahkan', async () => {
+      expect((await minta().post('/pesanan/RA-AWAL/kembali-awal')).status).toBe(401);
+      expect((await setujuAwal('mitra-b', 'RA-AWAL')).status).toBe(404);
+      expect((await setujuAwal('mitra-a', 'RA-B')).status).toBe(404);
+      expect((await setujuAwal('mitra-a', 'RA-TIDAK-ADA')).status).toBe(404);
+      // Menunggu, dan berjalan tapi unit belum diserahkan (mulai besok).
+      expect((await setujuAwal('mitra-a', 'RA-MENUNGGU')).status).toBe(409);
+      expect((await setujuAwal('mitra-a', 'RA-NANTI')).status).toBe(409);
+      // Sudah selesai.
+      expect((await setujuAwal('penyewa-1', 'RA-TELAT')).status).toBe(409);
+    });
+
+    it('database menolak pesanan selesai lebih awal tanpa persetujuan (trigger pesanan_kembali_awal)', async () => {
+      // RA-B jatuh tempo besok dan belum ada persetujuan.
+      await expect(
+        db.pesanan.update({ where: { kode: 'RA-B' }, data: { status: 'SELESAI', kembaliPada: new Date() } }),
+      ).rejects.toThrow();
+      expect((await db.pesanan.findUniqueOrThrow({ where: { kode: 'RA-B' } })).status).toBe('BERJALAN');
+    });
+
     it('ambil setengah jadi dengan klaim: muncul di menunggu-foto walau belum jatuh tempo', async () => {
       const r = await put('mitra-a', 'RA-AWAL', 'ambil', {
         kondisi: KONDISI,
@@ -519,6 +576,16 @@ describe('Mencatat serah terima', () => {
       const tab = await jadwal('mitra-a', 'menunggu-foto');
       expect(idDari(tab.body.daftar)).toEqual(['RA-AWAL-ambil']);
       expect((await db.pesanan.findUniqueOrThrow({ where: { kode: 'RA-AWAL' } })).status).toBe('BERJALAN');
+    });
+
+    it('persetujuan tidak bisa ditarik setelah ambil mulai dicatat (409)', async () => {
+      for (const siapa of ['penyewa-1', 'mitra-a']) {
+        const r = await minta().delete('/pesanan/RA-AWAL/kembali-awal').set(auth(siapa));
+        expect(r.status, siapa).toBe(409);
+      }
+      const p = await db.pesanan.findUniqueOrThrow({ where: { kode: 'RA-AWAL' } });
+      expect(p.kembaliAwalPenyewaPada).not.toBeNull();
+      expect(p.kembaliAwalMitraPada).not.toBeNull();
     });
 
     it('klaim belum bisa diselesaikan selama pesanan berjalan (409)', async () => {
@@ -552,6 +619,9 @@ describe('Mencatat serah terima', () => {
   });
 
   it('dua PUT ambil bersamaan untuk pesanan yang sama: keduanya 200, pesanan diselesaikan sekali', async () => {
+    // RA-ANTAR jatuh tempo lusa, jadi kedua pihak harus setuju dulu.
+    expect((await setujuAwal('penyewa-1', 'RA-ANTAR')).status).toBe(200);
+    expect((await setujuAwal('mitra-a', 'RA-ANTAR')).status).toBe(200);
     const body = { kondisi: KONDISI, foto: FOTO };
     const hasil = await Promise.all([
       put('mitra-a', 'RA-ANTAR', 'ambil', body),

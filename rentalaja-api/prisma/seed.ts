@@ -125,7 +125,16 @@ const PENYEWA_DEMO = 'Adi Prasetyo';
 /** Penyewa WNA dan kewarganegaraannya. Selain ini semuanya WNI. */
 const WNA: Record<string, string> = { 'Sarah Miller': 'Australia' };
 
-const REKENING_BMR = 'BCA ···4471';
+/** Rekening Bali Motor Rent. Nomornya fiktif; yang tampil di API hanya
+ *  'BCA ···4471'. Atas nama Wayan (nama akun 'Pak Wayan', sapaan dibuang),
+ *  dan diubah lama sekali supaya kunci tarik 24 jam sudah lewat. */
+const REKENING_BMR = {
+  bankRekening: 'BCA',
+  nomorRekening: '0281374471',
+  namaRekening: 'WAYAN',
+  rekeningDiubahPada: new Date(sekarang - 90 * HARI),
+};
+const LABEL_REKENING_BMR = 'BCA ···4471';
 
 type UnitSeed = {
   slug: string;
@@ -415,7 +424,7 @@ async function main() {
         },
       });
       const bmr = await tx.mitra.create({
-        data: { pemilikId: pakWayan.id, nama: 'Bali Motor Rent', area: 'Canggu, Badung', rekening: REKENING_BMR },
+        data: { pemilikId: pakWayan.id, nama: 'Bali Motor Rent', area: 'Canggu, Badung', ...REKENING_BMR },
       });
 
       const idUnit = new Map<string, string>();
@@ -615,7 +624,7 @@ async function main() {
       }
 
       await tx.pencairan.create({
-        data: { mitraId: bmr.id, rekening: REKENING_BMR, ...PENCAIRAN_LAMA },
+        data: { mitraId: bmr.id, rekening: LABEL_REKENING_BMR, ...PENCAIRAN_LAMA },
       });
     },
     { timeout: 60_000 },

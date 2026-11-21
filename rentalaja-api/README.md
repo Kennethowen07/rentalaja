@@ -98,7 +98,9 @@ dijawab 403, tanpa token 401.
 | `POST /mitra/klaim/:kode/selesai` | mitra | tandai klaim kerusakan selesai; dana lalu dilepas sesuai jadwalnya |
 | `GET /mitra/ulasan`, `POST /mitra/ulasan/:id/balas` | mitra | ulasan unit sendiri + rata-rata; balasan `{balasan}` boleh ditimpa |
 | `GET /mitra/pendapatan?periode=bulan-ini\|bulan-lalu\|tiga-bulan` | mitra | dana dilepas, komisi, transaksi per periode |
-| `GET /mitra/saldo`, `POST /mitra/saldo/tarik` | mitra | saldo turunan + rekening; tarik `{jumlah?}` (kosong = seluruh saldo); 400 kalau saldo kurang atau rekening belum diisi |
+| `GET /mitra/saldo`, `POST /mitra/saldo/tarik` | mitra | saldo turunan + label rekening + `bisaTarikPada`; tarik `{jumlah?}` (kosong = seluruh saldo); 400 kalau saldo kurang atau rekening belum diisi, 409 dalam 24 jam setelah rekening diubah |
+| `GET /mitra/rekening`, `PUT /mitra/rekening` | mitra | rekening tersamar; isi/ganti `{bank, nomor, namaPemilik, kataSandi}`; 403 kata sandi salah, 400 nama tidak sama dengan nama akun |
+| `POST /pesanan/:kode/kembali-awal`, `DELETE ...` | penyewa atau mitra | setuju (atau tarik persetujuan) unit kembali sebelum jatuh tempo; ambil lebih awal baru bisa kalau dua-duanya setuju |
 
 Kode atau id di URL yang berisi karakter NUL (`%00`) dijawab 400 oleh filter
 global `src/prisma/filter-kesalahan-db.ts`, bukan 500.
@@ -136,9 +138,24 @@ diturunkan dari status pesanan, tidak disimpan.
   sungguhan, dan mitra hanya melihat jenis dokumennya.
 - **Saldo tidak disimpan.** Saldo = dana bersih yang sudah dilepas dikurangi
   semua pencairan. Tarik saldo mengunci baris mitra (`FOR UPDATE`) supaya
-  dua tarikan bersamaan tidak bisa melebihi saldo. Rekening tujuan
-  (`Mitra.rekening`) belum punya endpoint untuk diubah; di data contoh diisi
-  seed (`BCA ···4471`).
+  dua tarikan bersamaan tidak bisa melebihi saldo.
+- **Rekening ala aplikasi saham dan kripto.** Bank dipilih dari daftar
+  (`src/umum/rekening.ts`), panjang nomor dicek untuk BCA, BNI, BRI, dan
+  Mandiri. Rekening harus atas nama pemilik akun (huruf besar, tanda baca,
+  dan sapaan seperti "Pak" diabaikan). Mengisi atau mengganti rekening wajib
+  kata sandi, dan tarik saldo dikunci 24 jam setelahnya. Nomor lengkap hanya
+  ada di database; API mengirim `BCA ···4471`. **Masih simulasi:** aplikasi
+  sungguhan mengambil nama pemilik dari bank (inquiry rekening lewat
+  penyedia pembayaran); di sini nama yang diketik dicocokkan dengan nama
+  akun. Belum ada notifikasi email saat rekening diubah dan belum ada batas
+  percobaan kata sandi.
+- **Pengembalian lebih awal boleh kalau dua pihak setuju.** Sebelum hari
+  jatuh tempo (WITA), mitra baru bisa mencatat ambil setelah penyewa dan
+  mitra sama-sama memanggil `POST /pesanan/:kode/kembali-awal`. Persetujuan
+  bisa ditarik selama ambil belum mulai dicatat. Database menjaga aturan
+  yang sama (trigger `pesanan_kembali_awal`). Begitu pesanan SELESAI,
+  sisa harinya otomatis kosong lagi di kalender dan pencarian. Sisa hari
+  sewa **tidak** dikembalikan ke penyewa.
 
 ## Hal yang perlu diketahui
 
