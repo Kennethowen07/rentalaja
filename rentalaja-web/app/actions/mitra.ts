@@ -88,3 +88,19 @@ export async function simpanSerahTerima(kode: string, jenis: string, isian: Isia
   if (isian?.klaim) body.klaim = { nominal: Number(isian.klaim.nominal), keterangan: String(isian.klaim.keterangan ?? "") };
   return jalankan(`/mitra/serah-terima/${encodeURIComponent(kode)}/${jenis}`, body, "PUT");
 }
+
+const TANGGAL = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Blokir unit dari tanggal `mulai` sampai `selesai` (WITA, keduanya ikut).
+ *  Bentrok dengan pesanan ditolak API (409). */
+export async function blokirTanggal(unitId: string, mulai: string, selesai: string): Promise<HasilAksi> {
+  if (typeof unitId !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(unitId)) return { ok: false, pesan: "Unit tidak sah." };
+  if (!TANGGAL.test(String(mulai)) || !TANGGAL.test(String(selesai))) return { ok: false, pesan: "Tanggal tidak sah." };
+  return jalankan("/mitra/kalender/blokir", { unitId, mulai, selesai });
+}
+
+/** Buka satu blokir manual (seluruh rentangnya). */
+export async function bukaBlokir(id: string): Promise<HasilAksi> {
+  if (typeof id !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return { ok: false, pesan: "Blokir tidak sah." };
+  return jalankan(`/mitra/kalender/blokir/${encodeURIComponent(id)}`, undefined, "DELETE");
+}

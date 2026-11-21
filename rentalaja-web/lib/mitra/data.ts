@@ -29,6 +29,7 @@ import type {
 import { apiAktif } from "@/lib/api/klien";
 import {
   berandaMitra,
+  blokirKalenderMitra,
   dompetMitra,
   pendapatanMitra,
   pesananMitra,
@@ -447,6 +448,13 @@ export async function ambilJadwalSerah(): Promise<JadwalSerah[] | null> {
   if (!apiAktif()) return null;
   const sesi = await sesiMitra();
   return sesi ? serahTerimaMitra(sesi.token) : [];
+}
+
+/** Blokir manual kalender dari API. null di mode mock (blokir hidup di state). */
+export async function ambilBlokirKalender(): Promise<{ kunci: string; id: string }[] | null> {
+  if (!apiAktif()) return null;
+  const sesi = await sesiMitra();
+  return sesi ? blokirKalenderMitra(sesi.token) : [];
 }
 
 export async function ambilPendapatan(bahasa: Bahasa = "id"): Promise<Periode[]> {

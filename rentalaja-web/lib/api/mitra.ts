@@ -377,3 +377,30 @@ export async function serahTerimaMitra(token: string): Promise<JadwalSerah[]> {
     ...(b.klaim ? { klaim: { nominal: b.klaim.nominal, keterangan: b.klaim.keterangan } } : {}),
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Kalender: blokir manual
+
+type KalenderApi = {
+  unit: { id: string; sel: { tanggal: string; keadaan: string; blokirId: string | null }[] }[];
+};
+
+/** Blokir manual di sekitar hari ini (2 minggu ke belakang sampai ~11 minggu
+ *  ke depan), sebagai kunci "unitId|2026-11-21" -> id blokir. Sel pesanan dan
+ *  servis tidak perlu: panel menurunkannya dari pesanan dan unit. */
+export async function blokirKalenderMitra(token: string): Promise<{ kunci: string; id: string }[]> {
+  // API membatasi 31 hari per permintaan, jadi diambil tiga potong 30 hari.
+  const HARI_MS = 24 * 60 * 60 * 1000;
+  const awal = Date.now() - 14 * HARI_MS + 8 * 60 * 60 * 1000; // tanggal WITA
+  const potongan = await Promise.all(
+    [0, 30, 60].map((geser) => {
+      const mulai = new Date(awal + geser * HARI_MS).toISOString().slice(0, 10);
+      return ambilApi<KalenderApi>(`/mitra/kalender?mulai=${mulai}&hari=30`, { token });
+    }),
+  );
+  return potongan.flatMap((r) => r.unit).flatMap((u) =>
+    u.sel
+      .filter((s) => s.keadaan === "diblokir" && s.blokirId)
+      .map((s) => ({ kunci: `${u.id}|${s.tanggal}`, id: s.blokirId! })),
+  );
+}

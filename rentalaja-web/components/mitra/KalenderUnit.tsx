@@ -12,7 +12,9 @@
 // Jadi menerima pesanan di layar Pesanan langsung mengubah warna kalender,
 // tanpa ada data kedua yang harus disinkronkan.
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { blokirTanggal, bukaBlokir } from "@/app/actions/mitra";
 import Modal from "@/components/ui/Modal";
 import { useBahasa } from "@/components/BahasaProvider";
 import { kamus, type Bahasa } from "@/lib/i18n";
@@ -186,12 +188,42 @@ function isiSel(
   return { keadaan: "kosong", keterangan: t.kosong };
 }
 
-export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekarang: number }) {
+export default function KalenderUnit({
+  unit,
+  sekarang,
+  blokirApi = null,
+}: {
+  unit: Unit[];
+  sekarang: number;
+  /** Mode API: blokir manual dari server ("unitId|tanggal" -> id blokir).
+   *  Tanpa ini blokir hanya hidup di state (prototype). */
+  blokirApi?: { kunci: string; id: string }[] | null;
+}) {
   const { pesanan } = usePesanan();
   const { bahasa } = useBahasa();
   const t = TEKS[bahasa];
+  const router = useRouter();
   const [minggu, setMinggu] = useState(0);
-  const [blokir, setBlokir] = useState<Set<string>>(new Set());
+  const [blokir, setBlokir] = useState<Set<string>>(() => new Set(blokirApi?.map((b) => b.kunci)));
+  // Data baru dari server menggantikan perubahan lokal.
+  useEffect(() => {
+    if (blokirApi) setBlokir(new Set(blokirApi.map((b) => b.kunci)));
+  }, [blokirApi]);
+
+  /** Mode API: kirim, muat ulang dari server; kalau ditolak (mis. tanggalnya
+   *  sudah dipesan), kalender dikembalikan dan alasannya ditampilkan. */
+  function kirim(aksi: () => Promise<{ ok: true } | { ok: false; pesan: string }>, sebelum: Set<string>) {
+    void aksi()
+      .catch(() => ({
+        ok: false as const,
+        pesan: bahasa === "en" ? "The server can't be reached right now." : "Server sedang tidak bisa dihubungi.",
+      }))
+      .then((h) => {
+        if (h.ok) return router.refresh();
+        setBlokir(sebelum);
+        window.alert(h.pesan);
+      });
+  }
   const [formBlokir, setFormBlokir] = useState(false);
   const [kabar, setKabar] = useState("");
 
@@ -200,6 +232,16 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
 
   function ubahBlokir(u: Unit, tanggal: number, jadiBlokir: boolean) {
     const kunci = `${u.id}|${kunciTanggal(tanggal)}`;
+    if (blokirApi) {
+      if (jadiBlokir) {
+        kirim(() => blokirTanggal(u.id, kunciTanggal(tanggal), kunciTanggal(tanggal)), blokir);
+      } else {
+        // Satu blokir bisa beberapa hari; membuka satu sel membuka seluruh
+        // rentangnya, karena API menyimpan blokir sebagai satu rentang.
+        const id = blokirApi.find((b) => b.kunci === kunci)?.id;
+        if (id) kirim(() => bukaBlokir(id), blokir);
+      }
+    }
     setBlokir((lama) => {
       const baru = new Set(lama);
       if (jadiBlokir) baru.add(kunci);
@@ -348,6 +390,7 @@ export default function KalenderUnit({ unit, sekarang }: { unit: Unit[]; sekaran
             for (let t = awalHari(mulai); t <= awalHari(selesai); t += HARI) {
               kunci.push(`${u.id}|${kunciTanggal(t)}`);
             }
+            if (blokirApi) kirim(() => blokirTanggal(u.id, kunciTanggal(mulai), kunciTanggal(selesai)), blokir);
             setBlokir((lama) => new Set([...lama, ...kunci]));
             setKabar(t.diblokirBanyak(kunci.length, `${u.nama} ${u.plat}`, tanggalSingkat(mulai, bahasa)));
             setFormBlokir(false);

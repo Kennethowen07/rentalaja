@@ -4,10 +4,10 @@
 
 import KalenderUnit from "@/components/mitra/KalenderUnit";
 import { bahasaAktif } from "@/lib/i18n-server";
-import { ambilUnit, ambilWaktuServer } from "@/lib/mitra/data";
+import { ambilBlokirKalender, ambilUnit, ambilWaktuServer } from "@/lib/mitra/data";
 
 export default async function KalenderMitra() {
   const bahasa = await bahasaAktif();
-  const [unit, sekarang] = await Promise.all([ambilUnit(bahasa), ambilWaktuServer()]);
-  return <KalenderUnit unit={unit} sekarang={sekarang} />;
+  const [unit, sekarang, blokir] = await Promise.all([ambilUnit(bahasa), ambilWaktuServer(), ambilBlokirKalender()]);
+  return <KalenderUnit unit={unit} sekarang={sekarang} blokirApi={blokir} />;
 }
