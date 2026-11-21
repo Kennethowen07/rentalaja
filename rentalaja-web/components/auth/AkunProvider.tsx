@@ -1,14 +1,29 @@
 "use client";
 
 // Status masuk yang dipakai bersama: navbar, tombol "Hubungi penyedia", dan
-// halaman /chat. Dulu akun hanya hidup di state Navbar, sehingga komponen
-// lain tidak bisa tahu penyewa sudah masuk atau belum.
+// halaman /chat.
 //
-// Masih simulasi (lihat AuthModal): yang disimpan hanya nama akun demo, di
-// localStorage supaya tidak hilang saat pindah halaman. Bukan sesi sungguhan
-// dan tidak pernah dikirim ke mana pun.
+// Dua mode, dipilih layout dari env server:
+//
+//   nyata  API_URL diisi. Masuk lewat rentalaja-api (app/actions/akun.ts);
+//          token disimpan di cookie httpOnly, jadi tidak pernah terlihat di
+//          sini. Saat halaman dimuat, sesinya dibaca lewat sesiSaya(). Belum
+//          ada pendaftaran: hanya akun demo dari seed yang bisa masuk.
+//   simulasi  Tanpa API (mis. deploy Vercel sebelum backend online). Yang
+//          disimpan hanya nama akun demo di localStorage. Bukan sesi
+//          sungguhan dan tidak pernah dikirim ke mana pun.
 
-import { createContext, useCallback, useContext, useRef, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { keluar as keluarSesi, sesiSaya, type Akun } from "@/app/actions/akun";
 import AuthModal, { type ModeAuth } from "@/components/auth/AuthModal";
 
 const KUNCI = "rentalaja-akun-demo";
@@ -46,7 +61,10 @@ function langganan(p: () => void) {
 }
 
 type NilaiAkun = {
+  /** Nama yang ditampilkan, atau null kalau belum masuk. */
   akun: string | null;
+  /** Hanya di mode nyata; null di mode simulasi atau belum masuk. */
+  peran: Akun["peran"] | null;
   keluar: () => void;
   /** Buka modal masuk. `lanjut` dijalankan setelah berhasil masuk, mis.
    *  membuka chat yang tadi diklik sebelum login. */
@@ -61,33 +79,76 @@ export function useAkun(): NilaiAkun {
   return nilai;
 }
 
-export default function AkunProvider({ children }: { children: React.ReactNode }) {
-  // Server selalu merender keadaan belum masuk, lalu klien membaca
-  // localStorage tanpa hydration mismatch.
-  const akun = useSyncExternalStore(langganan, baca, () => null);
+export default function AkunProvider({
+  children,
+  nyata,
+  adaDemo,
+}: {
+  children: React.ReactNode;
+  /** true kalau API_URL diisi: login sungguhan. */
+  nyata: boolean;
+  /** true kalau server punya kata sandi akun demo (tombol masuk sekali klik). */
+  adaDemo: boolean;
+}) {
+  const router = useRouter();
+  // Mode simulasi: server selalu merender keadaan belum masuk, lalu klien
+  // membaca localStorage tanpa hydration mismatch.
+  const akunSimulasi = useSyncExternalStore(langganan, baca, () => null);
+  // Mode nyata: dibaca dari server setelah halaman dimuat. Cookie sengaja
+  // tidak dibaca di layout, karena itu membuat semua halaman jadi dinamis.
+  const [akunNyata, setAkunNyata] = useState<Akun | null>(null);
   const [modeAuth, setModeAuth] = useState<ModeAuth | null>(null);
   const lanjutRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!nyata) return;
+    let batal = false;
+    sesiSaya()
+      .then((a) => {
+        if (!batal) setAkunNyata(a);
+      })
+      .catch(() => {});
+    return () => {
+      batal = true;
+    };
+  }, [nyata]);
 
   const mintaMasuk = useCallback((mode: ModeAuth = "masuk", lanjut?: () => void) => {
     lanjutRef.current = lanjut ?? null;
     setModeAuth(mode);
   }, []);
 
-  const keluar = useCallback(() => tulis(null), []);
+  const keluar = useCallback(() => {
+    if (!nyata) return tulis(null);
+    setAkunNyata(null);
+    // Halaman yang datanya bergantung pada sesi (pesanan, panel mitra) ikut
+    // dimuat ulang dari server.
+    keluarSesi().then(() => router.refresh());
+  }, [nyata, router]);
+
+  const nilai: NilaiAkun = nyata
+    ? { akun: akunNyata?.nama ?? null, peran: akunNyata?.peran ?? null, keluar, mintaMasuk }
+    : { akun: akunSimulasi, peran: null, keluar, mintaMasuk };
 
   return (
-    <KonteksAkun.Provider value={{ akun, keluar, mintaMasuk }}>
+    <KonteksAkun.Provider value={nilai}>
       {children}
       {modeAuth && (
         <AuthModal
           mode={modeAuth}
+          nyata={nyata}
+          adaDemo={adaDemo}
           onTutup={() => {
             lanjutRef.current = null;
             setModeAuth(null);
           }}
           onGantiMode={setModeAuth}
-          onBerhasil={(identitas) => {
-            tulis(identitas);
+          onBerhasil={(hasil) => {
+            if (typeof hasil === "string") tulis(hasil);
+            else {
+              setAkunNyata(hasil);
+              router.refresh();
+            }
             setModeAuth(null);
             const lanjut = lanjutRef.current;
             lanjutRef.current = null;

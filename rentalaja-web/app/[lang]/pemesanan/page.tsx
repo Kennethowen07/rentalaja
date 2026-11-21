@@ -20,7 +20,8 @@ import BookingForm, { type PeriodeSewa } from "@/components/pemesanan/BookingFor
 import { desimal, jalur, kamus, lokal, type Bahasa } from "@/lib/i18n";
 import { bahasaAktif } from "@/lib/i18n-server";
 import { pesanan, type RingkasanPesanan } from "@/lib/mock/pemesanan";
-import { detailUnit, type DetailUnit } from "@/lib/mock/unit-detail";
+import { ambilDetailUnit } from "@/lib/api/unit";
+import type { DetailUnit } from "@/lib/mock/unit-detail";
 import { formatRupiah } from "@/lib/mock/units";
 import { sewaDariParams, tanggalKembali, type Sewa } from "@/lib/sewa";
 
@@ -103,7 +104,7 @@ export default async function PemesananPage({
   const bahasa = await bahasaAktif();
   const sewa = sewaDariParams(params, Date.now());
   const slug = typeof params.unit === "string" ? params.unit : "";
-  const detail = slug ? detailUnit(slug, sewa, bahasa) : null;
+  const detail = slug ? await ambilDetailUnit(slug, sewa, bahasa) : null;
   // WNI atau wisatawan asing, dipilih di pop-up pertama halaman ini.
   const asal = params.asal === "wni" || params.asal === "wna" ? params.asal : null;
   // Halaman wisatawan asing selalu berbahasa Inggris.

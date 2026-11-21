@@ -157,9 +157,10 @@ const slugDari = (...bagian: string[]) =>
 
 type BarisUnit = [nama: string, plat: string, berkasFoto: string, spesifikasi: string, harga: number, tahun: number, slugTetap?: string];
 
-/** 18 unit Bali Motor Rent, sama dengan semuaUnit() di data mitra. Dua yang
- *  pertama juga tampil di hasil pencarian penyewa, jadi memakai slug yang
- *  sama dengan frontend; sisanya diberi plat di slug supaya unik. */
+/** 18 unit Bali Motor Rent, sama dengan semuaUnit() di data mitra. Scoopy,
+ *  NMAX, dan Avanza pertama juga ditautkan frontend (kartu "Unit populer" di
+ *  beranda), jadi memakai slug yang sama dengan frontend; sisanya diberi plat
+ *  di slug supaya unik. */
 const BARIS_BMR: BarisUnit[] = [
   ['Honda Scoopy 2023', 'DK 4821 XY', 'honda-scoopy-2023', 'matic 110cc · 2 helm', 70_000, 2023, 'honda-scoopy-2023'],
   ['Yamaha NMAX 155', 'DK 1902 CD', 'yamaha-nmax-2022', 'matic 155cc · 2 helm', 110_000, 2022, 'yamaha-nmax-2022'],
@@ -167,7 +168,7 @@ const BARIS_BMR: BarisUnit[] = [
   ['Honda Beat 2022', 'DK 7734 EF', 'honda-beat-2022', 'matic 110cc · 1 helm', 65_000, 2022],
   ['Vespa Sprint 2021', 'DK 2251 MN', 'vespa-sprint-2021', 'matic 150cc · 2 helm', 150_000, 2021],
   ['Yamaha Fino 2021', 'DK 6043 PQ', 'yamaha-fino-2021', 'matic 125cc · 2 helm', 75_000, 2021],
-  ['Toyota Avanza 2021', 'DK 8890 GH', 'toyota-avanza-2021', 'MPV 7 kursi · bensin', 285_000, 2021],
+  ['Toyota Avanza 2021', 'DK 8890 GH', 'toyota-avanza-2021', 'MPV 7 kursi · bensin', 285_000, 2021, 'toyota-avanza-2021'],
   ['Toyota Avanza 2021', 'DK 8912 GH', 'toyota-avanza-2021', 'MPV 7 kursi · bensin', 285_000, 2021],
   ['Honda Scoopy 2023', 'DK 4835 XY', 'honda-scoopy-2023', 'matic 110cc · 2 helm', 70_000, 2023],
   ['Honda Scoopy 2022', 'DK 4102 TR', 'honda-scoopy-2023', 'matic 110cc · 2 helm', 65_000, 2022],
@@ -627,7 +628,9 @@ async function main() {
         data: { mitraId: bmr.id, rekening: LABEL_REKENING_BMR, ...PENCAIRAN_LAMA },
       });
     },
-    { timeout: 60_000 },
+    // maxWait: koneksi pertama ke Postgres di Docker (Windows) bisa lebih dari
+    // 2 detik bawaan Prisma, dan seed gagal dengan P2028 sebelum mulai.
+    { timeout: 60_000, maxWait: 30_000 },
   );
 
   const [pengguna, mitra, unit, pesanan, ulasan, blokir, dokumen, serah, klaim, chat, pencairan] =

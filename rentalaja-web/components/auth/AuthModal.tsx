@@ -13,6 +13,7 @@
 // sandi bebas. Itu bagian dari desainnya, jangan dihapus.
 
 import { useEffect, useRef, useState } from "react";
+import { masuk, masukDemo, type Akun } from "@/app/actions/akun";
 import Modal from "@/components/ui/Modal";
 import { useBahasa } from "@/components/BahasaProvider";
 import { kamus } from "@/lib/i18n";
@@ -48,6 +49,12 @@ const TEKS = kamus({
     catatan: (akun: string) =>
       `Prototype portofolio. Tidak ada akun sungguhan, tidak ada autentikasi, dan tombol Google tidak menghubungi Google. Apa pun yang diisi akan masuk sebagai ${akun}.`,
     akunDemo: "Akun Demo",
+    bantuanNyata: "Pendaftaran belum dibuka. Pakai akun demo di bawah, atau akun yang sudah terdaftar.",
+    daftarBelumBuka: "Pendaftaran akun belum dibuka. Untuk mencoba, masuk dengan akun demo.",
+    demoPenyewa: "Masuk sebagai penyewa demo",
+    demoMitra: "Masuk sebagai mitra demo",
+    catatanNyata: "Prototype portofolio. Akun demo memakai data contoh, bukan data orang sungguhan.",
+    galatServer: "Server sedang tidak bisa dihubungi. Coba lagi sebentar.",
   },
   en: {
     masuk: "Log in",
@@ -71,6 +78,12 @@ const TEKS = kamus({
     catatan: (akun: string) =>
       `Portfolio prototype. There are no real accounts and no authentication, and the Google button doesn't contact Google. Whatever you enter logs you in as ${akun}.`,
     akunDemo: "Demo account",
+    bantuanNyata: "Sign-ups aren't open yet. Use a demo account below, or an existing account.",
+    daftarBelumBuka: "Sign-ups aren't open yet. To try it out, log in with a demo account.",
+    demoPenyewa: "Log in as demo renter",
+    demoMitra: "Log in as demo provider",
+    catatanNyata: "Portfolio prototype. Demo accounts use sample data, not real people.",
+    galatServer: "The server can't be reached right now. Try again shortly.",
   },
 });
 
@@ -103,14 +116,21 @@ function LogoGoogle() {
 
 export default function AuthModal({
   mode,
+  nyata,
+  adaDemo,
   onTutup,
   onGantiMode,
   onBerhasil,
 }: {
   mode: ModeAuth;
+  /** true = login sungguhan lewat rentalaja-api (lihat AkunProvider). */
+  nyata: boolean;
+  /** Mode nyata: tampilkan tombol masuk sekali klik sebagai akun demo. */
+  adaDemo: boolean;
   onTutup: () => void;
   onGantiMode: (mode: ModeAuth) => void;
-  onBerhasil: (identitas: string) => void;
+  /** Mode simulasi mengirim nama akun demo; mode nyata mengirim akunnya. */
+  onBerhasil: (hasil: string | Akun) => void;
 }) {
   const { bahasa } = useBahasa();
   const t = TEKS[bahasa];
@@ -118,10 +138,13 @@ export default function AuthModal({
   const [sandi, setSandi] = useState("");
   const [lihatSandi, setLihatSandi] = useState(false);
   const [memproses, setMemproses] = useState(false);
+  const [galat, setGalat] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const masuk = mode === "masuk";
-  const sah = emailSah(email) && sandi.length >= MIN_SANDI;
+  const masukMode = mode === "masuk";
+  // Mode nyata tidak memaksakan panjang minimal: aturan kata sandi milik
+  // server, dan akun yang sudah ada tidak boleh terkunci oleh aturan baru.
+  const sah = emailSah(email) && (nyata ? sandi.length > 0 : sandi.length >= MIN_SANDI);
 
   // Timer dibersihkan kalau modal keburu ditutup, supaya tidak ada state yang
   // diubah setelah komponen mati.
@@ -131,7 +154,25 @@ export default function AuthModal({
     };
   }, []);
 
+  /** Mode nyata: kirim ke server, tampilkan galatnya kalau gagal. Kata sandi
+   *  dikosongkan setelah gagal, email tetap. */
+  async function jalankan(aksi: () => Promise<{ ok: true; akun: Akun } | { ok: false; pesan: string }>) {
+    if (memproses) return;
+    setMemproses(true);
+    setGalat(null);
+    try {
+      const h = await aksi();
+      if (h.ok) return onBerhasil(h.akun);
+      setGalat(bahasa === "en" ? terjemahGalat(h.pesan) : h.pesan);
+      setSandi("");
+    } catch {
+      setGalat(t.galatServer);
+    }
+    setMemproses(false);
+  }
+
   function mulaiMasuk() {
+    if (nyata) return void jalankan(() => masuk(email, sandi));
     if (memproses) return;
     setMemproses(true);
     timerRef.current = setTimeout(() => onBerhasil(NAMA_AKUN), JEDA_MASUK_MS);
@@ -139,10 +180,30 @@ export default function AuthModal({
 
   const kelasIsian =
     "mt-6 w-full rounded-input border border-line px-14 py-13 text-lead text-ink placeholder:text-placeholder disabled:bg-surface-2 disabled:text-muted";
+  const kelasTombolKedua =
+    "mt-12 flex w-full items-center justify-center gap-10 rounded-input border border-line py-13 text-btn text-ink transition-colors duration-160 ease-base hover:border-green-700 disabled:text-muted";
+
+  // Mode nyata belum punya pendaftaran: layar Daftar hanya memberi tahu itu.
+  if (nyata && !masukMode) {
+    return (
+      <Modal judul={t.daftar} onTutup={onTutup} lebar="max-w-[420px]" latar="pekat">
+        <div key={mode} className="animasi-modal-isi">
+          <p className="mt-2 text-body text-muted">{t.daftarBelumBuka}</p>
+          <button
+            type="button"
+            onClick={() => onGantiMode("masuk")}
+            className="mt-16 flex w-full items-center justify-center rounded-input bg-green-700 py-13 text-btn text-white hover:bg-green-800"
+          >
+            {t.masuk}
+          </button>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
-      judul={masuk ? t.masuk : t.daftar}
+      judul={masukMode ? t.masuk : t.daftar}
       // Selama memproses, modal tidak bisa ditutup, sama seperti jendela
       // pembayaran yang sedang menunggu.
       onTutup={memproses ? () => {} : onTutup}
@@ -154,14 +215,14 @@ export default function AuthModal({
           saja. */}
       <div key={mode} className="animasi-modal-isi">
         <p className="mt-2 text-body text-muted">
-          {masuk ? t.belumPunya : t.sudahPunya}{" "}
+          {masukMode ? t.belumPunya : t.sudahPunya}{" "}
           <button
             type="button"
             disabled={memproses}
-            onClick={() => onGantiMode(masuk ? "daftar" : "masuk")}
+            onClick={() => onGantiMode(masukMode ? "daftar" : "masuk")}
             className="text-nav-strong text-green-700 hover:underline disabled:text-muted"
           >
-            {masuk ? t.daftar : t.masuk}
+            {masukMode ? t.daftar : t.masuk}
           </button>
         </p>
 
@@ -179,7 +240,7 @@ export default function AuthModal({
           <input
             id="email"
             type="email"
-            autoComplete="off"
+            autoComplete={nyata ? "email" : "off"}
             disabled={memproses}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -194,14 +255,15 @@ export default function AuthModal({
             <input
               id="sandi"
               type={lihatSandi ? "text" : "password"}
-              // Sengaja off: isian ini tidak dipakai, jadi jangan sampai
+              // Simulasi: off, isiannya tidak dipakai, jadi jangan sampai
               // pengelola kata sandi menawarkan menyimpannya.
-              autoComplete="off"
+              autoComplete={nyata ? "current-password" : "off"}
               disabled={memproses}
               value={sandi}
               onChange={(e) => setSandi(e.target.value)}
-              placeholder={t.minimal(MIN_SANDI)}
+              placeholder={nyata ? "" : t.minimal(MIN_SANDI)}
               aria-describedby="bantuan-sandi"
+              aria-invalid={galat ? true : undefined}
               className={`${kelasIsian} pr-64`}
             />
             <button
@@ -214,7 +276,7 @@ export default function AuthModal({
             </button>
           </div>
           <p id="bantuan-sandi" className="mt-6 text-body-sm text-muted">
-            {t.bantuanSandi}
+            {nyata ? t.bantuanNyata : t.bantuanSandi}
           </p>
 
           <button
@@ -234,36 +296,70 @@ export default function AuthModal({
                 className="size-16 animate-spin rounded-pill border-2 border-white/40 border-t-white"
               />
             )}
-            {memproses ? t.memverifikasi : masuk ? t.masuk : t.buatAkun}
+            {memproses ? t.memverifikasi : masukMode ? t.masuk : t.buatAkun}
           </button>
         </form>
 
         {/* Hanya emailnya yang disebut, kata sandi tidak pernah ditampilkan
             ulang di mana pun. */}
-        <p aria-live="polite" className="mt-8 text-body-sm text-muted">
-          {memproses ? t.memverifikasiEmail(email.trim()) : ""}
-        </p>
-
-        <div className="mt-12 flex items-center gap-12">
-          <span className="h-1 flex-1 bg-line" />
-          <span className="text-body-sm text-muted">{t.atau}</span>
-          <span className="h-1 flex-1 bg-line" />
-        </div>
-
-        <button
-          type="button"
-          disabled={memproses}
-          onClick={mulaiMasuk}
-          className="mt-16 flex w-full items-center justify-center gap-10 rounded-input border border-line py-13 text-btn text-ink transition-colors duration-160 ease-base hover:border-green-700 disabled:text-muted"
+        <p
+          aria-live="polite"
+          role={galat ? "alert" : undefined}
+          className={`mt-8 text-body-sm ${galat ? "text-red-700" : "text-muted"}`}
         >
-          <LogoGoogle />
-          {masuk ? t.masukGoogle : t.daftarGoogle}
-        </button>
-
-        <p className="mt-12 text-micro text-muted">
-          {t.catatan(t.akunDemo)}
+          {galat ?? (memproses && email ? t.memverifikasiEmail(email.trim()) : "")}
         </p>
+
+        {(!nyata || adaDemo) && (
+          <div className="mt-12 flex items-center gap-12">
+            <span className="h-1 flex-1 bg-line" />
+            <span className="text-body-sm text-muted">{t.atau}</span>
+            <span className="h-1 flex-1 bg-line" />
+          </div>
+        )}
+
+        {nyata ? (
+          adaDemo && (
+            <>
+              <button
+                type="button"
+                disabled={memproses}
+                onClick={() => jalankan(() => masukDemo("PENYEWA"))}
+                className={kelasTombolKedua}
+              >
+                {t.demoPenyewa}
+              </button>
+              <button
+                type="button"
+                disabled={memproses}
+                onClick={() => jalankan(() => masukDemo("MITRA"))}
+                className={kelasTombolKedua}
+              >
+                {t.demoMitra}
+              </button>
+            </>
+          )
+        ) : (
+          <button type="button" disabled={memproses} onClick={mulaiMasuk} className={`${kelasTombolKedua} mt-16`}>
+            <LogoGoogle />
+            {masukMode ? t.masukGoogle : t.daftarGoogle}
+          </button>
+        )}
+
+        <p className="mt-12 text-micro text-muted">{nyata ? t.catatanNyata : t.catatan(t.akunDemo)}</p>
       </div>
     </Modal>
   );
+}
+
+/** Pesan galat dari server berbahasa Indonesia; untuk halaman /en
+ *  diterjemahkan di sini. Pesan yang tidak dikenal tampil apa adanya. */
+function terjemahGalat(pesan: string): string {
+  const peta: Record<string, string> = {
+    "Email atau kata sandi salah.": "Incorrect email or password.",
+    "Server sedang tidak bisa dihubungi. Coba lagi sebentar.": "The server can't be reached right now. Try again shortly.",
+    "Akun demo belum disiapkan di situs ini.": "Demo accounts aren't set up on this site.",
+    "Login sungguhan belum aktif di situs ini.": "Real login isn't enabled on this site.",
+  };
+  return peta[pesan] ?? pesan;
 }

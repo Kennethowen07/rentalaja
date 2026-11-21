@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "../globals.css";
 import AkunProvider from "@/components/auth/AkunProvider";
 import { BahasaProvider } from "@/components/BahasaProvider";
+import { apiAktif } from "@/lib/api/klien";
 import { BAHASA, kamus } from "@/lib/i18n";
 import { bahasaAktif } from "@/lib/i18n-server";
 
@@ -51,7 +52,11 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
     <html lang={bahasa} className={`${jakarta.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-white font-sans text-ink">
         <BahasaProvider bahasa={bahasa}>
-          <AkunProvider>{children}</AkunProvider>
+          {/* Dua flag dari env server, keduanya boolean: alamat API dan kata
+              sandi demo sendiri tidak pernah dikirim ke browser. */}
+          <AkunProvider nyata={apiAktif()} adaDemo={apiAktif() && !!process.env.PASSWORD_DEMO}>
+            {children}
+          </AkunProvider>
         </BahasaProvider>
       </body>
     </html>

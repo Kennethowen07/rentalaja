@@ -104,7 +104,18 @@ export function detailUnit(slug: string, sewa: Sewa, bahasa: Bahasa = "id"): Det
 
   const subtotal = unit.hargaPerHari * sewa.hari;
   const layanan = biayaLayanan(subtotal);
+  return susunDetail(unit, sewa, bahasa, { perHari: unit.hargaPerHari, subtotal, layanan, total: subtotal + layanan });
+}
 
+/** Menyusun DetailUnit dari satu unit dan harganya. Dipakai mock di atas
+ *  dan lib/api/unit.ts (harga dari API), supaya bagian naratif halaman
+ *  detail hanya ditulis sekali. */
+export function susunDetail(
+  unit: UnitHasil,
+  sewa: Sewa,
+  bahasa: Bahasa,
+  harga: DetailUnit["harga"],
+): DetailUnit {
   return {
     unit,
     rentangLabel: rentangTanggal(sewa.mulai, sewa.mulai + sewa.hari * HARI, bahasa),
@@ -122,11 +133,6 @@ export function detailUnit(slug: string, sewa: Sewa, bahasa: Bahasa = "id"): Det
           ? `★ ${desimal(unit.rating, bahasa)}\nJoined in 2023\nAverage Reply Time: 1 Hour`
           : `★ ${desimal(unit.rating, bahasa)}\nBergabung Sejak 2023\nRata-Rata Waktu Balas: 1 Jam`,
     },
-    harga: {
-      perHari: unit.hargaPerHari,
-      subtotal,
-      layanan,
-      total: subtotal + layanan,
-    },
+    harga,
   };
 }

@@ -35,6 +35,7 @@ const TEKS = kamus({
     bukaMenu: "Buka menu",
     tutupMenu: "Tutup menu",
     akunDemo: "Akun Demo",
+    panelMitra: "Panel mitra",
     bahasa: "Bahasa",
   },
   en: {
@@ -51,6 +52,7 @@ const TEKS = kamus({
     bukaMenu: "Open menu",
     tutupMenu: "Close menu",
     akunDemo: "Demo account",
+    panelMitra: "Provider dashboard",
     bahasa: "Language",
   },
 });
@@ -120,10 +122,13 @@ const navLinks = [
 
 export default function Navbar() {
   const [drawerTerbuka, setDrawerTerbuka] = useState(false);
-  // Masuk dan daftar masih simulasi; statusnya dibagi lewat AkunProvider
+  // Status masuk dibagi lewat AkunProvider (simulasi atau login sungguhan)
   // supaya tombol "Hubungi penyedia" dan /chat ikut tahu.
-  const { akun, keluar, mintaMasuk } = useAkun();
+  const { akun, peran, keluar, mintaMasuk } = useAkun();
+  // Akun mitra: chat dan namanya membuka panel mitra, bukan halaman penyewa.
+  const mitra = peran === "MITRA";
   const { bahasa, jalur } = useBahasa();
+  const tautanChat = jalur(mitra ? "/mitra/chat" : "/chat");
   const t = TEKS[bahasa];
   const hamburgerRef = useRef<HTMLButtonElement>(null);
 
@@ -197,7 +202,7 @@ export default function Navbar() {
             {akun ? (
               <>
                 <Link
-                  href={jalur("/chat")}
+                  href={tautanChat}
                   aria-label={t.riwayatChat}
                   title={t.riwayatChat}
                   aria-current={diChat ? "page" : undefined}
@@ -207,7 +212,13 @@ export default function Navbar() {
                 >
                   <IkonChat />
                 </Link>
-                <span className="max-w-160 truncate text-b6 text-muted-kuat">{namaAkun(akun, t.akunDemo)}</span>
+                {mitra ? (
+                  <Link href={jalur("/mitra")} title={t.panelMitra} className="max-w-160 truncate text-b6 text-muted-kuat hover:text-green-700 hover:underline">
+                    {namaAkun(akun, t.akunDemo)}
+                  </Link>
+                ) : (
+                  <span className="max-w-160 truncate text-b6 text-muted-kuat">{namaAkun(akun, t.akunDemo)}</span>
+                )}
                 <button
                   type="button"
                   onClick={keluar}
@@ -290,7 +301,7 @@ export default function Navbar() {
           {akun ? (
             <>
               <Link
-                href={jalur("/chat")}
+                href={tautanChat}
                 aria-current={diChat ? "page" : undefined}
                 onClick={tutupDrawer}
                 className={`flex min-h-56 items-center gap-10 border-b border-green-200 text-b4-sm font-semibold ${
@@ -300,7 +311,13 @@ export default function Navbar() {
                 <IkonChat />
                 {t.chat}
               </Link>
-              <span className="flex min-h-56 items-center text-b5-sm text-muted-kuat">{namaAkun(akun, t.akunDemo)}</span>
+              {mitra ? (
+                <Link href={jalur("/mitra")} onClick={tutupDrawer} className="flex min-h-56 items-center text-b5-sm font-semibold text-green-700">
+                  {t.panelMitra}
+                </Link>
+              ) : (
+                <span className="flex min-h-56 items-center text-b5-sm text-muted-kuat">{namaAkun(akun, t.akunDemo)}</span>
+              )}
               <button
                 type="button"
                 onClick={() => {

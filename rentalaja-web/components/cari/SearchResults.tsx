@@ -11,7 +11,8 @@ import Link from "next/link";
 import ResultCard from "@/components/cari/ResultCard";
 import { jalur } from "@/lib/i18n";
 import { bahasaAktif } from "@/lib/i18n-server";
-import { type Kategori, type RentangTanggal, urutkanHasil } from "@/lib/mock/search";
+import { cariUnit } from "@/lib/api/unit";
+import type { Kategori, RentangTanggal } from "@/lib/mock/search";
 
 export default async function SearchResults({
   ringkasanFilter,
@@ -23,7 +24,8 @@ export default async function SearchResults({
   /** Dihitung di server dari tanggal pilihan penyewa, lihat app/cari/page.tsx. */
   rentang: RentangTanggal;
 }) {
-  const hasil = urutkanHasil(kategori);
+  // Dari rentalaja-api kalau API_URL diisi, selain itu dari mock.
+  const hasil = await cariUnit(kategori, { mulai: rentang.mulai, hari: rentang.hari });
   const bahasa = await bahasaAktif();
   const en = bahasa === "en";
 
